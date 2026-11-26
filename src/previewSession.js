@@ -42,7 +42,7 @@ export function sampleResponses(q){
   case 'matching':{const k=matchKey(q);response=i%3===0?k.slice(1).concat(k.slice(0,1)):k;break;}
   case 'simulation':{response=defaultResponse(q.simKind);if(q.simKind==='appraisal')response={demand:i%8+3,control:i%7+2,support:i%6+3,prepared:i%8+1};if(q.simKind==='recovery')response={frequency:i%9+1,recovery:(i*17)%101};if(q.simKind==='microbiome')response={microbes:response.microbes.map((x,j)=>j<i%8?i%6:x)};break;}
   case 'research':{const r=normalizeResearch(q),n=r.researchKind==='prediction'?1:r.researchClaims.length,limit=r.researchKind==='prediction'?r.researchOptions.length:2;response={answers:Array.from({length:n},(_,k)=>(i+k)%Math.max(1,limit)),confidence:r.researchConfidence?Array.from({length:n},(_,k)=>50+((i+k)*10)%51):[]};break;}
-  case 'wordcloud':return {i,response:['stress','recovery','appraisal','support','stress','coping'][j%6]};
+  case 'wordcloud':return {i,response:['stress','recovery','appraisal','support','stress','coping','sleep','perceived control','stress','social support','gut symptoms','uncertainty','recovery','attention'][j]};
   default:response=i%Math.max(1,q.options?.length||0);
   }
   return {i,response:normalizePreviewResponse(q,response)};

@@ -1,7 +1,7 @@
 import React,{useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {wordFrequencies,fitCloudWords,cloudPageSize,wordColor} from '../../wordCloudLayout.js';
 
-const graphicStyle={aspectRatio:'900 / 460',minHeight:240,width:'100%',boxSizing:'border-box'};
+const graphicStyle={aspectRatio:'900 / 460',minHeight:240,width:'100%',maxWidth:960,marginInline:'auto',boxSizing:'border-box'};
 const fontFamily='"Source Sans 3", Arial, sans-serif';
 
 export default function WordCloudDisplay({words=[],totalResponses=0,hidden=false}){

@@ -60,13 +60,24 @@ test('audience layout regression with fourteen demo responses, live and revealed
    await nav.locator('button').nth(i).click();
    if(q.simMode!=='explore'){await page.getByRole('button',{name:'Add demo responses'}).click();await page.getByRole('status').filter({hasText:'14/15 completed'}).waitFor();}
    if(q.type==='wordcloud'){
-    await cloudFit(name+' normal live',5);
-    const word=page.frameLocator('iframe[title="Student phone preview"]').getByPlaceholder('e.g. Stress, recovery, support…');
+    await cloudFit(name+' normal live',11);
+    // Rehearsal opens with the phone visible; the initial toggle hid it for the audience tests.
+    const phoneToggle=page.getByRole('button',{name:'Student phone',exact:true});
+    if(await phoneToggle.getAttribute('aria-pressed')!=='true')await phoneToggle.click();
+    const phone=page.frameLocator('iframe[title="Student phone preview"]');
+    const word=phone.getByPlaceholder('e.g. Stress, recovery, support…');
+    await word.waitFor();
     for(const text of ['perceived social evaluation','uncertainty about the presentation','anticipatory anxiety','gastrointestinal symptoms','negative feedback regulation','psychological coping resources','sympathetic nervous system','difficulty concentrating','WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW','microbiome diversity']){
-     await word.fill(text);await word.press('Enter');await page.waitForTimeout(100);
+     await word.fill(text);await word.press('Enter');await phone.getByText(text,{exact:true}).waitFor();
     }
-    await stage.getByText('24 submissions · 15 unique',{exact:true}).waitFor();
+    await stage.getByText('24 submissions · 21 unique',{exact:true}).waitFor();
+    await page.getByRole('status').filter({hasText:'15/15 completed'}).waitFor();
     await cloudFit(name+' long live',15);
+    await stage.getByRole('button',{name:'Next word cloud page'}).click();
+    await cloudFit(name+' live page 2',6);
+    await stage.getByRole('button',{name:'Previous word cloud page'}).click();
+    await cloudFit(name+' live page 1 again',15);
+    if(await phoneToggle.getAttribute('aria-pressed')==='true')await phoneToggle.click();
    }
    await page.getByRole('button',{name:'Full screen',exact:true}).click();await page.waitForFunction(()=>!!document.fullscreenElement);
    await fit(name+' live');
@@ -74,9 +85,19 @@ test('audience layout regression with fourteen demo responses, live and revealed
    if(q.simMode!=='explore'){await page.locator('.gm-fullscreen-controls').getByRole('button',{name:'Reveal results'}).click();await fit(name+' revealed');}
    if(q.type==='wordcloud'){
     await cloudFit(name+' revealed',15);
+    await page.screenshot({path:out+'/word-cloud-stress-page1.png'});
+    await stage.getByRole('button',{name:'Next word cloud page'}).click();
+    await cloudFit(name+' revealed page 2',6);
+    await fit(name+' page 2');
+    await page.screenshot({path:out+'/word-cloud-stress-page2.png'});
+    await stage.getByRole('button',{name:'Previous word cloud page'}).click();
     await stage.getByRole('button',{name:'Response frequencies',exact:true}).click();
     assert.equal(await stage.getByRole('list',{name:'Response frequencies'}).locator('li').count(),15);
     await fit(name+' frequencies');
+    await stage.getByRole('button',{name:'Next word cloud page'}).click();
+    assert.equal(await stage.getByRole('list',{name:'Response frequencies'}).locator('li').count(),6);
+    await fit(name+' frequencies page 2');
+    await stage.getByRole('button',{name:'Previous word cloud page'}).click();
     await stage.getByRole('button',{name:'Back to word cloud',exact:true}).click();
     await cloudFit(name+' returned to cloud',15);
    }
