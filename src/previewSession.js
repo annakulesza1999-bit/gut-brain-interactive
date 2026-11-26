@@ -1,5 +1,5 @@
 // Rehearsal state is ephemeral, never written into the saved presentation.
-import {activityDuration,initialTextCount,textLines,publicActivity,curveIdentity,normalizeCurve,reactionSummary} from './activities.js';
+import {activityDuration,initialTextCount,textLines,publicActivity,curveIdentity,normalizeCurve,reactionSummary,curveReference} from './activities.js';
 import {normalizePoint,normalizeMatch,scoreMap,scoreMatch,matchKey} from './spatialActivities.js';
 import {normalizeSimulation,defaultResponse} from './simulations.js';
 import {normalizeResearchResponse,normalizeResearch,scoreResearch,revealResearch} from './researchActivities.js';
@@ -72,7 +72,7 @@ export function previewData(deck,state){
  const entries=rows.map(({i,response})=>({...curveIdentity(i),response,...score(q,response)}));
  const words=[...state.words,...(q.type==='wordcloud'?state.samples.map(x=>x.response):[])];
  const reveal={correctAnswer:q.correctAnswer,explanation:q.explanation,afterMedia:q.afterMedia,afterPreset:q.afterPreset,optionDist:(q.options||[]).map((_,i)=>({count:rows.filter(r=>r.response===i).length,pct:rows.length?Math.round(rows.filter(r=>r.response===i).length/rows.length*100):0}))};
- if(q.type==='curve')reveal.curves=entries.map(e=>({...e,points:e.response}));
+ if(q.type==='curve'){reveal.curves=entries.map(e=>({...e,points:e.response}));reveal.referenceCurve=curveReference(q);}
  if(q.type==='pointmap')Object.assign(reveal,{mapResults:entries.map(e=>({...e,point:e.response})),mapTarget:q.mapGraded?q.mapTarget:null,mapRadius:q.mapRadius});
  if(q.type==='matching')Object.assign(reveal,{matchResults:entries.map(e=>({...e,selection:e.response})),matchKey:matchKey(q)});
  if(q.type==='simulation')reveal.simulationResults=entries;

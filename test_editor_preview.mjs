@@ -122,6 +122,7 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   await page.getByRole('button',{name:'Present this slide'}).click();
   await page.locator('.gm-hpa-figure svg').waitFor();
   await page.getByText('BODY OVERVIEW',{exact:true}).waitFor();
+  await phone.getByText('BODY OVERVIEW',{exact:true}).waitFor();
   await page.screenshot({path:out+'/07-body-sequence.png'});
   // New medial atlas template; choose a real rendered structure and receive private feedback.
   await page.getByRole('button',{name:'Edit current slide'}).click();
@@ -136,7 +137,12 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   for(const [x,y] of [[.5,.5],[.4,.4],[.6,.4],[.5,.3],[.4,.6],[.6,.6],[.5,.65]]){await page.mouse.click(brainBox.x+brainBox.width*x,brainBox.y+brainBox.height*y);if(await check.isEnabled())break;}
   assert.ok(await check.isEnabled(),'No selectable atlas mesh visible in medial view');
   await check.click();await phone.getByText('Correct anatomy is highlighted in green.',{exact:false}).waitFor();
+  assert.equal(await phone.getByLabel('Show highlighted structures through surrounding anatomy').isChecked(),true);
+  await phone.getByLabel('Show highlighted structures through surrounding anatomy').uncheck();await phone.getByLabel('Show highlighted structures through surrounding anatomy').check();
   await page.screenshot({path:out+'/08-medial-brain-feedback.png'});
+  // Compare a reference curve, but only after closing the prediction.
+  await page.getByRole('button',{name:'Edit current slide'}).click();await page.getByRole('button',{name:'+ Draw a curve',exact:true}).click();await page.getByRole('button',{name:'Use illustrative cortisol example'}).click();
+  await page.getByRole('button',{name:'Present this slide'}).click();await phone.getByRole('button',{name:'Submit prediction'}).waitFor();await page.getByRole('button',{name:'Add demo responses'}).click();assert.equal(await page.locator('[data-reference-curve]').count(),0);await page.getByRole('button',{name:'Reveal results'}).click();await page.locator('[data-reference-curve]').waitFor();await phone.locator('[data-reference-curve]').waitFor();await page.screenshot({path:out+'/09-reference-curve.png'});
   await page.getByRole('button',{name:'Library',exact:true}).click();
   // Import two actual PNG pages; preserve original bytes and natural page order.
   const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGMs7KlmIAUwkaR6VMOohiGlAQCw0gGYqw/vQAAAAABJRU5ErkJggg==','base64');

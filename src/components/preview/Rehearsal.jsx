@@ -20,7 +20,7 @@ function Stage({question:q,data,state}){
  const showResults=state.revealed||liveResultsEnabled(q),result=state.revealed?data.reveal:showResults?data.live:null;
  const props={question:q,result,revealed:state.revealed,showResults,count:data.completed};
  if(q.type==='text')return <TextSlide question={q} presenter visible={state.visible}/>;
- if(q.type==='curve')return <CurveResults question={q} curves={result?.curves||[]} revealed={state.revealed} showResults={showResults} count={data.completed}/>;
+ if(q.type==='curve')return <CurveResults question={q} curves={result?.curves||[]} reference={result?.referenceCurve} revealed={state.revealed} showResults={showResults} count={data.completed}/>;
  if(['pointmap','matching'].includes(q.type))return <SpatialResults {...props}/>;
  if(q.type==='simulation')return <SimulationResults {...props}/>;
  if(q.type==='research')return <ResearchResults {...props}/>;

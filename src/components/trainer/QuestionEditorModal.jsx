@@ -1,3 +1,4 @@
+import {ReferenceCurveEditor} from '../common/CurveActivity';
 import {BrainEditor} from '../common/BrainActivity';
 import {brainTemplate} from '../../anatomyActivities.js';
 import {ResearchEditor} from '../common/ResearchActivity';
@@ -426,6 +427,7 @@ export default function QuestionEditorModal({
                 <h3 className="font-semibold">Graph settings</h3>
                 { [['xLabel','Horizontal axis label','Time (minutes)'],['yLabel','Vertical axis label','Relative cortisol level'],['xTicks','Horizontal tick labels (comma-separated)','Before,0,15,30,45,60']].map(([key,label,placeholder])=><label key={key} className="block text-sm">{label}<input className="block w-full p-2 rounded-lg border border-slate-700 bg-slate-950 mt-1" value={currentQ[key]??''} placeholder={placeholder} onChange={ev=>handleUpdateCurrentQ(key,ev.target.value)}/></label>)}
                 <label className="block text-sm">Event marker position (0–100%; empty to hide)<input type="number" min="0" max="100" className="block p-2 rounded-lg border border-slate-700 bg-slate-950 mt-1" value={currentQ.stressMarker == null ? '' : currentQ.stressMarker*100} onChange={ev=>handleUpdateCurrentQ('stressMarker',ev.target.value===''?null:Math.min(1,Math.max(0,Number(ev.target.value)/100)))}/></label>
+                <ReferenceCurveEditor key={currentQ.id} question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>
                 <p className="text-xs text-slate-400">Each student gets a consistent color and curve number. No correct answer; optional countdown reveals curves together.</p>
               </section>}
               {currentQ.type === 'sequence' && <section className="p-4 border border-slate-800 rounded-2xl space-y-3">

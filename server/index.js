@@ -1,3 +1,4 @@
+import {curveReference} from '../src/activities.js';
 import {personalBrainFeedback} from '../src/anatomyActivities.js';
 import {randomBytes} from 'node:crypto';
 import express from 'express';
@@ -496,7 +497,7 @@ io.on('connection', (socket) => {
 
       if (currQ && session.questionState === 'revealed') {
         const qa=analytics.questionAnalytics[session.currentQuestionIndex];
-        payload.revealData={...qa,...spatialResults(session),curves:currQ.type==='curve'?(session.curveSubmissions?.[session.currentQuestionIndex]||[]).map(({participantId,...curve})=>curve):undefined,afterMedia:currQ.afterMedia,afterPreset:currQ.afterPreset,leaderboard:publicLeaderboard(session).slice(0,10)};
+        payload.revealData={...qa,...spatialResults(session),referenceCurve:currQ.type==='curve'?curveReference(currQ):undefined,curves:currQ.type==='curve'?(session.curveSubmissions?.[session.currentQuestionIndex]||[]).map(({participantId,...curve})=>curve):undefined,afterMedia:currQ.afterMedia,afterPreset:currQ.afterPreset,leaderboard:publicLeaderboard(session).slice(0,10)};
       }
       if (callback) callback(payload);
     } catch (e) {
@@ -638,6 +639,7 @@ io.on('connection', (socket) => {
       correctAnswer: q.correctAnswer,
       explanation: q.explanation,
       optionDist: currQA.optionDist,
+      referenceCurve:q.type==='curve'?curveReference(q):undefined,
       curves: q.type === 'curve' ? (session.curveSubmissions?.[session.currentQuestionIndex] || []).map(({participantId,...curve})=>curve) : undefined,
       afterMedia: q.type === 'sequence' ? q.afterMedia : undefined,
       afterPreset: q.type === 'sequence' ? q.afterPreset : undefined,
@@ -1148,6 +1150,7 @@ io.on('connection', (socket) => {
         wordCloudWords:(session.wordCloudSubmissions?.[session.currentQuestionIndex]||[]).map(({text})=>text),
         questionIndex: session.currentQuestionIndex,
         correctAnswer: currQ.correctAnswer,
+        referenceCurve:currQ.type==='curve'?curveReference(currQ):undefined,
         curves: currQ.type === 'curve' ? (session.curveSubmissions?.[session.currentQuestionIndex] || []).map(({participantId,...curve})=>curve) : undefined,
         afterMedia: currQ.type === 'sequence' ? currQ.afterMedia : undefined,
         afterPreset: currQ.type === 'sequence' ? currQ.afterPreset : undefined,

@@ -74,3 +74,8 @@ export const liveResultsEnabled=q=>q?.resultsMode!=='reveal';
 
 // Artwork is lossless imported raster content, bounded independently from small activity media.
 export function safeSlideArtwork(value){return typeof value==='string'&&value.length<=4200000&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value)?value:'';}
+
+/** Reference is an authored comparison, never a participant answer. Only include after reveal. */
+export function curveReference(q){const points=normalizeCurve(q?.referenceCurve);if(!points)return null;return {points,label:typeof q.referenceLabel==='string'&&q.referenceLabel.trim()?q.referenceLabel.trim().slice(0,120):'Reference curve',note:typeof q.referenceNote==='string'?q.referenceNote.slice(0,700):''};}
+// Illustrative trace of the original teaching figure's Day 2 T1–T6 segment; no measured cortisol scale.
+export const exampleCortisolReference=[[0,.2],[.0373,.2055],[.0761,.2055],[.1149,.2109],[.1537,.2218],[.191,.2382],[.2298,.2546],[.2686,.276],[.3075,.2983],[.3447,.3529],[.3835,.4185],[.4224,.484],[.4612,.5605],[.5,.6534],[.5373,.7571],[.5761,.8336],[.6149,.8555],[.6537,.8282],[.691,.7817],[.7298,.7298],[.7686,.6752],[.8075,.6206],[.8447,.566],[.8835,.5113],[.9224,.4595],[.9612,.4076],[1,.3557]];
