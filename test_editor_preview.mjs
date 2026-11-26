@@ -150,8 +150,7 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   await page.getByRole('button',{name:'Present this slide'}).click();
   const sagittal=phone.getByRole('img',{name:'Interactive midsagittal anatomy'});
   await sagittal.waitFor();await sagittal.scrollIntoViewIfNeeded();
-  const wrongPoint=await sagittal.evaluate(el=>{const p=el.createSVGPoint();p.x=540;p.y=370;const r=p.matrixTransform(el.getScreenCTM());return {x:r.x,y:r.y};});
-  const rect=await sagittal.boundingBox();const local=await sagittal.evaluate(el=>{const p=el.createSVGPoint();p.x=540;p.y=370;const r=p.matrixTransform(el.getScreenCTM()),b=el.getBoundingClientRect();return {x:r.x-b.left,y:r.y-b.top};});
+  const local=await sagittal.evaluate(el=>{const p=el.createSVGPoint();p.x=540;p.y=370;const r=p.matrixTransform(el.getScreenCTM()),b=el.getBoundingClientRect();return {x:r.x-b.left,y:r.y-b.top};});
   await sagittal.click({position:local});
   await enabled(phone.getByRole('button',{name:'Check location',exact:true}));
   await phone.getByRole('button',{name:'Check location',exact:true}).click();
