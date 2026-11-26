@@ -32,7 +32,9 @@ jobs:
       - name: Build frontend
         run: npm run build
       - name: Real 15-client loopback smoke test
-        run: node --test test_session_smoke.js
+        run: GM_TEST_CLIENTS=15 node --test test_session_smoke.js
+      - name: Real 30-client loopback stress test
+        run: GM_TEST_CLIENTS=30 node --test test_session_smoke.js
       - name: Dependency audit
         if: ${{ always() && steps.install.outcome == 'success' }}
         run: npm audit --audit-level=low

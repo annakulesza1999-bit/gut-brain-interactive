@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {curveColors,curveIdentity,normalizeCurve,publicActivity,safeMedia,averageCurves,hpaStages} from './src/activities.js';
-test('unique stable colors and labels for a class of fifteen',()=>{
- assert.equal(new Set(curveColors).size,15);
- for(let i=0;i<15;i++){assert.deepEqual(curveIdentity(i),curveIdentity(i));assert.equal(curveIdentity(i).label,'Curve '+(i+1));}
+test('unique stable colors and labels for a class of thirty',()=>{
+ assert.equal(new Set(curveColors).size,30);
+ for(let i=0;i<30;i++){assert.deepEqual(curveIdentity(i),curveIdentity(i));assert.equal(curveIdentity(i).label,'Curve '+(i+1));}
 });
 test('curve validation rejects malformed, reversed, and out-of-bounds inputs',()=>{
  assert.deepEqual(normalizeCurve([[0,.2],[.5,.9],[1,.3]]),[[0,.2],[.5,.9],[1,.3]]);

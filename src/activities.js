@@ -3,7 +3,7 @@ import { publicResearch } from './researchActivities.js';
 import { simulationConfig } from './simulations.js';
 import { matchChoices } from './spatialActivities.js';
 // Shared activity helpers (browser and server). Coordinates are normalized to [0,1].
-export const curveColors = ['#0063A6','#176D70','#7C468C','#735E00','#407BA4','#A02E21','#496323','#2BA4A6','#81529B','#BC682D','#354D60','#6B853C','#B46BBF','#1E8B99','#96731D'];
+export const curveColors = ['#0063A6','#176D70','#7C468C','#735E00','#407BA4','#A02E21','#496323','#2BA4A6','#81529B','#BC682D','#354D60','#6B853C','#B46BBF','#1E8B99','#96731D', '#B33C79','#256D3A','#3E51A2','#B65B56','#167DAD','#825A31','#613D93','#9B5320','#346A6A','#AC397E','#526EAD','#5F6F39','#943D47','#7E597B','#365D92'];
 export function curveIdentity(index) {
   const i = Math.max(0, Number.isInteger(index) ? index : 0);
   return { color: curveColors[i % curveColors.length], label: 'Curve ' + (i + 1) };
