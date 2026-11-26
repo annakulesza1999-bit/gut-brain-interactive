@@ -104,8 +104,11 @@ test('loopback session: '+N+' participants, all activity families, auth and priv
  await advance(11);
  const openState=await ack(students[1],'get_session_state',{sessionCode});assert.equal(openState.currentQuestion.wordcloudMode,'open');
  const sentence='They may be discussing something unrelated to the presentation.';
+ // The restored client replaces the original socket; the old socket must no longer submit.
+ assert.equal((await ack(students[0],'submit_word_cloud',{sessionCode,questionIndex:11,word:sentence})).success,false);
  const open=event(presenter,'live_results',r=>r.questionIndex===11&&r.data.words.length===N);
- assert.ok((await Promise.all(students.map(s=>ack(s,'submit_word_cloud',{sessionCode,questionIndex:11,word:sentence})))).every(r=>r.success));
+ const activeStudents=[restored,...students.slice(1)];
+ const submitted=await Promise.all(activeStudents.map(s=>ack(s,'submit_word_cloud',{sessionCode,questionIndex:11,word:sentence})));assert.ok(submitted.every(r=>r.success),JSON.stringify(submitted.filter(r=>!r.success)));
  assert.equal((await open).data.words.length,N);assert.equal((await ack(students[1],'submit_word_cloud',{sessionCode,questionIndex:11,word:'X'.repeat(251)})).success,false);
  assert.ok((await ack(students[1],'submit_word_cloud',{sessionCode,questionIndex:11,word:sentence})).success);
  const openResult=await reveal(11);assert.equal(openResult.answeredCount,N);assert.equal(openResult.wordCloudWords.length,N+1);assert.ok(openResult.wordCloudWords.every(w=>w===sentence));
