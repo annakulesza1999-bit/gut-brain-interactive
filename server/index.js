@@ -8,7 +8,6 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { db } from './db.js';
-import * as XLSX from 'xlsx';
 import { curveIdentity, normalizeCurve, publicActivity, safeMedia, timerSeconds, activityDuration, textLines, initialTextCount, reactionSummary } from '../src/activities.js';
 
 import {normalizePoint,scoreMap,normalizeMatch,scoreMatch,matchKey,validPairs,validTarget} from '../src/spatialActivities.js';
@@ -344,72 +343,6 @@ app.put('/api/student/:phoneOrId', (req, res) => {
   });
 
   res.json({ success: true, student: updated });
-});
-
-// Master Multi-Exam Excel Export Endpoint
-app.get('/api/export-master', (req, res) => {
-  try {
-    const students = db.getAllStudents();
-    const wb = XLSX.utils.book_new();
-
-    // Sheet 1: Master Student Directory & Cumulative Performance
-    const sheet1Data = students.map((s, idx) => ({
-      'S.No': idx + 1,
-      'Student ID': s.id,
-      'Student Name': s.name,
-      'Mobile Number': s.phone,
-      'Total Quizzes Attempted': s.totalQuizzes,
-      'Cumulative Score (Marks)': s.totalScore,
-      'Average Accuracy (%)': `${s.avgAccuracy}%`,
-      'Last Quiz Date': s.lastExamDate || '-'
-    }));
-
-    // Sheet 2: All Exam Results Log
-    const sheet2Data = db.data.examResults.map((er, idx) => ({
-      'Record ID': er.id,
-      'Date': er.date,
-      'Session Code': er.sessionCode,
-      'Quiz Title': er.quizTitle,
-      'Student Name': er.studentName,
-      'Mobile Number': er.studentPhone,
-      'Score (Marks)': er.score,
-      'Accuracy (%)': `${er.accuracy}%`,
-      'Rank in Quiz': er.rank,
-      'Total Questions': er.totalQuestions,
-      'Correct Answers': er.correctAnswers
-    }));
-
-    // Sheet 3: Sessions Log
-    const sheet3Data = db.data.sessions.map((sess, idx) => ({
-      'Session ID': sess.id,
-      'Session Code': sess.code,
-      'Date': sess.date,
-      'Trainer Name': sess.trainerName,
-      'Total Questions': sess.totalQuestions,
-      'Participants Count': sess.totalParticipants,
-      'Cohort Average Score': sess.avgScore,
-      'Cohort Average Accuracy': `${sess.avgAccuracy}%`
-    }));
-
-    const ws1 = XLSX.utils.json_to_sheet(sheet1Data);
-    const ws2 = XLSX.utils.json_to_sheet(sheet2Data);
-    const ws3 = XLSX.utils.json_to_sheet(sheet3Data);
-
-    ws1['!cols'] = [{ wch: 6 }, { wch: 15 }, { wch: 25 }, { wch: 18 }, { wch: 24 }, { wch: 24 }, { wch: 20 }, { wch: 16 }];
-    ws2['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 30 }, { wch: 25 }, { wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 14 }];
-    ws3['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 14 }, { wch: 25 }, { wch: 15 }, { wch: 18 }, { wch: 20 }, { wch: 22 }];
-
-    XLSX.utils.book_append_sheet(wb, ws1, 'Student Directory');
-    XLSX.utils.book_append_sheet(wb, ws2, 'All Exams Record Log');
-    XLSX.utils.book_append_sheet(wb, ws3, 'Completed Sessions');
-
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    res.setHeader('Content-Disposition', 'attachment; filename="Digi_Warriors_Master_Analytics_Database.xlsx"');
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.send(buffer);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
 });
 
 // Clear all active sessions (Reset DB)
