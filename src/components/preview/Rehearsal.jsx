@@ -27,7 +27,7 @@ function Stage({question:q,data,state}){
  if(q.type==='simulation')return <SimulationResults {...props}/>;
  if(q.type==='research')return <ResearchResults {...props}/>;
  if(q.type==='brain')return <BrainResults {...props}/>;
- if(q.type==='wordcloud')return <div className="space-y-5"><h1 className="text-3xl">{q.question}</h1><WordCloudDisplay words={showResults?data.words:[]} totalResponses={showResults?data.words.length:0} hidden={!showResults}/></div>;
+ if(q.type==='wordcloud')return <div className="space-y-5"><h1 className="text-3xl">{q.question}</h1><WordCloudDisplay question={q} words={showResults?data.words:[]} totalResponses={showResults?data.words.length:0} hidden={!showResults}/></div>;
  return <div className="gm-question-stage space-y-4"><h1 className="text-3xl font-serif">{q.question}</h1>{q.type==='sequence'&&<div className="gm-sequence-stage"><SequenceHeading question={q}/><SequenceMedia artwork={q.sequenceArtwork} media={state.revealed?q.afterMedia:q.beforeMedia} preset={state.revealed?q.afterPreset:q.beforePreset} phase={state.revealed?'after':'before'}/></div>}
  <div className="gm-choice-grid space-y-3">{(q.options||[]).map((o,i)=>{const d=result?.optionDist[i],correct=state.revealed&&q.correctAnswer===i;return <div key={i} className="relative overflow-hidden rounded-xl border border-slate-800 p-4 bg-slate-900"><div className="absolute inset-y-0 left-0 transition-all" style={{width:(d?.pct||0)+'%',background:correct?'#DFEFF0':'#F4E8F8'}}/><div className="relative flex justify-between gap-3"><span>{String.fromCharCode(65+i)}. {o}</span>{showResults&&<strong>{d?.count||0} · {d?.pct||0}%{correct?' ✓':''}</strong>}</div></div>;})}</div>{state.revealed&&q.explanation&&<p className="text-sm">{q.explanation}</p>}</div>;
 }

@@ -20,3 +20,13 @@ test('flow cloud sizes fit a classroom page, including long and mixed-width resp
  assert.equal(cloudPageSize(1200),15);
  assert.equal(cloudPageSize(390),6);
 });
+
+import {publicActivity,wordResponseLimit} from './src/activities.js';
+import {startSlide,previewReducer} from './src/previewSession.js';
+test('open-ended responses retain sentences, repeat answers and public format',()=>{
+ const q={id:1,type:'wordcloud',wordcloudMode:'open',question:'Interpret the situation',timerSeconds:0};
+ assert.equal(publicActivity(q).wordcloudMode,'open');assert.equal(wordResponseLimit(q),250);assert.equal(wordResponseLimit({type:'wordcloud'}),35);
+ const deck={questions:[q]},sentence='Maybe they are sharing a joke unrelated to the presentation.';
+ let state=startSlide(deck);for(let i=0;i<2;i++)state=previewReducer(deck,state,{type:'word',visit:state.visit,word:sentence});
+ assert.deepEqual(state.words,[sentence,sentence]);const closed=previewReducer(deck,state,{type:'reveal'});assert.equal(previewReducer(deck,closed,{type:'word',visit:closed.visit,word:sentence}),closed);
+});

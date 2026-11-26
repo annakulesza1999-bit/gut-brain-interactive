@@ -253,7 +253,7 @@ export default function TrainerLiveQuestion() {
           onClose={() => setViewMode('question')}
         />
       ) : currentQuestion.type==='brain'?<BrainResults key={currentQuestionIndex} question={currentQuestion} result={result} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : currentQuestion.type==='research'?<ResearchResults key={currentQuestionIndex} question={currentQuestion} result={result} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : currentQuestion.type==='simulation'? <SimulationResults key={currentQuestionIndex} question={currentQuestion} result={result} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : ['pointmap','matching'].includes(currentQuestion.type) ? <SpatialResults key={currentQuestionIndex} question={currentQuestion} result={result} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : currentQuestion.type === 'text' ? <TextSlide question={currentQuestion} visible={textVisible} presenter/> : currentQuestion.type === 'curve' ? <CurveResults key={currentQuestionIndex} question={currentQuestion} curves={result?.curves||[]} reference={result?.referenceCurve} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : currentQuestion.type === 'wordcloud' ? (
-        <WordCloudDisplay
+        <WordCloudDisplay question={currentQuestion}
           words={showResults?(liveData?.words||revealData?.wordCloudWords||wordCloudWords):[]}
           totalResponses={showResults?(liveData?.words||revealData?.wordCloudWords||wordCloudWords).length:0} hidden={!showResults}
         />

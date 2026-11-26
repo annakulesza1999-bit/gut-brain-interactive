@@ -14,15 +14,25 @@ function Control({label,value,min,max,onChange,disabled}){
 function Metric({label,value}){return <div className="rounded-xl border border-slate-800 bg-slate-950 p-3"><p className="text-xs text-slate-400">{label}</p><p className="text-xl font-mono">{value}</p></div>;}
 function AppraisalView({value}){
  const {resources,gap}=appraisalMetrics(value);
+ const angle=Math.max(-24,Math.min(24,-gap*2.5)),rad=angle*Math.PI/180;
+ const red='#B84444',green='#367B51',black='#171717';
+ function pan(offset,amount,color,side){
+  const x=170+offset*Math.cos(rad),y=64+offset*Math.sin(rad),bottom=y+60;
+  const blocks=Array.from({length:Math.ceil(amount)},(_,i)=>Math.min(1,amount-i));
+  return <g data-balance-pan={side}>
+   <path data-balance-string="true" d={'M'+x+' '+y+' L'+(x-32)+' '+bottom+' M'+x+' '+y+' L'+(x+32)+' '+bottom} fill="none" stroke={black} strokeWidth="1.8" strokeLinecap="round"/>
+   {blocks.map((fraction,i)=><rect key={i} data-balance-brick={side} x={x-25} y={bottom-3-i*5.2-fraction*5.2} width="50" height={Math.max(.4,fraction*5.2-.55)} rx=".65" fill={color}/>)}
+   <path data-balance-platform="true" d={'M'+(x-36)+' '+bottom+' H'+(x+36)} stroke={black} strokeWidth="4.5" strokeLinecap="round"/>
+  </g>;
+ }
  return <div className="space-y-3">
- <svg viewBox="0 0 340 164" className="w-full" role="img" aria-label="Conceptual demand and resource balance">
- <path d="M170 68 L137 149 H203Z" fill="#C5D3DE"/>
- <g transform={'rotate('+Math.max(-24,Math.min(24,-gap*2.5))+' 170 68)'}>
- <path d="M48 68 H292" stroke="#032138" strokeWidth="3" strokeLinecap="round"/>
- <path d="M67 68 L42 123 H92Z M273 68 L248 123 H298Z" fill="none" stroke="#005C99" strokeWidth="1.2"/>
- <rect x="36" y={123-value.demand*5} width="62" height={value.demand*5} rx="3" fill="#FFDC4C"/>
- <rect x="242" y={123-resources*5} width="62" height={resources*5} rx="3" fill="#005C99"/>
- </g><g fontSize="11" textAnchor="middle"><text x="66" y="160" fill="#735E00">Demands</text><text x="273" y="160" fill="#005C99">Resources</text></g>
+ <svg viewBox="0 0 340 190" className="w-full" role="img" aria-label="Conceptual demand and resource balance">
+ <path d="M170 64 L143 169 H197Z" fill="#171717"/>
+ <path d="M129 169 H211" stroke={black} strokeWidth="6" strokeLinecap="round"/>
+ <path d="M58 64 H282" transform={'rotate('+angle+' 170 64)'} stroke={black} strokeWidth="4.5" strokeLinecap="round"/>
+ {pan(-100,value.demand,red,'demand')}{pan(100,resources,green,'resources')}
+ <circle cx="170" cy="64" r="4" fill="white" stroke={black} strokeWidth="2"/>
+ <g fontSize="12" fontWeight="600" textAnchor="middle"><text x="70" y="185" fill={red}>Demands</text><text x="270" y="185" fill={green}>Resources</text></g>
  </svg>
  <div className="grid grid-cols-2 gap-2"><Metric label="Perceived demand" value={fmt(value.demand,0)}/><Metric label="Illustrative resource index" value={fmt(resources,1)}/></div>
  <p className="text-sm font-medium">{gap>2?'Demands exceed the illustrated resources.':gap< -2?'Illustrated resources exceed demands.':'Demands and illustrated resources are relatively balanced.'}</p>

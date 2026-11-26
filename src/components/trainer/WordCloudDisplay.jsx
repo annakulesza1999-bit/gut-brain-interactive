@@ -1,10 +1,22 @@
 import React,{useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
+import {openResponses} from '../../activities.js';
 import {wordFrequencies,fitCloudWords,cloudPageSize,wordColor} from '../../wordCloudLayout.js';
 
 const graphicStyle={aspectRatio:'900 / 460',minHeight:240,width:'100%',maxWidth:960,marginInline:'auto',boxSizing:'border-box'};
 const fontFamily='"Source Sans 3", Arial, sans-serif';
 
-export default function WordCloudDisplay({words=[],totalResponses=0,hidden=false}){
+export default function WordCloudDisplay(props){
+ return openResponses(props.question)?<OpenResponseDisplay {...props}/>:<FrequencyCloud {...props}/>;
+}
+function OpenResponseDisplay({words=[],hidden=false}){
+ const entries=hidden?[]:words.map(x=>typeof x==='string'?x:x?.text).filter(x=>typeof x==='string'&&x.trim());
+ return <section className="gm-open-response-panel">
+ <div className="gm-open-response-meta"><span>Open-ended responses</span><span>{hidden?'Waiting for reveal':entries.length+' responses'}</span></div>
+ {entries.length?<div className="gm-open-response-scroll" role="region" aria-label="Open-ended responses" tabIndex={0}><ul className="gm-open-response-grid">{entries.map((text,i)=><li data-open-response="true" key={i}>{text}</li>)}</ul></div>:<div className="gm-open-response-empty">{hidden?'Responses are hidden':'Responses will appear here as participants submit them.'}</div>}
+ <p className="gm-open-response-hint">{!hidden&&entries.length?'Scroll within the responses to see more.':' '}</p>
+ </section>;
+}
+function FrequencyCloud({words=[],totalResponses=0,hidden=false}){
  const stats=useMemo(()=>wordFrequencies(words),[words]);
  const [page,setPage]=useState(0),[view,setView]=useState('cloud'),[fontVersion,setFontVersion]=useState(0);
  const graphic=useRef(null),[dimensions,setDimensions]=useState({width:900,height:460});

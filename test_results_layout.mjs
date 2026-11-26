@@ -38,6 +38,8 @@ test('audience layout regression with fourteen demo responses, live and revealed
   questions[1].sequenceArtwork={body:media.portrait,brain:media.wide,layout:'vascular-v2'};
   questions.push({...questions[1],id:questions.length+1,question:'Synthetic complete HPA loop',beforePreset:'cortisol',afterPreset:'feedback',sequenceStep:5});
   questions.push({type:'text',id:questions.length+1,question:'Social appraisal fixture',body:'**Two interpretations:**\n~ *Same audience behavior, different appraisals.*',revealMode:'all',options:[],correctAnswer:null,timerSeconds:0,slideSources:'Synthetic fixture'});
+  questions.push({type:'wordcloud',wordcloudMode:'open',id:questions.length+1,question:'Open-ended interpretation fixture',options:[],correctAnswer:null,timerSeconds:0});
+  questions.push({type:'text',id:questions.length+1,question:'Example text fixture',body:'**Acute stress:**\n~ Example: giving a presentation.\n**Chronic stress:**\n~ Example: months of ongoing work pressure.\n~ Measurements: salivary cortisol, blood (BDNF, serum SCFAs) and stool (fecal SCFAs)',revealMode:'all',options:[],correctAnswer:null,timerSeconds:0,slideSources:'Synthetic fixture'});
   const fixtures=[
    {question:'Wide findings: compare three original-sized panels',body:'**Main association:** a fictional finding, not measured data.\n~ Group A: n = 35 | Group B: n = 39',figureLayout:'wide',revealMode:'all',textImages:[{media:media.wide,alt:'Wide geometry fixture'}]},
    {question:'Study design and sample: wide timeline and compact QR',body:'@ **Sample:** fictional participants, 18-35 years; initial N = 80\n@ **Groups:** A n = 35 | B n = 39\n**Sampling:** salivary and microbiome measurements\n**Behavioral data:** subjective ratings and a representative questionnaire\n**Microbiome:** composition and hypothetical functional measures',figureLayout:'wide',revealMode:'all',textImages:[{media:media.timeline,alt:'Timeline geometry fixture'},{media:media.qr,alt:'QR geometry fixture',role:'qr'}]},
@@ -77,10 +79,10 @@ test('audience layout regression with fourteen demo responses, live and revealed
    await nav.locator('button').nth(i).click();
    if(q.type==='text'&&!q.textImages?.length){
     const muted=stage.locator('.gm-muted-line');
-    await muted.waitFor();
+    await muted.first().waitFor();
     await fit(name+' muted line');
-    const m=await muted.evaluate(el=>({display:getComputedStyle(el).display,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,line:getComputedStyle(el).lineHeight,scale:el.closest('.gm-slide-canvas').getBoundingClientRect().width/1280}));
-    assert.equal(m.display,'block');assert.ok(m.height/m.scale<=parseFloat(m.line)*1.15,name+' muted text wraps '+JSON.stringify(m));
+    for(const line of await muted.all()){const m=await line.evaluate(el=>({display:getComputedStyle(el).display,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,line:getComputedStyle(el).lineHeight,scale:el.closest('.gm-slide-canvas').getBoundingClientRect().width/1280}));
+    assert.equal(m.display,'block');assert.ok(m.height/m.scale<=parseFloat(m.line)*1.15,name+' muted text wraps '+JSON.stringify(m));}
     continue;
    }
    if(q.type==='text'){
@@ -133,6 +135,17 @@ test('audience layout regression with fourteen demo responses, live and revealed
    }
 
    if(q.simMode!=='explore'){await page.getByRole('button',{name:'Add demo responses'}).click();await page.getByRole('status').filter({hasText:'14/15 completed'}).waitFor();}
+   if(q.type==='wordcloud'&&q.wordcloudMode==='open'){
+    const phoneToggle=page.getByRole('button',{name:'Student phone',exact:true});if(await phoneToggle.getAttribute('aria-pressed')!=='true')await phoneToggle.click();
+    const phone=page.frameLocator('iframe[title="Student phone preview"]'),input=phone.getByPlaceholder('Type your response…');const sentence='They might be discussing something completely unrelated to my presentation.';
+    await input.fill(sentence);await input.press('Enter');await phone.getByText(sentence,{exact:true}).waitFor();await stage.getByText(sentence,{exact:true}).waitFor();
+    await input.fill(sentence);await input.press('Enter');await stage.getByText('16 responses',{exact:true}).waitFor();
+    assert.equal(await stage.getByText(sentence,{exact:true}).count(),2);assert.equal(await stage.locator('[data-open-response]').count(),16);
+    await phoneToggle.click();await page.getByRole('button',{name:'Full screen',exact:true}).click();await page.waitForFunction(()=>!!document.fullscreenElement);await fit(name+' live');
+    const region=stage.getByRole('region',{name:'Open-ended responses'});assert.ok(await region.evaluate(el=>{el.scrollTop=el.scrollHeight;return el.scrollHeight>el.clientHeight&&el.scrollTop>0;}));
+    await page.locator('.gm-fullscreen-controls').getByRole('button',{name:'Reveal results'}).click();await fit(name+' revealed');assert.equal(await stage.locator('[data-open-response]').count(),16);await page.screenshot({path:out+'/open-ended.png'});
+    await page.getByRole('button',{name:'Exit full screen'}).click();await page.waitForFunction(()=>!document.fullscreenElement);continue;
+   }
    if(q.type==='wordcloud'){
     await cloudFit(name+' normal live',11);
     // Rehearsal opens with the phone visible; the initial toggle hid it for the audience tests.
@@ -155,6 +168,9 @@ test('audience layout regression with fourteen demo responses, live and revealed
    }
    await page.getByRole('button',{name:'Full screen',exact:true}).click();await page.waitForFunction(()=>!!document.fullscreenElement);
    await fit(name+' live');
+   if(q.type==='simulation'&&q.simMode==='explore'&&q.simKind==='appraisal'){
+    const scale=stage.getByRole('img',{name:'Conceptual demand and resource balance'});assert.equal(await scale.locator('[data-balance-platform]').count(),2);assert.equal(await scale.locator('[data-balance-string][stroke="#171717"]').count(),2);assert.equal(await scale.locator('[data-balance-brick="demand"]').count(),8);await stage.getByRole('slider',{name:'Perceived demands'}).fill('10');assert.equal(await scale.locator('[data-balance-brick="demand"]').count(),10);await stage.getByRole('slider',{name:'Perceived demands'}).fill('0');assert.equal(await scale.locator('[data-balance-brick="demand"]').count(),0);await stage.getByRole('slider',{name:'Perceived demands'}).fill('8');
+   }
    if(q.type==='sequence'){assert.equal(await stage.locator('[data-hpa-art]').count(),2);assert.equal(await stage.locator('[data-vessel="artery"]').count(),6);assert.equal(await stage.locator('[data-vessel="vein"]').count(),6);assert.equal(await stage.locator('[data-hpa-pituitary]').count(),1);if(q.beforePreset==='threat')assert.equal(await stage.locator('[data-hpa-signal]').count(),0);}
    if(q.type==='wordcloud')await cloudFit(name+' full screen live',15);
    if(q.simMode!=='explore'){await page.locator('.gm-fullscreen-controls').getByRole('button',{name:'Reveal results'}).click();await fit(name+' revealed');if(q.type==='sequence'){assert.equal(await stage.locator('[data-hpa-art]').count(),2);assert.ok(await stage.locator('[data-hpa-signal] animateMotion').count()>0);if(q.afterPreset==='feedback'){for(const kind of ['crh','acth','cortisol','feedback'])assert.ok(await stage.locator('[data-hpa-signal="'+kind+'"] animateMotion').count()>0,kind+' missing');assert.equal(await stage.locator('[data-hpa-inhibition] circle').count(),2);const colors=await stage.evaluate(s=>['cortisol','feedback'].map(k=>s.querySelector('[data-hpa-signal="'+k+'"] circle')?.getAttribute('fill')));assert.equal(colors[0],colors[1],'cortisol and feedback must share a color');await page.screenshot({path:out+'/hpa-complete-loop.png'});}}}

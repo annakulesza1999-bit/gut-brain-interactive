@@ -130,3 +130,7 @@
 .gm-audience-content .gm-figure-wide.gm-wide-medium .gm-annotated-figure{max-height:350px}
 .gm-audience-content .gm-figure-wide.gm-wide-dense .gm-annotated-figure{max-height:300px}
 @media(prefers-reduced-motion:reduce){.gm-hpa-artwork animateMotion{display:none}}
+
+.gm-audience-content .gm-open-response-scroll{height:460px;max-height:460px}
+.gm-audience-content .gm-text-slide .gm-slide-bullets li.gm-muted-line{display:block;min-width:0;font-size:20px;line-height:1.22}
+.gm-audience-content .gm-text-slide .gm-slide-bullets li.gm-muted-line>span{display:inline}

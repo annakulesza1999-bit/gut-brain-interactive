@@ -1025,13 +1025,13 @@ io.on('connection', (socket) => {
   // Live Word Cloud Submission
   const handleWordCloudSubmit = ({ sessionCode, word, questionIndex, participantPhone }, callback) => {
     const session = sessions.get(sessionCode);
-    if (!session || typeof word!=='string' || !word.trim() || word.trim().length>35 || session.questionState!=='active' || session.status!=='running') return callback && callback({ success: false });
+    if (!session || typeof word!=='string' || !word.trim() || word.trim().length>250 || session.questionState!=='active' || session.status!=='running') return callback && callback({ success: false });
     const participant=session.participants.find(p=>p.socketId===socket.id&&p.connected);
     if(!participant)return callback&&callback({success:false});
 
     if (!session.wordCloudSubmissions) session.wordCloudSubmissions = {};
     const qIdx = questionIndex !== undefined ? questionIndex : session.currentQuestionIndex;
-    if(qIdx!==session.currentQuestionIndex || session.questions[qIdx]?.type!=='wordcloud')return callback&&callback({success:false});
+    if(qIdx!==session.currentQuestionIndex || session.questions[qIdx]?.type!=='wordcloud'||word.trim().length>(session.questions[qIdx].wordcloudMode==='open'?250:35))return callback&&callback({success:false});
 
     if (!session.wordCloudSubmissions[qIdx]) {
       session.wordCloudSubmissions[qIdx] = [];

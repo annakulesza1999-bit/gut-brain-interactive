@@ -1,5 +1,5 @@
 // Rehearsal state is ephemeral, never written into the saved presentation.
-import {activityDuration,initialTextCount,textLines,publicActivity,curveIdentity,normalizeCurve,reactionSummary,curveReference} from './activities.js';
+import {activityDuration,initialTextCount,textLines,publicActivity,curveIdentity,normalizeCurve,reactionSummary,curveReference,openResponses,wordResponseLimit} from './activities.js';
 import {normalizePoint,normalizeMatch,scoreMap,scoreMatch,matchKey} from './spatialActivities.js';
 import {normalizeSimulation,defaultResponse,isExploreSimulation} from './simulations.js';
 import {normalizeResearchResponse,normalizeResearch,scoreResearch,revealResearch} from './researchActivities.js';
@@ -42,7 +42,7 @@ export function sampleResponses(q){
   case 'matching':{const k=matchKey(q);response=i%3===0?k.slice(1).concat(k.slice(0,1)):k;break;}
   case 'simulation':{response=defaultResponse(q.simKind);if(q.simKind==='appraisal')response={demand:i%8+3,control:i%7+2,support:i%6+3,prepared:i%8+1};if(q.simKind==='recovery')response={frequency:i%9+1,recovery:(i*17)%101};if(q.simKind==='microbiome')response={microbes:response.microbes.map((x,j)=>j<i%8?i%6:x)};break;}
   case 'research':{const r=normalizeResearch(q),n=r.researchKind==='prediction'?1:r.researchClaims.length,limit=r.researchKind==='prediction'?r.researchOptions.length:2;response={answers:Array.from({length:n},(_,k)=>(i+k)%Math.max(1,limit)),confidence:r.researchConfidence?Array.from({length:n},(_,k)=>50+((i+k)*10)%51):[]};break;}
-  case 'wordcloud':return {i,response:['stress','recovery','appraisal','support','stress','coping','sleep','perceived control','stress','social support','gut symptoms','uncertainty','recovery','attention'][j]};
+  case 'wordcloud':if(openResponses(q))return {i,response:['They could be discussing something unrelated.','Maybe they found a joke funny.','They might be reacting to my presentation.','Perhaps they are nervous too.','They may be laughing at a message.','They might have a question.','I cannot know what they are thinking.','They could be encouraging one another.','Maybe they did not understand a point.','They might be distracted.','They could be planning something.','They may be sharing an observation.','They could be laughing at a message.','Maybe nothing to do with me.'][j]};return {i,response:['stress','recovery','appraisal','support','stress','coping','sleep','perceived control','stress','social support','gut symptoms','uncertainty','recovery','attention'][j]};
   default:response=i%Math.max(1,q.options?.length||0);
   }
   return {i,response:normalizePreviewResponse(q,response)};
@@ -59,7 +59,7 @@ export function previewReducer(deck,state,action){
  case 'reset':return startSlide(deck,state.index,state.visit+1);
  case 'samples':if(isExploreSimulation(q))return state;return {...state,samples:state.samples.length?[]:sampleResponses(q)};
  case 'answer':{if(isExploreSimulation(q)||action.visit!==state.visit||state.paused||state.revealed||state.response!==null)return state;const response=normalizePreviewResponse(q,action.response);return response===null?state:{...state,response};}
- case 'word':return action.visit===state.visit&&q.type==='wordcloud'&&!state.paused&&!state.revealed&&typeof action.word==='string'&&action.word.trim()&&state.words.length<10?{...state,words:[...state.words,action.word.trim().slice(0,35)]}:state;
+ case 'word':return action.visit===state.visit&&q.type==='wordcloud'&&!state.paused&&!state.revealed&&typeof action.word==='string'&&action.word.trim()&&state.words.length<10?{...state,words:[...state.words,action.word.trim().slice(0,wordResponseLimit(q))]}:state;
  case 'reaction':return action.visit===state.visit&&['👍','👎','❤️','👏','💡','🎉'].includes(action.emoji)?{...state,thumb:['👍','👎'].includes(action.emoji)?action.emoji:state.thumb,reactions:[...state.reactions.slice(-5),{id:action.id,emoji:action.emoji}]}:state;
  case 'resetThumbs':return {...state,thumb:'',reactions:[]};
  case 'qa':return action.visit===state.visit&&typeof action.text==='string'&&action.text.trim()&&state.qa.length<20?{...state,qa:[...state.qa,{id:action.id,text:action.text.trim().slice(0,500),authorName:'Anonymous',timestamp:action.timestamp,upvotes:0,answered:false}]}:state;

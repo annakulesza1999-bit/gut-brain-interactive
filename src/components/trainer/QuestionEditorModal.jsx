@@ -524,8 +524,8 @@ export default function QuestionEditorModal({
                 <div className="p-4 rounded-2xl bg-sky-950/30 border border-sky-500/30 text-xs text-sky-200 flex items-start gap-3">
                   <Cloud className="w-5 h-5 text-sky-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-white block mb-1">Live Word Cloud Mode</strong>
-                    Participants will see an input field on their phone to submit 1-3 words. The presenter screen dynamically animates the crowd submissions into a live word cloud with font sizes scaled to frequency.
+                    <label className="block text-sm">Response display<select aria-label="Response display" className="block w-full mt-2 p-2 rounded-lg border border-slate-700 bg-slate-950" value={currentQ.wordcloudMode==='open'?'open':'cloud'} onChange={e=>handleUpdateCurrentQ('wordcloudMode',e.target.value)}><option value="cloud">Word cloud</option><option value="open">Open-ended responses</option></select></label>
+                    <p className="mt-2">{currentQ.wordcloudMode==='open'?'Individual responses appear in scrollable cards, without combining duplicates.':'Words are sized by frequency in a live word cloud.'}</p>
                   </div>
                 </div>
               )}
