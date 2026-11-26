@@ -24,3 +24,27 @@ test('media permits bounded image data only',()=>{
  assert.equal(safeMedia('data:image/svg+xml;base64,YQ=='),'');
  assert.equal(safeMedia('data:image/gif;base64,YQ=='),'data:image/gif;base64,YQ==');
 });
+
+import { timerSeconds, activityDuration, initialTextCount, textLines, reactionSummary } from './src/activities.js';
+test('countdown supports session inheritance, zero and custom durations',()=>{
+ assert.equal(timerSeconds(0),0);
+ assert.equal(activityDuration({type:'curve'},75),75);
+ assert.equal(activityDuration({type:'sequence',timerSeconds:45},30),45);
+ assert.equal(activityDuration({type:'curve',timerSeconds:0},30),0);
+ assert.equal(activityDuration({type:'text',timerSeconds:45},30),0);
+ assert.equal(timerSeconds(9999),3600);
+});
+test('text reveal sends only visible lines to participant',()=>{
+ const q={type:'text',body:'First\n\nSecond\nThird',revealMode:'step'};
+ assert.equal(initialTextCount(q),0);
+ assert.deepEqual(textLines(q),['First','Second','Third']);
+ assert.deepEqual(publicActivity(q,1).visibleLines,['First']);
+ assert.equal(publicActivity(q,1).body,undefined);
+ assert.equal(publicActivity(q,1).textTotal,3);
+ assert.equal(initialTextCount({...q,revealMode:'all'}),3);
+});
+test('latest thumb reaction counts once per participant',()=>{
+ const votes={a:'👍',b:'👎'};
+ votes.a='👍';assert.deepEqual(reactionSummary(votes),{up:1,down:1});
+ votes.a='👎';assert.deepEqual(reactionSummary(votes),{up:0,down:2});
+});

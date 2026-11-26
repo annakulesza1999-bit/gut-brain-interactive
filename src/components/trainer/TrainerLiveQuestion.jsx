@@ -9,7 +9,6 @@ import TimerDisplay from '../common/TimerDisplay';
 import TrainerDistribution from './TrainerDistribution';
 import TrainerLeaderboard from './TrainerLeaderboard';
 import WordCloudDisplay from './WordCloudDisplay';
-import FloatingReactions from '../common/FloatingReactions';
 import QAModal from '../common/QAModal';
 import { soundFX } from '../../services/soundEffects';
 import { QRCodeSVG } from 'qrcode.react';
@@ -94,7 +93,7 @@ export default function TrainerLiveQuestion() {
   React.useEffect(() => {
     const handleKeyDown = (e) => {
       // Don't intercept if typing in an input
-      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(e.target.tagName) || e.target.isContentEditable) return;
 
       if (e.key === ' ' || e.key === 'ArrowRight') {
         e.preventDefault();

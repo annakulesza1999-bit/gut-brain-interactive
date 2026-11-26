@@ -3,6 +3,8 @@ import { socket } from '../../services/socket';
 import { soundEngine } from '../../services/soundEffects';
 
 const EMOJI_OPTIONS = [
+  { emoji: '👍', label: 'Thumbs up' },
+  { emoji: '👎', label: 'Thumbs down' },
   { emoji: '❤️', label: 'Love' },
   { emoji: '🔥', label: 'Fire' },
   { emoji: '👏', label: 'Clap' },

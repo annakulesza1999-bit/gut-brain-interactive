@@ -14,9 +14,8 @@ export default function WordCloudInput({ question }) {
     if (!cleanWord || isSubmitting) return;
 
     setIsSubmitting(true);
-    await submitWordCloud(cleanWord);
-    setSubmittedWords(prev => [...prev, cleanWord]);
-    setWord('');
+    const ok=await submitWordCloud(cleanWord);
+    if(ok){setSubmittedWords(prev => [...prev, cleanWord]);setWord('');}
     setIsSubmitting(false);
   };
 

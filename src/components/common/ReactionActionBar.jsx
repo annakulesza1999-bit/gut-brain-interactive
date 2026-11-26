@@ -3,7 +3,7 @@ import { useQuiz } from '../../context/QuizContext';
 import { MessageSquare, Volume2, VolumeX } from 'lucide-react';
 import { soundFX } from '../../services/soundEffects';
 
-const EMOJIS = ['❤️', '👍', '🔥', '👏', '💡', '🎉'];
+const EMOJIS = ['👍', '👎', '❤️', '👏', '💡', '🎉'];
 
 export default function ReactionActionBar({ onOpenQA, qaCount = 0 }) {
   const { sendReaction } = useQuiz();
@@ -11,6 +11,7 @@ export default function ReactionActionBar({ onOpenQA, qaCount = 0 }) {
   const [isMuted, setIsMuted] = useState(() => soundFX.isMuted());
 
   const handleEmojiClick = (emoji) => {
+    if(clickedEmoji)return;
     sendReaction(emoji);
     soundFX.playPop();
     setClickedEmoji(emoji);
@@ -32,7 +33,8 @@ export default function ReactionActionBar({ onOpenQA, qaCount = 0 }) {
               key={emoji}
               onClick={() => handleEmojiClick(emoji)}
               type="button"
-              aria-label={`React with ${emoji}`}
+              aria-label={emoji==='👍'?'Thumbs up':emoji==='👎'?'Thumbs down':`React with ${emoji}`}
+              title={emoji==='👍'?'Thumbs up':emoji==='👎'?'Thumbs down':`React with ${emoji}`}
               className={`text-xl sm:text-2xl p-1.5 rounded-full hover:bg-slate-800 active:scale-125 transition-transform duration-150 ${
                 clickedEmoji === emoji ? 'scale-125 bg-blue-600/30' : ''
               }`}
