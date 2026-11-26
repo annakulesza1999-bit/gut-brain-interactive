@@ -7,7 +7,7 @@ import {simSpec,defaultResponse} from '../../simulations.js';
 import React, { useState, useEffect, useRef } from 'react';
 import {MapEditor,MatchingEditor} from '../common/SpatialActivity';
 import {defaultPairs} from '../../spatialActivities.js';
-import { hpaStages, safeMedia } from '../../activities.js';
+import { hpaStages, safeMedia, safeTextImages } from '../../activities.js';
 import { 
   Plus, 
   Trash2, 
@@ -403,9 +403,21 @@ export default function QuestionEditorModal({
               {currentQ.type==='simulation'&&<SimulationEditor question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>}
               {currentQ.type==='pointmap'&&<MapEditor key={currentQ.id} question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>}
               {currentQ.type==='matching'&&<MatchingEditor question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>}
+              <section className="p-4 border border-slate-800 rounded-2xl space-y-2">
+                <h3 className="font-semibold">Presenter notes</h3>
+                {currentQ.sourceSlide&&<p className="text-xs text-slate-400">Original slide reference: {currentQ.sourceSlide} · {currentQ.contentOrigin||'Imported slide'}</p>}
+                <label className="block text-sm">Private speaker notes<textarea rows={3} className="block w-full mt-1 p-2 rounded-lg border border-slate-700 bg-slate-950" value={currentQ.sourceNotes||''} onChange={ev=>handleUpdateCurrentQ('sourceNotes',ev.target.value)}/></label>
+                <p className="text-xs text-slate-400">Notes stay in the presentation backup and are not sent to participant screens.</p>
+              </section>
               {currentQ.type==='text'&&<section className="p-4 border border-slate-800 rounded-2xl space-y-3">
                 <label className="block text-sm">Slide content (one revealable point per line)<textarea rows={7} className="block w-full mt-1 p-3 border border-slate-700 bg-slate-950 rounded-lg" value={currentQ.body||''} onChange={ev=>handleUpdateCurrentQ('body',ev.target.value)}/></label>
                 <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={currentQ.revealMode==='step'} onChange={ev=>handleUpdateCurrentQ('revealMode',ev.target.checked?'step':'all')}/> Reveal one line per click</label>
+                <div className="space-y-3 border-t border-slate-800 pt-3">
+                  <h3 className="font-semibold">Slide figures</h3>
+                  <p className="text-xs text-slate-400">Up to four images or GIFs, visible throughout the slide. Images and alt text are saved in your backup.</p>
+                  {safeTextImages(currentQ.textImages).map((image,i)=><div key={i} className="space-y-2 border border-slate-800 rounded-xl p-3"><img src={image.media} alt={image.alt||'Slide figure '+(i+1)} className="max-h-44 max-w-full object-contain bg-white rounded-lg"/><label className="block text-xs">Figure description<input className="block w-full mt-1 p-2 border border-slate-700 bg-slate-950 rounded-lg" value={image.alt} onChange={ev=>handleUpdateCurrentQ('textImages',safeTextImages(currentQ.textImages).map((x,j)=>j===i?{...x,alt:ev.target.value}:x))}/></label><button type="button" className="text-xs underline" onClick={()=>handleUpdateCurrentQ('textImages',safeTextImages(currentQ.textImages).filter((_,j)=>i!==j))}>Remove figure {i+1}</button></div>)}
+                  {safeTextImages(currentQ.textImages).length<4&&<label className="block text-xs font-medium">Add slide figure<input type="file" aria-label="Add slide figure" accept="image/png,image/jpeg,image/gif,image/webp" className="block w-full mt-1" onChange={ev=>{const file=ev.target.files?.[0];ev.target.value='';if(!file)return;if(file.size>350000){alert('Choose an image under 350 KB.');return;}const id=currentQ.id,reader=new FileReader();reader.onload=()=>{const media=safeMedia(reader.result);if(!media){alert('Unsupported image.');return;}setQuestions(prev=>prev.map(q=>q.id===id?{...q,textImages:[...safeTextImages(q.textImages),{media,alt:file.name}].slice(0,4)}:q));};reader.readAsDataURL(file);}}/></label>}
+                </div>
                 <p className="text-xs text-slate-400">The title stays visible. Click Reveal next line or press Space/Right Arrow. Student screens follow the presenter.</p>
               </section>}
               {currentQ.type === 'curve' && <section className="p-4 border border-slate-800 rounded-2xl space-y-3">

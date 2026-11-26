@@ -48,3 +48,6 @@ test('latest thumb reaction counts once per participant',()=>{
  votes.a='👍';assert.deepEqual(reactionSummary(votes),{up:1,down:1});
  votes.a='👎';assert.deepEqual(reactionSummary(votes),{up:0,down:2});
 });
+
+import {safeTextImages} from './src/activities.js';
+test('text figures are bounded and notes remain private',()=>{const good='data:image/png;base64,YQ==';const q={type:'text',body:'Hello',sourceNotes:'private',textImages:[{media:good,alt:'Figure'},{media:'https://example.com/image.png',alt:'external'}]};assert.deepEqual(safeTextImages(q.textImages),[{media:good,alt:'Figure'}]);assert.equal(publicActivity(q).sourceNotes,undefined);assert.deepEqual(publicActivity(q).textImages,[{media:good,alt:'Figure'}]);});

@@ -16,3 +16,5 @@ The 3D anatomy model is bundled for offline use. See atlas/ATLAS-LICENSE.md. If 
 Only download this preview from the successful GitHub Actions run in your own repository. Do not use the inherited original executable.
 
 REHEARSE: Open a saved practice deck, click Present (or Preview next to a slide). Use Student phone to answer from a 390px embedded responsive view, then Reveal results. Demo responses are generated, not real students; Reset slide clears the rehearsal. Use Edit current slide to return to the editor. No rehearsal responses are written to the deck. A physical phone cannot join the loopback-only server; network testing remains disabled.
+
+IMPORT YOUR FULL PRESENTATION: In My presentations choose Import backup or questions, select the supplied .gutmind.json file, then Edit slides or Present. Text slide figures and private speaker notes are supported. Original PowerPoint videos are not embedded in this preview.
