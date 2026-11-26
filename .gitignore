@@ -48,3 +48,5 @@ config.bat
 /server/db.json
 
 /dist-preview/
+
+/src/fonts/
