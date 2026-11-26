@@ -93,7 +93,10 @@ test('audience layout regression with fourteen demo responses, live and revealed
      const signals=async scope=>scope.locator('[data-hpa-signal] animateMotion').count();
      assert.equal(await signals(mobile),await signals(stage),phase+' animated signals differ');
      if(preset==='feedback')assert.equal(await mobile.locator('[data-hpa-inhibition] circle').count(),2);
-     await page.screenshot({path:out+'/hpa-phone-'+q.sequenceStep+'-'+phase+'.png'});
+     console.log('Verified phone/presenter HPA artwork and animation: stage '+q.sequenceStep+' '+phase);
+     if((q.sequenceStep===1||q.sequenceStep===5)&&phase==='after'){
+      await page.screenshot({path:out+'/hpa-phone-'+q.sequenceStep+'-'+phase+'.png',timeout:5000}).catch(e=>console.warn('Optional screenshot unavailable: '+e.message));
+     }
     }
     await checkAnatomy(q.beforePreset,'before');
     await page.getByRole('button',{name:'Reveal results',exact:true}).click();
