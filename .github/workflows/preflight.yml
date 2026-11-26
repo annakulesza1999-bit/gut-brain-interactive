@@ -4,11 +4,14 @@ on:
     branches:
       - design/academic-minimalism
   workflow_dispatch:
+concurrency:
+  group: gut-mind-preflight-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
