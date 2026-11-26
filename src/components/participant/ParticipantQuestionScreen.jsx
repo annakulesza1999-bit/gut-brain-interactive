@@ -1,3 +1,4 @@
+import {SimulationInput} from '../common/SimulationActivity';
 import React, { useState } from 'react';
 import {SpatialInput} from '../common/SpatialActivity';
 import TextSlide from '../common/TextSlide';
@@ -115,7 +116,7 @@ export default function ParticipantQuestionScreen() {
           </div>
         )}
 
-        {['pointmap','matching'].includes(currentQuestion.type)? <SpatialInput key={currentQuestionIndex} question={currentQuestion}/> : currentQuestion.type === 'text' ? <TextSlide question={currentQuestion}/> : currentQuestion.type === 'curve' ? <CurveInput key={currentQuestionIndex} question={currentQuestion}/> : currentQuestion.type === 'wordcloud' ? (
+        {currentQuestion.type==='simulation'?<SimulationInput key={currentQuestionIndex} question={currentQuestion}/> : ['pointmap','matching'].includes(currentQuestion.type)? <SpatialInput key={currentQuestionIndex} question={currentQuestion}/> : currentQuestion.type === 'text' ? <TextSlide question={currentQuestion}/> : currentQuestion.type === 'curve' ? <CurveInput key={currentQuestionIndex} question={currentQuestion}/> : currentQuestion.type === 'wordcloud' ? (
           <WordCloudInput question={currentQuestion} />
         ) : (
           <>
@@ -178,7 +179,7 @@ export default function ParticipantQuestionScreen() {
       </div>
 
       {/* Answer Submitted Sticky Feedback */}
-      {isAnswerSubmitted && !['wordcloud','curve','text','pointmap','matching'].includes(currentQuestion.type) && (
+      {isAnswerSubmitted && !['wordcloud','curve','text','pointmap','matching','simulation'].includes(currentQuestion.type) && (
         <div className="mt-6 mb-16 p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-200 flex items-center justify-center gap-2.5 animate-slide-up shadow-xl">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
           <span className="font-extrabold text-xs sm:text-sm">

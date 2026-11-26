@@ -12,6 +12,8 @@ import { curveIdentity, normalizeCurve, publicActivity, safeMedia, timerSeconds,
 
 import {normalizePoint,scoreMap,normalizeMatch,scoreMatch,matchKey,validPairs,validTarget} from '../src/spatialActivities.js';
 
+import {SIM_KINDS,normalizeSimulation,simulationConfig} from '../src/simulations.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -66,7 +68,7 @@ const sessions = new Map();
 function completionCount(session, index=session.currentQuestionIndex) {
  const q=session.questions[index];
  if(q?.type==='text')return 0;
- if(['pointmap','matching'].includes(q?.type))return (session.spatialSubmissions?.[index]||[]).length;
+ if(['pointmap','matching','simulation'].includes(q?.type))return (session.spatialSubmissions?.[index]||[]).length;
  if(q?.type==='curve')return (session.curveSubmissions?.[index]||[]).length;
  if(q?.type==='wordcloud')return new Set((session.wordCloudSubmissions?.[index]||[]).map(x=>x.participantId).filter(Boolean)).size;
  return session.participants.filter(p=>p.answers[index]!==undefined).length;
@@ -75,7 +77,7 @@ function completionPayload(session) {return {questionIndex:session.currentQuesti
 function textState(session){const q=session.questions[session.currentQuestionIndex];return {questionIndex:session.currentQuestionIndex,visibleLines:textLines(q).slice(0,session.textVisible||0),textTotal:textLines(q).length};}
 function broadcastText(session){io.to(session.code).emit('text_reveal_updated',textState(session));}
 function thumbsState(session){return {questionIndex:session.currentQuestionIndex,...reactionSummary(session.thumbVotes)};}
-function spatialResults(session,index=session.currentQuestionIndex){const q=session.questions[index];if(!['pointmap','matching'].includes(q?.type))return {};const entries=session.spatialSubmissions?.[index]||[];return q.type==='pointmap'?{mapResults:entries.map(({participantId,...r})=>r),mapTarget:q.mapGraded?q.mapTarget:undefined,mapRadius:q.mapGraded?q.mapRadius:undefined}:{matchResults:entries.map(({participantId,...r})=>r),matchKey:matchKey(q)};}
+function spatialResults(session,index=session.currentQuestionIndex){const q=session.questions[index];if(!['pointmap','matching','simulation'].includes(q?.type))return {};const entries=session.spatialSubmissions?.[index]||[];if(q.type==='simulation')return {simulationResults:entries.map(({participantId,label,color,response})=>({label,color,response}))};return q.type==='pointmap'?{mapResults:entries.map(({participantId,...r})=>r),mapTarget:q.mapGraded?q.mapTarget:undefined,mapRadius:q.mapGraded?q.mapRadius:undefined}:{matchResults:entries.map(({participantId,...r})=>r),matchKey:matchKey(q)};}
 function resetActivityUI(session){session.textVisible=initialTextCount(session.questions[session.currentQuestionIndex]);session.thumbVotes={};}
 
 
@@ -121,7 +123,7 @@ function calculateSessionAnalytics(session) {
       }
     });
 
-    if (['curve','wordcloud','text','pointmap','matching'].includes(q.type)) answeredCount = completionCount(session,qIndex);
+    if (['curve','wordcloud','text','pointmap','matching','simulation'].includes(q.type)) answeredCount = completionCount(session,qIndex);
     const notAnsweredCount = totalParticipants - answeredCount;
     const accuracyPct = totalParticipants > 0 ? Math.round((correctCount / totalParticipants) * 100) : 0;
     const avgResponseTimeMs = answeredCount > 0 ? Math.round(totalResponseTime / answeredCount) : 0;
@@ -143,7 +145,7 @@ function calculateSessionAnalytics(session) {
       answeredCount,
       notAnsweredCount,
       correctCount,
-      incorrectCount: (['curve','wordcloud','text'].includes(q.type)||(q.type==='pointmap'&&!q.mapGraded)) ? 0 : answeredCount - correctCount,
+      incorrectCount: (['curve','wordcloud','text','simulation'].includes(q.type)||(q.type==='pointmap'&&!q.mapGraded)) ? 0 : answeredCount - correctCount,
       type: q.type || 'mcq',
       accuracyPct,
       avgResponseTimeMs,
@@ -390,7 +392,7 @@ io.on('connection', (socket) => {
   socket.on('create_session', ({ trainerName, sessionCode, timerDuration = 30, speedBonusEnabled = true, showTopic = false, customQuestions = null }, callback) => {
     try {
       const code = (sessionCode || `DW-${Math.floor(1000 + Math.random() * 9000)}`).toUpperCase();
-      const questionSet = ((customQuestions && customQuestions.length > 0) ? customQuestions : defaultQuestions).map(q => ({...q, beforeMedia: safeMedia(q.beforeMedia), afterMedia: safeMedia(q.afterMedia),mapImage:safeMedia(q.mapImage)}));
+      const questionSet = ((customQuestions && customQuestions.length > 0) ? customQuestions : defaultQuestions).map(q => ({...q, beforeMedia: safeMedia(q.beforeMedia), afterMedia: safeMedia(q.afterMedia),mapImage:safeMedia(q.mapImage),...(q.type==='simulation'?simulationConfig(q):{})}));
 
       const newSession = {
         code,
@@ -795,7 +797,7 @@ io.on('connection', (socket) => {
     }
 
     const q = session.questions[questionIndex];
-    if (questionIndex !== session.currentQuestionIndex || !q || ['curve','text','wordcloud','pointmap','matching'].includes(q.type) || !Number.isInteger(selectedOption) || selectedOption < 0 || selectedOption >= (q.options?.length || 0)) return callback && callback({success:false,error:'Invalid or inactive question.'});
+    if (questionIndex !== session.currentQuestionIndex || !q || ['curve','text','wordcloud','pointmap','matching','simulation'].includes(q.type) || !Number.isInteger(selectedOption) || selectedOption < 0 || selectedOption >= (q.options?.length || 0)) return callback && callback({success:false,error:'Invalid or inactive question.'});
     const isCorrect = (selectedOption === q.correctAnswer);
 
     let basePoints = isCorrect ? 100 : 0;
@@ -855,12 +857,12 @@ io.on('connection', (socket) => {
     const session=sessions.get(sessionCode);
     if(!session||session.status!=='running'||session.questionState!=='active'||questionIndex!==session.currentQuestionIndex)return reply({success:false,error:'This activity is closed.'});
     const q=session.questions[questionIndex],index=session.participants.findIndex(p=>p.socketId===socket.id&&p.connected);
-    if(index<0||!['pointmap','matching'].includes(q?.type))return reply({success:false,error:'Join the active session first.'});
+    if(index<0||!['pointmap','matching','simulation'].includes(q?.type))return reply({success:false,error:'Join the active session first.'});
     const participantId=session.participants[index].id,entries=(session.spatialSubmissions||={})[questionIndex]||=[];
     if(entries.some(r=>r.participantId===participantId))return reply({success:false,error:'Already submitted.'});
-    const value=q.type==='pointmap'?normalizePoint(response):normalizeMatch(q,response);
+    const value=q.type==='pointmap'?normalizePoint(response):q.type==='simulation'?normalizeSimulation(q.simKind,response):normalizeMatch(q,response);
     if(!value||(q.type==='pointmap'&&q.mapGraded&&!validTarget(q)))return reply({success:false,error:'Invalid response or target configuration.'});
-    entries.push({participantId,...curveIdentity(index),...(q.type==='pointmap'?{point:value}:{selection:value}),responseTimeMs:Math.max(0,Date.now()-(session.questionStartTime||Date.now()))});
+    entries.push({participantId,...curveIdentity(index),...(q.type==='pointmap'?{point:value}:q.type==='simulation'?{response:value}:{selection:value}),responseTimeMs:Math.max(0,Date.now()-(session.questionStartTime||Date.now()))});
     reply({success:true});io.to(session.code).emit('live_answer_count',completionPayload(session));
   });
   socket.on('submit_curve', ({sessionCode, questionIndex, points} = {}, callback) => {
@@ -929,7 +931,7 @@ io.on('connection', (socket) => {
 
     const current=session.questions[session.currentQuestionIndex];
     if(current?.type==='text' && (session.textVisible||0)<textLines(current).length){if(socket.id===session.trainerSocketId){session.textVisible++;broadcastText(session);}return;}
-    if(['pointmap','matching'].includes(current?.type)&&session.questionState==='active'){if(socket.id===session.trainerSocketId){if(session.timerInterval)clearInterval(session.timerInterval);session.timerInterval=null;autoCloseQuestion(session);}return;}
+    if(['pointmap','matching','simulation'].includes(current?.type)&&session.questionState==='active'){if(socket.id===session.trainerSocketId){if(session.timerInterval)clearInterval(session.timerInterval);session.timerInterval=null;autoCloseQuestion(session);}return;}
     if (!session.completedQuestions.includes(session.currentQuestionIndex)) {
       session.completedQuestions.push(session.currentQuestionIndex);
     }
@@ -1313,7 +1315,7 @@ io.on('connection', (socket) => {
 
     if (participantObj) {
       payload.participant = participantObj;
-      if (['pointmap','matching'].includes(currQ?.type)) payload.isAnswerSubmitted=(session.spatialSubmissions?.[session.currentQuestionIndex]||[]).some(c=>c.participantId===participantObj.id);
+      if (['pointmap','matching','simulation'].includes(currQ?.type)) payload.isAnswerSubmitted=(session.spatialSubmissions?.[session.currentQuestionIndex]||[]).some(c=>c.participantId===participantObj.id);
       if (currQ?.type === 'curve') payload.isAnswerSubmitted = (session.curveSubmissions?.[session.currentQuestionIndex] || []).some(c=>c.participantId===participantObj.id);
       const ans = participantObj.answers[session.currentQuestionIndex];
       if (ans) {

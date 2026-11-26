@@ -1,3 +1,4 @@
+import {SimulationResults} from '../common/SimulationActivity';
 import {SpatialResults} from '../common/SpatialActivity';
 import React, { useState } from 'react';
 import {CurveResults} from '../common/CurveActivity';
@@ -36,6 +37,7 @@ export default function ParticipantResultScreen() {
   const speedBonus = lastAnswerResult?.speedBonus ?? 0;
   const pointsEarned = lastAnswerResult?.pointsEarned ?? (basePoints + speedBonus);
 
+  if(currentQuestion?.type==='simulation')return <div className="pb-24"><SimulationResults question={currentQuestion} result={revealData} revealed participant/><ReactionActionBar/></div>;
   if(['pointmap','matching'].includes(currentQuestion?.type))return <div className="pb-24"><SpatialResults question={currentQuestion} result={revealData} revealed participant/><ReactionActionBar/></div>;
   if(currentQuestion?.type==='curve') return <div className="pb-24"><CurveResults question={currentQuestion} curves={revealData?.curves||[]} revealed={true} participant/><ReactionActionBar/></div>;
   if(currentQuestion?.type==='sequence') return <div className="max-w-xl mx-auto space-y-4"><SequenceHeading question={currentQuestion}/><SequenceMedia media={revealData?.afterMedia} preset={revealData?.afterPreset} phase="after"/><h2 className="text-xl">{currentQuestion.options?.[correctAnswer]}</h2><p className="text-sm">{explanation}</p><p className="text-sm text-slate-400">Waiting for the next stage.</p><ReactionActionBar/></div>;
