@@ -20,7 +20,7 @@ test('private pilot: actual presenter and independent phones, invite, nickname, 
  const qs=[{id:1,type:'text',question:'Pilot introduction',body:'Synthetic testing only.',revealMode:'all',options:[],correctAnswer:null},{id:2,type:'mcq',question:'Pilot question',options:['Wrong','Correct'],correctAnswer:1},{id:3,type:'text',question:'Pilot ending',body:'Thank you.',revealMode:'all',options:[],correctAnswer:null}].map(q=>({...q,scoringMode:'simple',timerSeconds:0}));
  await host.goto(url);await host.getByRole('button',{name:'Open presenter studio'}).click();await host.getByLabel('Presenter name').fill('Pilot presenter');await host.getByLabel('Presenter access secret').fill('wrong');
  await host.locator('input[type=file][accept=".json,application/json"]').setInputFiles({name:'pilot-fixture.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({format:'gut-mind-presentation',schemaVersion:1,content:{title:'Synthetic pilot fixture',questions:qs,settings:{timerDuration:0}},history:[]}))});
- await host.getByText('Synthetic pilot fixture',{exact:true}).first().waitFor();
+ await host.waitForFunction(()=>document.querySelector('input[maxlength="160"]')?.value==='Synthetic pilot fixture');
  await host.getByRole('button',{name:'Continue to Trainer Dashboard'}).click();await host.getByText('Presenter access denied.',{exact:true}).waitFor();
  await host.getByLabel('Presenter access secret').fill(secret);await host.getByRole('button',{name:'Continue to Trainer Dashboard'}).click();await host.getByRole('heading',{name:'Your live learning session'}).waitFor();
  await host.getByRole('button',{name:'QR Code',exact:true}).click();
