@@ -1,10 +1,11 @@
 import React from 'react';
-import {textLines,safeTextImages} from '../../activities.js';
+import {textLines,safeTextImages,safeSlideArtwork} from '../../activities.js';
 export default function TextSlide({question,visible=0,presenter=false}){
  const all=presenter?textLines(question):question.visibleLines||[];
  const shown=presenter?all.slice(0,question.revealMode==='step'?visible:all.length):all;
  const total=presenter?all.length:question.textTotal||all.length;
- const images=safeTextImages(question.textImages);
+ const images=safeTextImages(question.textImages),art=safeSlideArtwork(question.slideArtwork);
+ if(art)return <figure className="gm-artwork-wrap w-full rounded-xl overflow-hidden bg-slate-900"><img className="gm-slide-artwork w-full object-contain mx-auto max-h-[75vh]" src={art} alt={question.artworkAlt||question.question||'Imported slide artwork'}/></figure>;
  return <section className="rounded-3xl bg-slate-900 border border-slate-800 p-6 sm:p-10 space-y-6 min-h-64">
  <h1 className="text-2xl sm:text-4xl font-serif">{question.question}</h1>
  <div className={'grid gap-6 '+(presenter&&images.length&&shown.length?'lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]':'')}>

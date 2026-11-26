@@ -20,3 +20,5 @@ REHEARSE: Open a saved practice deck, click Present (or Preview next to a slide)
 IMPORT YOUR FULL PRESENTATION: In My presentations choose Import backup or questions, select the supplied .gutmind.json file, then Edit slides or Present. Text slide figures and private speaker notes are supported. Original PowerPoint videos are not embedded in this preview.
 
 LIVE RESULTS: All existing slides default to live response updates on the presenter display. Change Response visibility to Hidden for independent predictions. The Reveal control still closes responses and displays correct answers, scoring or research findings. Live responses are never saved in the presentation.
+
+CANVA: Export all pages as PNG or JPG in Canva. Extract Canva's ZIP and select the image pages with Import Canva slides → Choose slide images. Create a new deck or append to your existing deck, then reorder and add activities. These are faithful raster pages, not individually editable Canva elements; animations are not imported. File limits: 3.1 MB per page, 35 MB artwork per presentation. Local preview only; large artwork decks may exceed the live session transfer limit.

@@ -7,7 +7,7 @@ import {simSpec,defaultResponse} from '../../simulations.js';
 import React, { useState, useEffect, useRef } from 'react';
 import {MapEditor,MatchingEditor} from '../common/SpatialActivity';
 import {defaultPairs} from '../../spatialActivities.js';
-import { hpaStages, safeMedia, safeTextImages } from '../../activities.js';
+import { hpaStages, safeMedia, safeTextImages, safeSlideArtwork } from '../../activities.js';
 import { 
   Plus, 
   Trash2, 
@@ -413,6 +413,7 @@ export default function QuestionEditorModal({
               {currentQ.type==='text'&&<section className="p-4 border border-slate-800 rounded-2xl space-y-3">
                 <label className="block text-sm">Slide content (one revealable point per line)<textarea rows={7} className="block w-full mt-1 p-3 border border-slate-700 bg-slate-950 rounded-lg" value={currentQ.body||''} onChange={ev=>handleUpdateCurrentQ('body',ev.target.value)}/></label>
                 <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={currentQ.revealMode==='step'} onChange={ev=>handleUpdateCurrentQ('revealMode',ev.target.checked?'step':'all')}/> Reveal one line per click</label>
+                {safeSlideArtwork(currentQ.slideArtwork)&&<div className="space-y-2 border border-slate-800 rounded-xl p-3"><h3 className="font-semibold">Imported Canva artwork</h3><img src={currentQ.slideArtwork} alt={currentQ.artworkAlt||currentQ.question} className="w-full max-h-[380px] object-contain"/><label className="block text-sm">Artwork description (accessibility)<textarea rows={2} className="w-full border border-slate-700 p-2 rounded-lg" value={currentQ.artworkAlt||''} onChange={ev=>handleUpdateCurrentQ('artworkAlt',ev.target.value)}/></label><p className="text-xs text-slate-400">The artwork fills the slide during playback. Its text and graphics remain a single image. Edit the source design in Canva and re-import if needed.</p><button className="text-xs underline" type="button" onClick={()=>{if(confirm('Remove the imported artwork from this slide?'))handleUpdateCurrentQ('slideArtwork','');}}>Remove artwork</button></div>}
                 <div className="space-y-3 border-t border-slate-800 pt-3">
                   <h3 className="font-semibold">Slide figures</h3>
                   <p className="text-xs text-slate-400">Up to four images or GIFs, visible throughout the slide. Images and alt text are saved in your backup.</p>

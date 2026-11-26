@@ -8,3 +8,5 @@
 .gm-rehearsal-stage:fullscreen .gm-stage-content figure img{max-height:65vh;object-fit:contain}
 .gm-fullscreen-controls{position:fixed;bottom:15px;left:50%;transform:translateX(-50%);z-index:20;background:#FFFEFA;border:1px solid #D7DCD1;padding:8px;border-radius:14px;box-shadow:0 6px 24px #34473e15;white-space:nowrap}
 .gm-rehearsal-reaction{animation:gmFloat 2.8s ease-out both}@keyframes gmFloat{0%{transform:translateY(0);opacity:0}12%{opacity:1}100%{transform:translateY(-180px);opacity:0}}@media(prefers-reduced-motion:reduce){.gm-rehearsal-reaction{animation:none;opacity:0}}
+
+.gm-rehearsal-stage:fullscreen .gm-hpa-figure svg{max-width:none;max-height:51vh;object-fit:contain}.gm-rehearsal-stage:fullscreen .gm-slide-artwork{width:100%;height:calc(100vh - 100px);max-height:none;object-fit:contain}.gm-rehearsal-stage:fullscreen .gm-artwork-wrap{background:transparent;padding:0;border:0}
