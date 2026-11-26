@@ -27,6 +27,10 @@ test('audience layout regression with fourteen demo responses, live and revealed
  async function fit(name,min=.80){
   await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(140);
   const metrics=await page.locator('.gm-slide-viewport').evaluate(v=>{const c=v.querySelector('.gm-slide-canvas'),s=v.querySelector('.gm-stage-content'),a=c.getBoundingClientRect(),b=s.getBoundingClientRect();return {fit:Number(v.dataset.fitScale),ratio:a.width/a.height,overflow:b.bottom-a.bottom,scroll:v.scrollHeight-v.clientHeight};});
+  if(await page.evaluate(()=>!!document.fullscreenElement)){
+   const chrome=await page.evaluate(()=>{const stage=document.fullscreenElement,viewport=stage.querySelector('.gm-slide-viewport'),controls=stage.querySelector('.gm-fullscreen-controls');return {stage:getComputedStyle(stage).backgroundColor,viewport:getComputedStyle(viewport).backgroundColor,controls:getComputedStyle(controls).backgroundColor,divider:getComputedStyle(controls).borderTopWidth};});
+   assert.equal(chrome.stage,'rgb(255, 255, 255)',name+' full-screen surround');assert.equal(chrome.viewport,'rgb(255, 255, 255)',name+' viewport surround');assert.equal(chrome.controls,'rgb(255, 255, 255)',name+' controls');assert.equal(chrome.divider,'1px',name+' divider');
+  }
   checks.push({name,...metrics});assert.ok(Math.abs(metrics.ratio-16/9)<.02,name+' aspect');assert.ok(metrics.overflow<=2&&metrics.scroll<=1,name+' overflow '+JSON.stringify(metrics));assert.ok(metrics.fit>=min,name+' too small '+JSON.stringify(metrics));
  }
  try{
