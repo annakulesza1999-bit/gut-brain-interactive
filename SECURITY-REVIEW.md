@@ -1,0 +1,28 @@
+# Security review — initial static triage
+Status: NOT approved for classroom deployment. Do not start the inherited main branch or its bundled executable. This document records source observations, not a penetration test.
+
+## Confirmed findings on the development branch before this cleanup
+- **Critical — presenter takeover:** reconnect_trainer and get_session_state accept caller-provided session code/role and reassign trainerSocketId without a secret. Checking socket ID elsewhere does not protect against that takeover.
+- **Critical — administrative APIs:** routes for editing questions, reading and deleting trainer records, enumerating students, editing profiles, exporting records, and resetting the database lack authentication. API data and question banks can contain personal details or answer keys.
+- **High — identity and confidentiality:** participant phone/name is used as identity, sent in participant lists and stored in persistent records. Session restoration accepts names/phones rather than a random secret. Some events accept caller-provided identity. Leaderboard and session state payloads require review for private answers and identifiers.
+- **High — network exposure:** original server binds 0.0.0.0, permits wildcard CORS and supplies LAN HTTP join URLs even if hosted. Require correct HTTPS public origin, same-origin sockets and a secure session lifecycle.
+- **High — inherited executable/config provenance:** opaque startup and Tailwind suffixes were removed in the redesign commit. No original executable or unreviewed install script was executed. More source and dependency review is still required.
+- **Medium — resource limits:** large socket/HTTP payloads and in-memory sessions require bounded session counts, rate limits, inactivity expiry and safe validation.
+- **Medium — anatomy scoring:** the server checks declared mesh ID and normalized point bounds, not membership of the point in the true mesh. Suitable for low-stakes formative use only after visual review; not tamper-proof exam scoring.
+
+## Immediate containment on this branch
+- Removed legacy npm publishing workflow, Windows executable/launcher and obsolete packaging helpers; marked npm package private.
+- Removed inherited seeded participant data and seed function; new runtime database path is ignored by git and begins empty.
+- Added temporary NODE_ENV=production startup block, to be replaced after security hardening. This is a precaution, not an access-control fix.
+- Original main and Git history are unchanged. Any inherited historical records still need separate history/privacy review; removing a file does not erase it from prior commits or the upstream fork.
+
+## Required before public deployment
+1. Replace inherited authentication with random high-entropy presenter and participant session tokens; authorize every socket operation by server-verified membership and role. Remove or restrict legacy APIs; avoid collecting phone numbers and real names.
+2. Keep response records in memory unless explicitly exported; no persistent student directory, personal identity logs or unrelated sample records. Review public payloads for hidden answers and secret identifiers.
+3. Enforce same-origin/HTTPS setup, validated public join URL, rate limits, input validation, session limits and expiration. Protect admin operations and reconnection.
+4. Review all source and dependencies, install with lockfile in a clean network-enabled environment, run dependency audit, build, and run all unit tests and actual browser tests. Prepare the pinned atlas and verify its integrity; test touch selection, views and performance on real devices.
+5. Exercise two-client and multi-client sessions, reconnects, pause/resume, countdowns, duplicate submissions, presentation backups across updates, and attempted unauthorized access. Verify no answer key leaks before reveal. Check the original fork/history for remaining sensitive records before any public exposure.
+6. Only after these pass, deploy a single same-origin HTTPS Node/Socket.IO service with stable URL. No host selected or connected yet; account setup and any charges require user approval.
+
+## Current limitations
+The review environment cannot resolve the npm registry (EAI_AGAIN), so no dependency installation, audit, production build, end-to-end testing or live hosting has been performed. Five isolated anatomy logic checks passed; these do not test WebGL or the original server. No card game work planned at present.

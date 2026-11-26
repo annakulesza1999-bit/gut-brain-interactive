@@ -3,9 +3,6 @@
   "version": "1.0.1",
   "description": "Free, local-first, zero-internet alternative to Mentimeter & Kahoot for live MCQ examinations and real-time assessments.",
   "type": "module",
-  "bin": {
-    "openmenti": "bin/cli.js"
-  },
   "files": [
     "bin",
     "dist",
@@ -37,7 +34,6 @@
     "preview": "vite preview",
     "server": "node server/index.js",
     "start": "node init && node server/index.js",
-    "prepublishOnly": "npm run build",
     "prepare:atlas": "node scripts/prepare-atlas.mjs"
   },
   "dependencies": {
@@ -65,5 +61,6 @@
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
     "vite": "^6.2.0"
-  }
+  },
+  "private": true
 }

@@ -34,10 +34,10 @@ export default function BrainViewer({view,markers=[],targets=[],anchor=null,tole
   gltf.scene.position.sub(center);model.scale.setScalar(1.7/radius);model.updateMatrixWorld(true);
   const palette={cortex:'#D3BEB6',cerebellum:'#C0B5A7',brainstem:'#CAB7A0',diencephalon:'#C4B6D1',deep_grey:'#B7C7B4',white_matter:'#DFD9C8',ventricles:'#AAC5C9'};
   const raycaster=new T.Raycaster(),ndc=new T.Vector2(),sphere=new T.SphereGeometry(.034,16,12);disposables.add(sphere);
-  function setView(v){for(const m of meshes)m.visible=nodeVisible(brainNode(m.userData.nodeId),v);camera.position.set(...(v==='medial-left'?[5.4,.4,0]:v==='medial-right'?[-5.4,.4,0]:v==='deep'?[4.2,1.4,3.8]:[4.2,1.4,3.8]));controls.target.set(0,0,0);controls.update();}
+  function setView(v){for(const m of meshes)m.visible=nodeVisible(brainNode(m.userData.nodeId),v);camera.position.set(...(v==='medial-left'?[-5.4,.4,0]:v==='medial-right'?[5.4,.4,0]:v==='deep'?[4.2,1.4,3.8]:[4.2,1.4,3.8]));controls.target.set(0,0,0);controls.update();}
   function sync(){
    const data=latest.current,selected=new Set(data.targets);
-   for(const m of meshes){const n=brainNode(m.userData.nodeId);m.material.color.set(selected.has(n.id)?'#718C7B':palette[n.category]||'#C8BEB7');m.material.emissive.set(selected.has(n.id)?'#284735':'#000000');m.material.emissiveIntensity=selected.has(n.id)?.18:0;}
+   for(const m of meshes){const n=brainNode(m.userData.nodeId);m.material.color.set(selected.has(n.id)?'#718C7B':palette[n.category]||'#C8BEB7');m.material.emissive.set(selected.has(n.id)?'#284735':'#000000');m.material.emissiveIntensity=selected.has(n.id) ? .18 : 0;}
    for(const child of [...dots.children]){dots.remove(child);child.material?.dispose();if(child.geometry!==sphere)child.geometry?.dispose();}
    for(const mark of data.markers){if(!mark.response?.point||!nodeVisible(brainNode(mark.response.nodeId),data.view))continue;const p=new T.Vector3(...mark.response.point);const mesh=new T.Mesh(sphere,new T.MeshStandardMaterial({color:mark.color||'#42634F',emissive:mark.color||'#42634F',emissiveIntensity:.3,depthTest:true}));mesh.position.copy(p);mesh.scale.setScalar(mark.highlight?1.55:1);dots.add(mesh);}
    if(data.anchor&&data.tolerance>0){const mesh=new T.Mesh(new T.SphereGeometry(data.tolerance,24,16),new T.MeshBasicMaterial({color:'#42634F',transparent:true,opacity:.18,depthWrite:false,wireframe:true}));mesh.position.set(...data.anchor.point);dots.add(mesh);}

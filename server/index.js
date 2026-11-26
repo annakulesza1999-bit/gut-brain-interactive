@@ -21,6 +21,9 @@ import {normalizeBrain,normalizeBrainHit,brainProblem,scoreBrain,brainReveal} fr
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Temporary production guard until inherited access-control and privacy issues are fixed.
+if(process.env.NODE_ENV==='production')throw new Error('Public deployment blocked: security hardening is incomplete. See SECURITY-REVIEW.md.');
+
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {

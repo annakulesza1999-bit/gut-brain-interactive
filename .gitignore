@@ -42,3 +42,7 @@ config.bat
 # Generated, version-pinned anatomy assets
 /public/atlas/brain.glb
 /public/atlas/draco/
+
+# Local-only data (never commit classroom records)
+/server/runtime-db.json
+/server/db.json

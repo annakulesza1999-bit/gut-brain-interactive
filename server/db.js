@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_PATH = path.join(__dirname, 'db.json');
+const DB_PATH = path.join(__dirname, 'runtime-db.json');
 
 // Default initial database schema
 const defaultDb = {
@@ -16,7 +16,7 @@ const defaultDb = {
 
 class Database {
   constructor() {
-    this.data = defaultDb;
+    this.data = structuredClone(defaultDb);
     this.load();
   }
 
@@ -27,13 +27,12 @@ class Database {
         this.data = JSON.parse(raw);
         if (!this.data.trainers) this.data.trainers = [];
       } else {
-        this.data = defaultDb;
-        this.seedDay1Data();
+        this.data = structuredClone(defaultDb);
         this.save();
       }
     } catch (e) {
       console.error('Error loading database, initializing new db:', e);
-      this.data = defaultDb;
+      this.data = structuredClone(defaultDb);
       this.save();
     }
   }
@@ -43,93 +42,6 @@ class Database {
       fs.writeFileSync(DB_PATH, JSON.stringify(this.data, null, 2), 'utf8');
     } catch (e) {
       console.error('Error saving database:', e);
-    }
-  }
-
-  // Pre-seed Day 1 examination (Session DW-7764) participants so history is immediately available
-  seedDay1Data() {
-    const day1Students = [
-      { name: "Theja Gorrepati", score: 2647, accuracy: 95, correct: 19, rank: 1, phone: "9876500001" },
-      { name: "Charishma Barla", score: 2638, accuracy: 95, correct: 19, rank: 2, phone: "9876500002" },
-      { name: "Velmurugan", score: 2593, accuracy: 100, correct: 20, rank: 3, phone: "9876500003" },
-      { name: "Avinash.G", score: 2579, accuracy: 95, correct: 19, rank: 4, phone: "9876500004" },
-      { name: "Anumandhiram", score: 2576, accuracy: 100, correct: 20, rank: 5, phone: "9876500005" },
-      { name: "Shri Darshan C", score: 2565, accuracy: 95, correct: 19, rank: 6, phone: "9876500006" },
-      { name: "PRADEEPA P", score: 2553, accuracy: 100, correct: 20, rank: 7, phone: "9876500007" },
-      { name: "Thirumoorithy. P", score: 2516, accuracy: 95, correct: 19, rank: 8, phone: "9876500008" },
-      { name: "D Premkumar", score: 2485, accuracy: 95, correct: 19, rank: 9, phone: "9876500009" },
-      { name: "T. Nishanthkumar", score: 2484, accuracy: 95, correct: 19, rank: 10, phone: "9876500010" },
-      { name: "Suresh R", score: 2478, accuracy: 95, correct: 19, rank: 11, phone: "9876500011" },
-      { name: "S.Naveen Abishek", score: 2379, accuracy: 90, correct: 18, rank: 12, phone: "9876500012" },
-      { name: "Abhishek V", score: 2278, accuracy: 85, correct: 17, rank: 13, phone: "9876500013" },
-      { name: "Anil Kumar", score: 2246, accuracy: 85, correct: 17, rank: 14, phone: "9876500014" },
-      { name: "ROHIT", score: 2245, accuracy: 85, correct: 17, rank: 15, phone: "9876500015" },
-      { name: "Parameswaran", score: 2229, accuracy: 85, correct: 17, rank: 16, phone: "9876500016" },
-      { name: "Bhavesh patni", score: 2187, accuracy: 85, correct: 17, rank: 17, phone: "9876500017" },
-      { name: "Natarajan PM", score: 2175, accuracy: 85, correct: 17, rank: 18, phone: "9876500018" },
-      { name: "Saravana Kumar T", score: 2076, accuracy: 80, correct: 16, rank: 19, phone: "9876500019" },
-      { name: "Sundar", score: 2026, accuracy: 75, correct: 15, rank: 20, phone: "9876500020" },
-      { name: "Venkadesh", score: 2011, accuracy: 85, correct: 17, rank: 21, phone: "9876500021" },
-      { name: "Sabarinathan", score: 1933, accuracy: 70, correct: 14, rank: 22, phone: "9876500022" }
-    ];
-
-    const sessionRecord = {
-      id: "sess-DW-7764",
-      code: "DW-7764",
-      title: "Course 1 — Day 1 Assessment",
-      trainerName: "Rishi Bharathi B T",
-      date: new Date().toISOString().split('T')[0],
-      totalQuestions: 20,
-      totalParticipants: 22,
-      avgScore: 2359,
-      avgAccuracy: 90
-    };
-    this.data.sessions.push(sessionRecord);
-
-    day1Students.forEach((st, idx) => {
-      const studentId = `stu-${1000 + idx}`;
-      const examRecord = {
-        id: `res-DW-7764-${idx + 1}`,
-        studentId,
-        studentPhone: st.phone,
-        studentName: st.name,
-        sessionCode: "DW-7764",
-        quizTitle: "Course 1 — Day 1 Assessment",
-        date: sessionRecord.date,
-        totalQuestions: 20,
-        correctAnswers: st.correct,
-        score: st.score,
-        accuracy: st.accuracy,
-        rank: st.rank
-      };
-
-      this.data.examResults.push(examRecord);
-
-      const studentObj = {
-        id: studentId,
-        phone: st.phone,
-        name: st.name,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        totalQuizzes: 1,
-        totalScore: st.score,
-        avgAccuracy: st.accuracy,
-        history: [examRecord]
-      };
-
-      this.data.students.push(studentObj);
-    });
-
-    if (!this.data.trainers) this.data.trainers = [];
-    if (this.data.trainers.length === 0) {
-      this.data.trainers.push({
-        id: "tr-1000",
-        name: "Rishi Bharathi B T",
-        title: "Lead Technical Instructor",
-        createdAt: new Date().toISOString(),
-        lastActive: new Date().toISOString(),
-        totalSessions: 1
-      });
     }
   }
 
