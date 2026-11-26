@@ -57,3 +57,6 @@ test('reference curve is validated and never included in pre-reveal question pay
 
 import {slideSources,slideLayout} from './src/activities.js';
 test('slide source footer is separate from revealable bullets, bounded and public',()=>{const q={type:'text',body:'One idea\nAnother idea',slideSources:'A study (2020)',slideLayout:'cover',sourceNotes:'private'};assert.deepEqual(textLines(q),['One idea','Another idea']);assert.equal(slideSources(q),'A study (2020)');assert.equal(publicActivity(q).slideSources,'A study (2020)');assert.equal(publicActivity(q).sourceNotes,undefined);assert.equal(slideLayout(q),'cover');assert.equal(slideSources({slideSources:'x'.repeat(3000)}).length,2500);});
+
+import {parseSlideLine,shortDashes} from './src/slideText.js';
+test('safe authored emphasis and line styles',()=>{assert.deepEqual(parseSlideLine('~ **Sample:** *N = 74* — adults'),{kind:'muted',tokens:[{kind:'bold',text:'Sample:'},{kind:'plain',text:' '},{kind:'italic',text:'N = 74'},{kind:'plain',text:' - adults'}]});assert.equal(parseSlideLine('> example').kind,'indent');assert.equal(parseSlideLine('<script>').tokens[0].text,'<script>');assert.equal(shortDashes('A — B'),'A - B');});

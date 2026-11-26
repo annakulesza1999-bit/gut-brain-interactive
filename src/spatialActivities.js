@@ -1,5 +1,6 @@
 // Pure validation and scoring shared by the client and the live session server.
-export const bodyPath='M150 14 A24 24 0 1 1 149.99 62 A24 24 0 1 1 150 14 M137 62 L137 75 Q100 75 91 103 L69 193 Q68 213 85 213 Q95 212 99 196 L116 139 L117 190 L109 294 Q109 310 126 311 Q139 311 141 295 L150 216 L159 295 Q161 311 174 311 Q191 310 191 294 L183 190 L184 139 L201 196 Q205 212 215 213 Q232 213 231 193 L209 103 Q200 75 163 75 L163 62Z';
+// Invisible broad hit area around the stick figure, permitting comfortable touch selection.
+export const bodyPath='M150 10 A32 32 0 1 1 149.99 74 A32 32 0 1 1 150 10 M134 70 H166 V88 L225 148 Q238 162 226 174 Q216 185 202 175 L167 146 V185 L212 292 Q220 309 206 316 Q190 322 181 304 L150 229 L119 304 Q110 322 94 316 Q80 309 88 292 L133 185 V146 L98 175 Q84 185 74 174 Q62 162 75 148 L134 88 Z';
 export function mapDimensions(q){
  if(q.mapImage&&Number.isFinite(q.mapWidth)&&Number.isFinite(q.mapHeight)&&q.mapWidth>0&&q.mapHeight>0&&q.mapWidth<=12000&&q.mapHeight<=12000)return [q.mapWidth,q.mapHeight];
  return [300,330];

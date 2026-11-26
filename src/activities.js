@@ -16,7 +16,7 @@ export function normalizeCurve(points) {
   return points.map(p => p.map(v => Math.round(v*10000)/10000));
 }
 export function publicActivity(q, visible=initialTextCount(q)) {
-  return {type:q.type || 'mcq', ...(q.type==='simulation'?simulationConfig(q):{}), ...(q.type==='research'?publicResearch(q):{}), ...(q.type==='brain'?publicBrain(q):{}), mapImage:q.type==='pointmap'?safeMedia(q.mapImage):undefined,mapWidth:q.mapWidth,mapHeight:q.mapHeight,mapGraded:q.mapGraded,matchLeft:q.type==='matching'?(q.matchPairs||[]).map(p=>p.left):undefined,matchChoices:q.type==='matching'?matchChoices(q):undefined, timerSeconds:q.timerSeconds, revealMode:q.revealMode, visibleLines:q.type==='text'?textLines(q).slice(0,visible):undefined, textTotal:q.type==='text'?textLines(q).length:undefined, slideSources:slideSources(q),slideLayout:slideLayout(q),textImages:q.type==='text'?safeTextImages(q.textImages):undefined, slideArtwork:q.type==='text'?safeSlideArtwork(q.slideArtwork):undefined, artworkAlt:q.type==='text'&&typeof q.artworkAlt==='string'?q.artworkAlt.slice(0,300):undefined, xLabel:q.xLabel, yLabel:q.yLabel, xTicks:q.xTicks, stressMarker:q.stressMarker, sequenceTitle:q.sequenceTitle, sequenceStep:q.sequenceStep, sequenceTotal:q.sequenceTotal, beforeMedia:q.beforeMedia, beforePreset:q.beforePreset};
+  return {type:q.type || 'mcq', ...(q.type==='simulation'?simulationConfig(q):{}), ...(q.type==='research'?publicResearch(q):{}), ...(q.type==='brain'?publicBrain(q):{}), mapImage:q.type==='pointmap'?safeMedia(q.mapImage):undefined,mapWidth:q.mapWidth,mapHeight:q.mapHeight,mapGraded:q.mapGraded,matchLeft:q.type==='matching'?(q.matchPairs||[]).map(p=>p.left):undefined,matchChoices:q.type==='matching'?matchChoices(q):undefined, timerSeconds:q.timerSeconds, revealMode:q.revealMode, visibleLines:q.type==='text'?textLines(q).slice(0,visible):undefined, textTotal:q.type==='text'?textLines(q).length:undefined, slideSources:slideSources(q),slideLayout:slideLayout(q),figureLayout:q.figureLayout==='large'?'large':'normal',axisExplanation:typeof q.axisExplanation==='string'?q.axisExplanation.slice(0,400):undefined,textImages:q.type==='text'?safeTextImages(q.textImages):undefined, slideArtwork:q.type==='text'?safeSlideArtwork(q.slideArtwork):undefined, artworkAlt:q.type==='text'&&typeof q.artworkAlt==='string'?q.artworkAlt.slice(0,300):undefined, xLabel:q.xLabel, yLabel:q.yLabel, xTicks:q.xTicks, stressMarker:q.stressMarker, sequenceTitle:q.sequenceTitle, sequenceStep:q.sequenceStep, sequenceTotal:q.sequenceTotal, beforeMedia:q.beforeMedia, beforePreset:q.beforePreset};
 }
 export function safeMedia(value) {
   if (typeof value !== 'string' || value.length > 500000) return '';
@@ -70,7 +70,7 @@ export function reactionSummary(votes={}) {
 }
 
 /** Restrict figures to bounded local image data; speaker notes never enter the participant payload. */
-export function safeTextImages(value){return Array.isArray(value)?value.slice(0,4).map(x=>({media:safeMedia(x?.media),alt:typeof x?.alt==='string'?x.alt.slice(0,300):''})).filter(x=>x.media):[];}
+export function safeTextImages(value){return Array.isArray(value)?value.slice(0,4).map(x=>({media:safeMedia(x?.media),alt:typeof x?.alt==='string'?x.alt.slice(0,300):'',...(x?.role==='qr'?{role:'qr'}:{})})).filter(x=>x.media):[];}
 
 export const liveResultsEnabled=q=>q?.resultsMode!=='reveal';
 

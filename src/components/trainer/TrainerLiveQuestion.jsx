@@ -1,3 +1,5 @@
+import SlideFrame from '../common/SlideFrame';
+import '../../preview.css';
 import {BrainResults} from '../common/BrainActivity';
 import {ResearchResults} from '../common/ResearchActivity';
 import {SimulationResults} from '../common/SimulationActivity';
@@ -243,7 +245,7 @@ export default function TrainerLiveQuestion() {
       </div>
 
       {/* Main Presentation Area */}
-      {viewMode === 'leaderboard' ? (
+      <SlideFrame>{viewMode === 'leaderboard' ? (
         <TrainerLeaderboard
           leaderboard={leaderboard}
           onClose={() => setViewMode('question')}
@@ -297,6 +299,7 @@ export default function TrainerLiveQuestion() {
         </div>
       )}
 
+      </SlideFrame>
       {/* Trainer Bottom Control Panel */}
       <div className="mt-8 p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
         
