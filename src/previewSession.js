@@ -3,7 +3,7 @@ import {activityDuration,initialTextCount,textLines,publicActivity,curveIdentity
 import {normalizePoint,normalizeMatch,scoreMap,scoreMatch,matchKey} from './spatialActivities.js';
 import {normalizeSimulation,defaultResponse} from './simulations.js';
 import {normalizeResearchResponse,normalizeResearch,scoreResearch,revealResearch} from './researchActivities.js';
-import {normalizeBrainHit,scoreBrain,brainReveal} from './anatomyActivities.js';
+import {normalizeBrainHit,scoreBrain,brainReveal,personalBrainFeedback} from './anatomyActivities.js';
 export function startSlide(deck,index=0,visit=1){
  const q=deck.questions[index],duration=activityDuration(q,deck.settings?.timerDuration??30);
  return {index,visit,duration,remaining:duration,paused:false,revealed:false,visible:initialTextCount(q),response:null,words:[],samples:[],thumb:'',reactions:[],qa:[]};
@@ -88,5 +88,5 @@ export function previewData(deck,state){
  if(q.type==='brain')live.brainResults=publicEntries;
  const ownScore=own&&state.revealed&&q.type!=='wordcloud'?score(q,state.response):null;
  const question={id:q.id,question:q.question,options:q.options||[],category:q.category,difficulty:q.difficulty,...publicActivity(q,state.visible)};
- return {question,participants,words,completed:rows.length,own,live,reveal:state.revealed?reveal:null,ownScore,thumbs:reactionSummary(state.thumb?{preview:state.thumb}:{})};
+ return {question,participants,words,completed:rows.length,own,live,reveal:state.revealed?reveal:null,ownScore,brainFeedback:q.type==='brain'&&own?personalBrainFeedback(q,state.response):null,thumbs:reactionSummary(state.thumb?{preview:state.thumb}:{})};
 }

@@ -49,6 +49,7 @@ export function QuizProvider({ children }) {
   
   // Live reveal data
   const [revealData, setRevealData] = useState(null);
+  const [brainFeedback,setBrainFeedback]=useState(null);
   const [liveResults,setLiveResults]=useState(null);
   const [liveAnswerCount, setLiveAnswerCount] = useState({ answeredCount: 0, totalParticipants: 0 });
   
@@ -129,6 +130,7 @@ export function QuizProvider({ children }) {
           setLeaderboard(res.analytics.leaderboard || []);
         }
 
+        setBrainFeedback(res.brainFeedback??null);
         if (res.revealData) {
           setRevealData(res.revealData);
         }
@@ -181,7 +183,7 @@ export function QuizProvider({ children }) {
       setSelectedOption(null);
       setIsAnswerSubmitted(false);
       setLastAnswerResult(null);
-      setRevealData(null);setLiveResults(null);
+      setRevealData(null);setBrainFeedback(null);setLiveResults(null);
       setQuestionStartTime(Date.now());
       setLiveAnswerCount({answeredCount:0,totalParticipants:0});
       if (data.question) {
@@ -221,7 +223,7 @@ export function QuizProvider({ children }) {
       setSelectedOption(null);
       setIsAnswerSubmitted(false);
       setLastAnswerResult(null);
-      setRevealData(null);setLiveResults(null);
+      setRevealData(null);setBrainFeedback(null);setLiveResults(null);
       setLiveAnswerCount({answeredCount:0,totalParticipants:0});
       setWordCloudWords([]);
     };
@@ -272,7 +274,7 @@ export function QuizProvider({ children }) {
       setSelectedOption(null);
       setIsAnswerSubmitted(false);
       setLastAnswerResult(null);
-      setRevealData(null);setLiveResults(null);
+      setRevealData(null);setBrainFeedback(null);setLiveResults(null);
       setAnalytics(null);
       setLeaderboard([]);
       setWordCloudWords([]);
@@ -545,7 +547,7 @@ export function QuizProvider({ children }) {
     setSelectedOption(null);
     setIsAnswerSubmitted(false);
     setLastAnswerResult(null);
-    setRevealData(null);setLiveResults(null);
+    setRevealData(null);setBrainFeedback(null);setLiveResults(null);
     localStorage.removeItem('dw_role');
     localStorage.removeItem('dw_trainer_name');
     localStorage.removeItem('dw_participant_name');
@@ -610,7 +612,7 @@ export function QuizProvider({ children }) {
   const submitSpatial=useCallback(response=>new Promise(resolve=>{
     if(isAnswerSubmitted||questionState!=='active'||!sessionCode||!socket.connected)return resolve({success:false,error:'Activity unavailable.'});
     socket.timeout(8000).emit('submit_spatial',{sessionCode,questionIndex:currentQuestionIndex,response},(err,res)=>{
-      if(err)return resolve({success:false,error:'Connection timed out.'});if(res?.success)setIsAnswerSubmitted(true);resolve(res||{success:false,error:'Submission failed.'});
+      if(err)return resolve({success:false,error:'Connection timed out.'});if(res?.success){setIsAnswerSubmitted(true);if(res.brainFeedback)setBrainFeedback(res.brainFeedback);}resolve(res||{success:false,error:'Submission failed.'});
     });
   }),[isAnswerSubmitted,questionState,sessionCode,currentQuestionIndex]);
   const submitCurve = useCallback((points) => new Promise(resolve => {
@@ -663,7 +665,7 @@ export function QuizProvider({ children }) {
       selectedOption,
       isAnswerSubmitted,
       lastAnswerResult,
-      revealData,liveResults,
+      revealData,liveResults,brainFeedback,
       liveAnswerCount,
       connected,
       serverInfo,

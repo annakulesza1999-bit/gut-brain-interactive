@@ -1,3 +1,4 @@
+import {personalBrainFeedback} from '../src/anatomyActivities.js';
 import {randomBytes} from 'node:crypto';
 import express from 'express';
 import { createServer } from 'http';
@@ -706,7 +707,7 @@ io.on('connection', (socket) => {
     const value=q.type==='pointmap'?normalizePoint(response):q.type==='simulation'?normalizeSimulation(q.simKind,response):q.type==='research'?normalizeResearchResponse(q,response):q.type==='brain'?normalizeBrainHit(q,response):normalizeMatch(q,response);
     if(!value||(q.type==='pointmap'&&q.mapGraded&&!validTarget(q)))return reply({success:false,error:'Invalid response or target configuration.'});
     entries.push({participantId,...curveIdentity(index),...(q.type==='pointmap'?{point:value}:['simulation','research','brain'].includes(q.type)?{response:value}:{selection:value}),responseTimeMs:Math.max(0,Date.now()-(session.questionStartTime||Date.now()))});
-    reply({success:true});io.to(session.code).emit('live_answer_count',completionPayload(session));publishLive(session);
+    reply({success:true,...(q.type==='brain'?{brainFeedback:personalBrainFeedback(q,value)}:{})});io.to(session.code).emit('live_answer_count',completionPayload(session));publishLive(session);
   });
   socket.on('submit_curve', ({sessionCode, questionIndex, points} = {}, callback) => {
     const reply = typeof callback === 'function' ? callback : () => {};
@@ -1128,6 +1129,7 @@ io.on('connection', (socket) => {
 
     if (participantObj) {
       payload.participant = publicParticipant(participantObj);
+      if(currQ?.type==='brain'){const own=(session.spatialSubmissions?.[session.currentQuestionIndex]||[]).find(e=>e.participantId===participantObj.id);if(own)payload.brainFeedback=personalBrainFeedback(currQ,own.response);}
       payload.isAnswerSubmitted=false;
       if (['pointmap','matching','simulation','research','brain'].includes(currQ?.type)) payload.isAnswerSubmitted=(session.spatialSubmissions?.[session.currentQuestionIndex]||[]).some(c=>c.participantId===participantObj.id);
       if (currQ?.type === 'curve') payload.isAnswerSubmitted = (session.curveSubmissions?.[session.currentQuestionIndex] || []).some(c=>c.participantId===participantObj.id);
