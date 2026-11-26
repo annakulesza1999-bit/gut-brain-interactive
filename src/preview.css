@@ -97,3 +97,5 @@
 .gm-audience-content .gm-matching-results .h-2{height:6px}
 .gm-anatomy-feedback{border:1px solid #C5D3DE;border-left:4px solid #176D70;border-radius:8px;padding:12px;background:#DFEFF0;display:grid;gap:6px}
 .gm-anatomy-feedback.gm-feedback-retry{border-left-color:#B46B33;background:#FFF7D8}
+
+.gm-audience-content .gm-prediction-board.gm-two-options .gm-prediction-graphic svg,.gm-audience-content .gm-prediction-board.gm-two-options .gm-prediction-graphic img{height:240px}

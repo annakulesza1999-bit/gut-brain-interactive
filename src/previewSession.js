@@ -3,6 +3,7 @@ import {activityDuration,initialTextCount,textLines,publicActivity,curveIdentity
 import {normalizePoint,normalizeMatch,scoreMap,scoreMatch,matchKey} from './spatialActivities.js';
 import {normalizeSimulation,defaultResponse,isExploreSimulation} from './simulations.js';
 import {normalizeResearchResponse,normalizeResearch,scoreResearch,revealResearch} from './researchActivities.js';
+import {SAGITTAL_VIEW,sagittalHit} from './sagittalRegions.js';
 import {normalizeBrainHit,scoreBrain,brainReveal,personalBrainFeedback} from './anatomyActivities.js';
 export function startSlide(deck,index=0,visit=1){
  const q=deck.questions[index],duration=activityDuration(q,deck.settings?.timerDuration??30);
@@ -31,10 +32,11 @@ function score(q,response){
 }
 export function sampleResponses(q){
  // Brain coordinates must be picked on the actual mesh; do not fabricate them.
- if(q.type==='brain'||q.type==='text')return [];
+ if((q.type==='brain'&&q.brainView!==SAGITTAL_VIEW)||q.type==='text')return [];
  const candidates=Array.from({length:14},(_,j)=>{
   const i=j+1;let response;
   switch(q.type){
+  case 'brain':{const points=[[460,420],[540,370],[360,577],[550,570],[720,555],[410,495],[490,420]];const [x,y]=points[j%points.length];response=sagittalHit(x/1000,y/1104);break;}
   case 'curve':response=Array.from({length:31},(_,k)=>{const x=k/30;return [x,Math.min(.98,.12+(0.35+(i%6)*.07)*Math.exp(-((x-(.42+(i%4)*.06))**2)/(.035+(i%5)*.009)))];});break;
   case 'pointmap':if(q.mapImage)response=[.15+(i%5)*.16,.22+(i%4)*.18];else response=[.46+(i%4)*.025,.36+(i%5)*.045];break;
   case 'matching':{const k=matchKey(q);response=i%3===0?k.slice(1).concat(k.slice(0,1)):k;break;}

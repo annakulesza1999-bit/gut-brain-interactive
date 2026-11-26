@@ -50,6 +50,10 @@ jobs:
         env:
           PLAYWRIGHT_MODULE: ${{ runner.temp }}/gm-browser/node_modules/playwright/index.mjs
         run: node --test test_editor_preview.mjs
+      - name: Audience results layout verification
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/gm-browser/node_modules/playwright/index.mjs
+        run: node --test test_results_layout.mjs
       - name: Upload tested local editor preview
         uses: actions/upload-artifact@v4
         with:
