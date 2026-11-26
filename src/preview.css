@@ -122,7 +122,8 @@
 .gm-audience-content .gm-text-slide .gm-slide-bullets li.gm-sample-line+li.gm-sample-line{margin-top:-.60em}
 .gm-audience-content .gm-figure-wide .gm-slide-bullets li.gm-sample-line+li.gm-sample-line{margin-top:2px}
 .gm-audience-content .gm-figure-wide .gm-slide-bullets li.gm-sample-line:last-of-type{margin-bottom:4px}
-.gm-audience-content .gm-pointer-layout .gm-annotated-figure{max-height:490px}
+.gm-audience-content .gm-pointer-layout .gm-annotated-figure{max-height:470px}
+.gm-audience-content .gm-text-slide:not(.gm-cover-slide):has(.gm-pointer-layout){padding:20px 34px 12px;gap:10px}
 .gm-audience-content .gm-pointer-layout.gm-with-figures:not(.gm-figure-wide){grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);align-content:start;align-items:start}
 .gm-audience-content .gm-figure-wide .gm-slide-figures{width:100%}
 .gm-audience-content .gm-figure-wide .gm-annotated-figure{max-height:400px}
