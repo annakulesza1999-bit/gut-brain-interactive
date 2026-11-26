@@ -111,6 +111,44 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   const cloud=page.getByRole('img',{name:'Live frequency word cloud'});await cloud.locator('text').filter({hasText:'stress'}).waitFor();await word.fill('recovery');await word.press('Enter');await cloud.locator('text').filter({hasText:'recovery'}).waitFor();await word.fill('stress');await word.press('Enter');await page.getByText('3 responses · 2 unique',{exact:true}).waitFor();
   await page.getByRole('button',{name:'Add demo responses'}).click();await page.screenshot({path:out+'/06-live-word-cloud.png'});
   await page.getByRole('button',{name:'Edit current slide'}).click();await page.getByLabel('Response visibility').selectOption('reveal');await page.getByRole('button',{name:'Present this slide'}).click();await word.fill('independent');await word.press('Enter');await page.getByText('Responses are hidden',{exact:true}).waitFor();assert.equal(await cloud.count(),0);await page.getByRole('button',{name:'Reveal results'}).click();await cloud.locator('text').filter({hasText:'independent'}).waitFor();
+  // Verify a full-screen viewport (not the old 1100px cap).
+  await page.getByRole('button',{name:'Full screen',exact:true}).click();
+  await page.waitForFunction(()=>!!document.fullscreenElement);
+  assert.ok(await page.locator('.gm-stage-content').evaluate(el=>el.getBoundingClientRect().width)>1100);
+  await page.getByRole('button',{name:'Exit full screen'}).click();await page.waitForFunction(()=>!document.fullscreenElement);
+  // Whole-body sequence and responsive phone diagram.
+  await page.getByRole('button',{name:'Edit current slide'}).click();
+  await page.getByRole('button',{name:'+ Sequence (5 stages)',exact:true}).click();
+  await page.getByRole('button',{name:'Present this slide'}).click();
+  await page.locator('.gm-hpa-figure svg').waitFor();
+  await page.getByText('BODY OVERVIEW',{exact:true}).waitFor();
+  await page.screenshot({path:out+'/07-body-sequence.png'});
+  // New medial atlas template; choose a real rendered structure and receive private feedback.
+  await page.getByRole('button',{name:'Edit current slide'}).click();
+  await page.getByRole('button',{name:'+ 3D brain anatomy',exact:true}).click();
+  assert.equal(await page.getByLabel('Anatomical view').inputValue(),'medial-left');
+  await enabled(page.getByRole('button',{name:'Rotate left',exact:true}));
+  await page.getByRole('button',{name:'Present this slide'}).click();
+  const check=phone.getByRole('button',{name:'Check location',exact:true});await check.waitFor();
+  await enabled(phone.getByRole('button',{name:'Rotate left',exact:true}));
+  const canvas=phone.locator('canvas');await canvas.scrollIntoViewIfNeeded();
+  const box=await canvas.boundingBox();assert.ok(box);
+  for(const [x,y] of [[.5,.5],[.4,.4],[.6,.4],[.5,.3],[.4,.6],[.6,.6],[.5,.65]]){await page.mouse.click(box.x+box.width*x,box.y+box.height*y);if(await check.isEnabled())break;}
+  assert.ok(await check.isEnabled(),'No selectable atlas mesh visible in medial view');
+  await check.click();await phone.getByText('Correct anatomy is highlighted in green.',{exact:false}).waitFor();
+  await page.screenshot({path:out+'/08-medial-brain-feedback.png'});
+  await page.getByRole('button',{name:'Library',exact:true}).click();
+  // Import two actual PNG pages; preserve original bytes and natural page order.
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGMs7KlmIAUwkaR6VMOohiGlAQCw0gGYqw/vQAAAAABJRU5ErkJggg==','base64');
+  await page.getByLabel('Import destination').selectOption('new');
+  await page.getByLabel('Choose slide images').setInputFiles([{name:'10.png',mimeType:'image/png',buffer:png},{name:'2.png',mimeType:'image/png',buffer:png}]);
+  await page.waitForFunction(()=>document.querySelector('input[maxlength="160"]')?.value==='Imported Canva presentation');
+  await page.getByRole('button',{name:'Present',exact:true}).click();
+  const artwork=page.locator('.gm-slide-artwork');await artwork.waitFor();
+  assert.equal(await artwork.getAttribute('src'),'data:image/png;base64,'+png.toString('base64'));
+  assert.equal(await artwork.getAttribute('alt'),'2');
+  await page.getByRole('button',{name:'Next slide',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('.gm-slide-artwork')?.getAttribute('alt')==='10');
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);assert.deepEqual(sessionRequests,[]);
  }catch(e){await page.screenshot({path:out+'/failure.png'}).catch(()=>{});throw e;}
 });
