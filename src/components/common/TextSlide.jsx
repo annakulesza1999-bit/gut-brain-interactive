@@ -24,7 +24,7 @@ export default function TextSlide({question,visible=0,presenter=false}){
 
 function PointerFigure({image,visible}){
  const {aspect,groups}=image.pointers,W=1000*aspect,H=1000;
- return <svg className="gm-annotated-figure" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={image.alt||'Annotated teaching figure'}>
+ return <svg className="gm-annotated-figure" width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={image.alt||'Annotated teaching figure'}>
  <image href={image.media} width={W} height={H}/>
  {groups.slice(0,visible).map((paths,i)=><g key={i} data-pointer-index={i} fill="#0063A6" stroke="#0063A6">
  {paths.map((points,j)=>{const a=points[0],b=points.at(-1);return <g key={j}><polyline points={points.map(([x,y])=>`${x*W},${y*H}`).join(' ')} fill="none" strokeWidth="3.8" strokeLinejoin="round" strokeLinecap="round"/><circle cx={b[0]*W} cy={b[1]*H} r="6" stroke="white" strokeWidth="1.5"/>{j===0&&<g><circle cx={a[0]*W} cy={a[1]*H} r="15" stroke="white" strokeWidth="2"/><text x={a[0]*W} y={a[1]*H} fill="white" stroke="none" textAnchor="middle" dominantBaseline="central" fontSize="19" fontWeight="700">{i+1}</text></g>}</g>})}
