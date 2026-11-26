@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - design/academic-minimalism
-      - security/dependency-remediation
   workflow_dispatch:
 permissions:
   contents: read
@@ -18,12 +17,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Generate candidate lockfile (remediation branch only)
-        if: github.ref == 'refs/heads/security/dependency-remediation'
-        run: |
-          cp package-lock.json /tmp/previous-lock.json
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          node scripts/report-lock-delta.mjs /tmp/previous-lock.json package-lock.json
       - name: Install locked dependencies without lifecycle scripts
         id: install
         run: npm ci --ignore-scripts

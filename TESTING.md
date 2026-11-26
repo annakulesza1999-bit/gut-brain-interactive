@@ -15,3 +15,6 @@ Use Node 22. Review source and dependency lock before executing. No original exe
 5. `node --test test_session_smoke.js` (real loopback HTTP/Socket.IO, 15 synthetic students, no actual personal records)
 6. `npm audit --omit=dev --audit-level=high` and review all results.
 The new smoke test is authored but has not been executed in this environment. Even if it passes, do not infer browser/mobile or atlas geometry verification. Test actual phone touch interactions, rendering, editor autosave/reload, backup restore, view orientation and atlas mesh picking before classroom use. See SECURITY-REVIEW.md for remaining deployment blockers.
+
+## Dependency remediation verification
+2026-11-26: candidate run 45834680350 passed all 31 Node unit tests and the actual 15-client Socket.IO smoke test, built the frontend using Vite 6.4.6, prepared the pinned atlas, and reported zero vulnerabilities in the full npm audit. The exact npm-generated dependency lock is now committed for normal preflight. This does not verify actual WebGL rendering, IndexedDB or the presenter UI in a browser.
