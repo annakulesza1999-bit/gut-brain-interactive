@@ -3,7 +3,7 @@ import { publicResearch } from './researchActivities.js';
 import { simulationConfig } from './simulations.js';
 import { matchChoices } from './spatialActivities.js';
 // Shared activity helpers (browser and server). Coordinates are normalized to [0,1].
-export const curveColors = ['#507A65','#8070A0','#A26D53','#527A91','#A06179','#68834C','#927C42','#557F80','#8D668B','#B06C63','#626E9E','#7B7955','#A37D91','#397A73','#A78655'];
+export const curveColors = ['#0063A6','#176D70','#7C468C','#735E00','#407BA4','#A02E21','#496323','#2BA4A6','#81529B','#BC682D','#354D60','#6B853C','#B46BBF','#1E8B99','#96731D'];
 export function curveIdentity(index) {
   const i = Math.max(0, Number.isInteger(index) ? index : 0);
   return { color: curveColors[i % curveColors.length], label: 'Curve ' + (i + 1) };

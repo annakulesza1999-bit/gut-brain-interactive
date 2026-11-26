@@ -15,17 +15,17 @@ export default function SequenceMedia({media,preset,phase='before'}){
  if(src)return <img key={src+phase} src={src} alt={phase==='after'?'Correct biological event':'Biological event before prediction'} className="gm-sequence-upload max-h-[440px] w-full object-contain rounded-xl bg-slate-900"/>;
  if(!stage)return null;
  const n=Object.keys(stages).indexOf(preset),neural=preset==='sympathetic',headFocus=['hypothalamus','crh','feedback'].includes(preset);
- const sage='#507A65',plum='#79648D',ochre='#B07855',ink='#34473E',muted='#87988D';
+ const sage='#176D70',plum='#634078',ochre='#A96531',ink='#032138',muted='#657F93';
  const body='M218 83 Q197 87 190 109 L188 124 Q152 130 139 148 Q126 166 119 213 L107 273 Q105 286 116 291 Q128 293 132 280 L153 222 L162 194 L168 251 Q161 293 177 325 L175 436 Q175 454 190 454 Q203 454 206 440 L226 350 L246 440 Q249 454 263 454 Q278 454 278 436 L275 325 Q292 292 284 251 L290 194 L299 222 L320 280 Q324 293 336 291 Q347 286 344 273 L332 213 Q325 166 313 148 Q300 130 264 124 L262 109 Q255 87 234 83 Z';
  function line(d,color,width=2,dash){return <path d={d} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={dash}/>;}
  function motion(d,color){return <g>{line(d,color,3,'7 5')}<circle r="5" fill={color}><animateMotion dur="2.6s" repeatCount="indefinite" path={d}/></circle></g>;}
  return <figure ref={host} className="gm-hpa-figure rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden">
  <svg viewBox={compact?"0 0 410 980":"0 0 820 490"} className="block mx-auto w-full max-w-[920px]" role="img" aria-label={stage.title+': '+stage.caption}>
  <defs><linearGradient id={uid+'skin'} x1="0" x2="1" y1="0" y2=".6"><stop offset="0" stopColor="#F4E6DA"/><stop offset="1" stopColor="#E7D5C7"/></linearGradient><marker id={uid+'arrow'} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10Z" fill={muted}/></marker></defs>
- <rect width={compact?410:820} height={compact?980:490} rx="14" fill="#FFFEFA"/>
- <g fontFamily="Arial, sans-serif" fill={ink}>
+ <rect width={compact?410:820} height={compact?980:490} rx="14" fill="#FFFFFF"/>
+ <g fontFamily="Source Sans 3, Arial, sans-serif" fill={ink}>
  <text x="24" y="27" fontSize="12" fontWeight="700" letterSpacing="2">BODY OVERVIEW</text>
- {!compact&&<path d="M410 20 V465" stroke="#E1E5DD"/>}
+ {!compact&&<path d="M410 20 V465" stroke="#DCE5EC"/>}
  <path d={body} fill={'url(#'+uid+'skin)'} stroke="#BCA99A" strokeWidth="1.5"/>
  <ellipse cx="226" cy="61" rx="37" ry="48" fill={'url(#'+uid+'skin)'} stroke="#BCA99A" strokeWidth="1.5"/>
  {/* head cutaway, spinal cord, and simplified internal organs; not to scale */}
@@ -71,12 +71,12 @@ export default function SequenceMedia({media,preset,phase='before'}){
  {line('M621 238 L680 242 H799',muted,1.3)}<text x="799" y="237" textAnchor="end">Anterior pituitary</text>
  {line('M660 165 L717 154 H799',muted,1.3)}<text x="799" y="148" textAnchor="end">Thalamus</text>
  {line('M655 275 L696 290 H799',muted,1.3)}<text x="799" y="285" textAnchor="end">Brainstem</text>
- <text x="462" y="320" fontSize="11" fill="#65766A">Simplified medial schematic · structures not to scale</text>
+ <text x="462" y="320" fontSize="11" fill="#354D60">Simplified medial schematic · structures not to scale</text>
  </g>
- <rect x="440" y="345" width="360" height="121" rx="15" fill="#EEF1E9" stroke="#D7DFD1"/>
+ <rect x="440" y="345" width="360" height="121" rx="15" fill="#DFEFF0" stroke="#C5D3DE"/>
  <text x="458" y="365" fontSize="11" fontWeight="700" letterSpacing="1.2" fill={sage}>{phase==='before'?'CURRENT EVENT — PREDICT THE NEXT STEP':'EVENT REVEALED'}</text>
  <text x="458" y="389" fontSize="16" fontWeight="700">{stage.title.length>42?stage.title.slice(0,42)+'…':stage.title}</text>
- <foreignObject x="458" y="399" width="324" height="58"><div xmlns="http://www.w3.org/1999/xhtml" style={{fontFamily:'Arial,sans-serif',fontSize:'13px',lineHeight:'1.4',color:ink}}>{stage.caption}</div></foreignObject>
+ <foreignObject x="458" y="399" width="324" height="58"><div xmlns="http://www.w3.org/1999/xhtml" style={{fontFamily:'Source Sans 3,Arial,sans-serif',fontSize:'13px',lineHeight:'1.4',color:ink}}>{stage.caption}</div></foreignObject>
  </g></g></svg><figcaption className="px-4 pb-3 text-xs text-slate-400">Teaching schematic: organ positions and signaling routes are simplified; neural and endocrine responses can overlap.</figcaption></figure>;
 }
 export function SequenceHeading({question}){return <div className="text-sm text-slate-400 font-semibold">{question.sequenceTitle||'What happens next?'} · Stage {question.sequenceStep||1} / {question.sequenceTotal||1}</div>;}

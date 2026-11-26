@@ -19,4 +19,4 @@ export function layoutWords(stats,measure,width=900,height=460){
  }
  return [];
 }
-export const wordColor=key=>['#42634F','#79648D','#B07855','#527A91','#68834C','#A06179','#34473E'][hash(key)%7];
+export const wordColor=key=>['#0063A6','#176D70','#634078','#735E00','#032138','#407BA4','#7C468C'][hash(key)%7];

@@ -280,7 +280,7 @@ export default function TrainerLiveQuestion() {
                     </div>
                     <span className="text-base sm:text-lg font-semibold text-slate-100">
                       {opt}
-                      {showResults&&<span className="block mt-2 text-sm text-slate-400">{liveData?.optionDist?.[idx]?.count||0} · {liveData?.optionDist?.[idx]?.pct||0}%<span className="block h-2 mt-1 rounded-full bg-slate-800"><span className="block h-2 rounded-full bg-[#9B88AA] transition-all" style={{width:(liveData?.optionDist?.[idx]?.pct||0)+'%'}}/></span></span>}
+                      {showResults&&<span className="block mt-2 text-sm text-slate-400">{liveData?.optionDist?.[idx]?.count||0} · {liveData?.optionDist?.[idx]?.pct||0}%<span className="block h-2 mt-1 rounded-full bg-slate-800"><span className="block h-2 rounded-full bg-[#CA8ADB] transition-all" style={{width:(liveData?.optionDist?.[idx]?.pct||0)+'%'}}/></span></span>}
                     </span>
                   </div>
                 );

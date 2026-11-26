@@ -8,20 +8,20 @@ const button='px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-xs 
 const fmt=(n,d=2)=>Number.isFinite(n)?n.toFixed(d):'—';
 function useIdentity(){const {participants,participantName,participantPhone}=useQuiz();return curveIdentity(participants.findIndex(p=>(participantPhone&&p.phone===participantPhone)||p.name===participantName));}
 function Control({label,value,min,max,onChange,disabled}){
- return <label className="block space-y-1"><span className="flex justify-between gap-2 text-sm"><span>{label}</span><strong className="font-mono">{value}</strong></span><input aria-label={label} type="range" className="w-full accent-[#718C7B]" min={min} max={max} step="1" value={value} disabled={disabled} onChange={e=>onChange(+e.target.value)}/></label>;
+ return <label className="block space-y-1"><span className="flex justify-between gap-2 text-sm"><span>{label}</span><strong className="font-mono">{value}</strong></span><input aria-label={label} type="range" className="w-full accent-[#005C99]" min={min} max={max} step="1" value={value} disabled={disabled} onChange={e=>onChange(+e.target.value)}/></label>;
 }
 function Metric({label,value}){return <div className="rounded-xl border border-slate-800 bg-slate-950 p-3"><p className="text-xs text-slate-400">{label}</p><p className="text-xl font-mono">{value}</p></div>;}
 function AppraisalView({value}){
  const {resources,gap}=appraisalMetrics(value);
  return <div className="space-y-3">
  <svg viewBox="0 0 340 164" className="w-full" role="img" aria-label="Conceptual demand and resource balance">
- <path d="M170 68 L137 149 H203Z" fill="#CDD4C9"/>
+ <path d="M170 68 L137 149 H203Z" fill="#C5D3DE"/>
  <g transform={'rotate('+Math.max(-24,Math.min(24,-gap*2.5))+' 170 68)'}>
- <path d="M48 68 H292" stroke="#34473E" strokeWidth="3" strokeLinecap="round"/>
- <path d="M67 68 L42 123 H92Z M273 68 L248 123 H298Z" fill="none" stroke="#718C7B" strokeWidth="1.2"/>
- <rect x="36" y={123-value.demand*5} width="62" height={value.demand*5} rx="3" fill="#B58C6B"/>
- <rect x="242" y={123-resources*5} width="62" height={resources*5} rx="3" fill="#718C7B"/>
- </g><g fontSize="11" textAnchor="middle"><text x="66" y="160" fill="#805726">Demands</text><text x="273" y="160" fill="#42634F">Resources</text></g>
+ <path d="M48 68 H292" stroke="#032138" strokeWidth="3" strokeLinecap="round"/>
+ <path d="M67 68 L42 123 H92Z M273 68 L248 123 H298Z" fill="none" stroke="#005C99" strokeWidth="1.2"/>
+ <rect x="36" y={123-value.demand*5} width="62" height={value.demand*5} rx="3" fill="#FFDC4C"/>
+ <rect x="242" y={123-resources*5} width="62" height={resources*5} rx="3" fill="#005C99"/>
+ </g><g fontSize="11" textAnchor="middle"><text x="66" y="160" fill="#735E00">Demands</text><text x="273" y="160" fill="#005C99">Resources</text></g>
  </svg>
  <div className="grid grid-cols-2 gap-2"><Metric label="Perceived demand" value={fmt(value.demand,0)}/><Metric label="Illustrative resource index" value={fmt(resources,1)}/></div>
  <p className="text-sm font-medium">{gap>2?'Demands exceed the illustrated resources.':gap< -2?'Illustrated resources exceed demands.':'Demands and illustrated resources are relatively balanced.'}</p>
@@ -32,17 +32,17 @@ function RecoveryGraph({series,selected,events=[]}){
  const W=318,H=154,X=37,Y=20;
  const top=Math.max(6,Math.ceil(Math.max(.8,...series.flatMap(s=>s.values.map(p=>p[1])))/2)*2);
  const path=values=>values.map(([t,v],i)=>(i?'L':'M')+(X+t/7*W)+' '+(Y+H-v/top*H)).join(' ');
- return <svg viewBox="0 0 370 204" className="w-full" role="img" aria-label="Illustrative activation over seven days"><rect x={X} y={Y} width={W} height={H} fill="#FFFEFA" rx="3"/>
- {[0,.25,.5,.75,1].map(n=><g key={n}><line x1={X} x2={X+W} y1={Y+H-n*H} y2={Y+H-n*H} stroke="#DFE4DB" strokeWidth=".7"/><text x={X-5} y={Y+H-n*H+3} textAnchor="end" fontSize="8" fill="#64736A">{fmt(top*n,1)}</text></g>)}
- <path d={'M'+X+' '+Y+' V'+(Y+H)+' H'+(X+W)} fill="none" stroke="#64736A"/>
- <line x1={X} x2={X+W} y1={Y+H-.8/top*H} y2={Y+H-.8/top*H} stroke="#9B88AA" strokeDasharray="3 4"/>
- {eventTimes.map((t,i)=><g key={i} data-stressor-marker="true" transform={'translate('+(X+t/7*W)+' 9)'}><title>{'Stressor '+(i+1)+' · day '+(t+1).toFixed(2)}</title><line y1="8" y2={H+11} stroke="#C49A2B" strokeWidth=".7" strokeDasharray="2 4" opacity=".45"/><path d="M1 -6 L-5 1 H-1 L-3 7 L6 -2 H2 L4 -6Z" fill="#F2C94C" stroke="#7C5D12" strokeWidth=".8" strokeLinejoin="round"/></g>)}
- {series.map((s,i)=><path key={s.label||i} d={path(s.values)} fill="none" stroke={s.color||'#42634F'} strokeWidth={series.length===1||selected===s.label?1.8:.8} opacity={series.length===1||selected===s.label ? .95:selected ? .18:.45} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>)}
- <g fill="#64736A" fontSize="9" textAnchor="middle">{['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day,i)=><text key={day} x={X+(i+.5)*W/7} y="187">{day}</text>)}<text transform="translate(9 96) rotate(-90)">Activation (illustrative)</text><text x="196" y="201">Time</text></g></svg>;
+ return <svg viewBox="0 0 370 204" className="w-full" role="img" aria-label="Illustrative activation over seven days"><rect x={X} y={Y} width={W} height={H} fill="#FFFFFF" rx="3"/>
+ {[0,.25,.5,.75,1].map(n=><g key={n}><line x1={X} x2={X+W} y1={Y+H-n*H} y2={Y+H-n*H} stroke="#DCE5EC" strokeWidth=".7"/><text x={X-5} y={Y+H-n*H+3} textAnchor="end" fontSize="8" fill="#354D60">{fmt(top*n,1)}</text></g>)}
+ <path d={'M'+X+' '+Y+' V'+(Y+H)+' H'+(X+W)} fill="none" stroke="#354D60"/>
+ <line x1={X} x2={X+W} y1={Y+H-.8/top*H} y2={Y+H-.8/top*H} stroke="#CA8ADB" strokeDasharray="3 4"/>
+ {eventTimes.map((t,i)=><g key={i} data-stressor-marker="true" transform={'translate('+(X+t/7*W)+' 9)'}><title>{'Stressor '+(i+1)+' · day '+(t+1).toFixed(2)}</title><line y1="8" y2={H+11} stroke="#C49A2B" strokeWidth=".7" strokeDasharray="2 4" opacity=".45"/><path d="M1 -6 L-5 1 H-1 L-3 7 L6 -2 H2 L4 -6Z" fill="#FFDC4C" stroke="#7C5D12" strokeWidth=".8" strokeLinejoin="round"/></g>)}
+ {series.map((s,i)=><path key={s.label||i} d={path(s.values)} fill="none" stroke={s.color||'#005C99'} strokeWidth={series.length===1||selected===s.label?1.8:.8} opacity={series.length===1||selected===s.label ? .95:selected ? .18:.45} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>)}
+ <g fill="#354D60" fontSize="9" textAnchor="middle">{['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day,i)=><text key={day} x={X+(i+.5)*W/7} y="187">{day}</text>)}<text transform="translate(9 96) rotate(-90)">Activation (illustrative)</text><text x="196" y="201">Time</text></g></svg>;
 }
 function Microbe({type,index}){
  const c=MICROBE_COLORS[type];
- return <svg viewBox="0 0 44 44" className="w-full" aria-hidden="true">{type%3===0?<g transform={'rotate('+(index%2? -35:35)+' 22 22)'}><rect x="13" y="5" width="18" height="34" rx="9" fill={c}/><circle cx="20" cy="17" r="2" fill="#FFFEFA"/><circle cx="25" cy="25" r="2" fill="#FFFEFA"/></g>:type%3===1?<g><circle cx="22" cy="22" r="13" fill={c}/>{[0,60,120,180,240,300].map(n=><path key={n} d="M22 8 V3" transform={'rotate('+n+' 22 22)'} stroke={c} strokeWidth="2" strokeLinecap="round"/>)}</g>:<path d="M8 32 C4 12 23 6 25 21 S39 39 36 13" fill="none" stroke={c} strokeWidth="8" strokeLinecap="round"/>}<text x="38" y="42" fontSize="9" textAnchor="end" fill="#34473E">{type+1}</text></svg>;
+ return <svg viewBox="0 0 44 44" className="w-full" aria-hidden="true">{type%3===0?<g transform={'rotate('+(index%2? -35:35)+' 22 22)'}><rect x="13" y="5" width="18" height="34" rx="9" fill={c}/><circle cx="20" cy="17" r="2" fill="#FFFFFF"/><circle cx="25" cy="25" r="2" fill="#FFFFFF"/></g>:type%3===1?<g><circle cx="22" cy="22" r="13" fill={c}/>{[0,60,120,180,240,300].map(n=><path key={n} d="M22 8 V3" transform={'rotate('+n+' 22 22)'} stroke={c} strokeWidth="2" strokeLinecap="round"/>)}</g>:<path d="M8 32 C4 12 23 6 25 21 S39 39 36 13" fill="none" stroke={c} strokeWidth="8" strokeLinecap="round"/>}<text x="38" y="42" fontSize="9" textAnchor="end" fill="#032138">{type+1}</text></svg>;
 }
 function MicrobeView({value,onChange,disabled=false,compact=false}){
  const d=diversityMetrics(value.microbes);
@@ -70,7 +70,7 @@ export function SimulationInput({question}){
  <p className="text-xs text-slate-400">{spec.note}</p>{isAnswerSubmitted?<p className="font-medium">Submitted — waiting for reveal.</p>:<div className="flex gap-2"><button type="button" className={button} disabled={disabled} onClick={()=>setValue(cfg.simInitial)}>Reset</button><button type="button" className="flex-1 rounded-xl p-3 bg-emerald-600 text-white disabled:opacity-40" disabled={disabled} onClick={async()=>{setPending(true);setError('');try{const r=await submitSpatial(value);if(!r.success)setError(r.error);}finally{setPending(false);}}}>{pending?'Submitting…':'Submit my scenario'}</button></div>}{error&&<p role="alert" className="text-rose-700">{error}</p>}</section>;
 }
 function AppraisalResults({entries}){
- return <div className="space-y-3">{entries.map(e=>{const r=appraisalMetrics(e.response);return <div key={e.label} className="grid grid-cols-[48px_1fr_1fr] items-center gap-2 text-xs"><span style={{color:e.color}}>#{e.label.split(' ')[1]}</span><div><div>Demand {e.response.demand}</div><div className="h-2 bg-slate-800 rounded-full"><div className="h-2 rounded-full bg-[#B58C6B]" style={{width:e.response.demand*10+'%'}}/></div></div><div><div>Resources {fmt(r.resources,1)}</div><div className="h-2 bg-slate-800 rounded-full"><div className="h-2 rounded-full bg-[#718C7B]" style={{width:r.resources*10+'%'}}/></div></div></div>})}</div>;
+ return <div className="space-y-3">{entries.map(e=>{const r=appraisalMetrics(e.response);return <div key={e.label} className="grid grid-cols-[48px_1fr_1fr] items-center gap-2 text-xs"><span style={{color:e.color}}>#{e.label.split(' ')[1]}</span><div><div>Demand {e.response.demand}</div><div className="h-2 bg-slate-800 rounded-full"><div className="h-2 rounded-full bg-[#FFDC4C]" style={{width:e.response.demand*10+'%'}}/></div></div><div><div>Resources {fmt(r.resources,1)}</div><div className="h-2 bg-slate-800 rounded-full"><div className="h-2 rounded-full bg-[#005C99]" style={{width:r.resources*10+'%'}}/></div></div></div>})}</div>;
 }
 export function SimulationResults({question,result,revealed,showResults=revealed,count,participant=false}){
  const cfg=simulationConfig(question),spec=simSpec(cfg.simKind),me=useIdentity(),[highlight,setHighlight]=useState('');
