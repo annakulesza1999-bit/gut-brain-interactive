@@ -236,5 +236,5 @@ input::placeholder,textarea::placeholder{color:#536A7B;opacity:1}
 .gm-live-fullscreen>.gm-live-toolbar{top:0}
 .gm-live-fullscreen>.gm-live-nav{bottom:0}
 .gm-live-fullscreen.gm-chrome-hidden>.gm-live-toolbar,.gm-live-fullscreen.gm-chrome-hidden>.gm-live-nav{opacity:0;pointer-events:none}
-.gm-live-fullscreen>.gm-live-toolbar:focus-within,.gm-live-fullscreen>.gm-live-nav:focus-within{opacity:1!important;pointer-events:auto!important}
+.gm-live-fullscreen>.gm-live-toolbar:has(:focus-visible),.gm-live-fullscreen>.gm-live-nav:has(:focus-visible){opacity:1!important;pointer-events:auto!important}
 @media(max-width:600px){.gm-live-participant .gm-participant-content{padding:8px 10px 104px}.gm-live-participant .gm-live-question h2{line-height:1.2}.gm-live-participant .gm-live-question .rounded-3xl{padding:12px;margin-bottom:10px}.gm-live-participant .gm-live-question .rounded-2xl{padding:10px}.gm-live-participant .gm-score-dock{max-width:none}.gm-live-participant .gm-score-strip{font-size:12px}.gm-live-participant .gm-score-strip strong{font-size:14px}}

@@ -66,8 +66,8 @@ export default function TrainerLiveQuestion() {
 
   const stageRef=useRef(null),hideTimer=useRef(null);
   const [presentationMode,setPresentationMode]=useState(false),[chromeVisible,setChromeVisible]=useState(true);
-  const showChrome=()=>{setChromeVisible(true);clearTimeout(hideTimer.current);hideTimer.current=setTimeout(()=>{if(!stageRef.current?.querySelector('.gm-live-toolbar:focus-within,.gm-live-nav:focus-within'))setChromeVisible(false);},2600);};
-  const enterPresentation=async()=>{setPresentationMode(true);showChrome();try{await stageRef.current?.requestFullscreen?.();}catch{/* CSS full-window mode on unsupported browsers. */}};
+  const showChrome=()=>{setChromeVisible(true);clearTimeout(hideTimer.current);hideTimer.current=setTimeout(()=>{if(!stageRef.current?.querySelector('.gm-live-toolbar :focus-visible,.gm-live-nav :focus-visible'))setChromeVisible(false);},2600);};
+  const enterPresentation=async()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();setPresentationMode(true);showChrome();try{await stageRef.current?.requestFullscreen?.();}catch{/* CSS full-window mode on unsupported browsers. */}};
   const exitPresentation=()=>{setPresentationMode(false);clearTimeout(hideTimer.current);if(document.fullscreenElement===stageRef.current)document.exitFullscreen().catch(()=>{});};
   useEffect(()=>{const changed=()=>{if(!document.fullscreenElement)setPresentationMode(false);};document.addEventListener('fullscreenchange',changed);return()=>{document.removeEventListener('fullscreenchange',changed);clearTimeout(hideTimer.current);};},[]);
   const [viewMode, setViewMode] = useState('question'); // 'question' | 'leaderboard'
