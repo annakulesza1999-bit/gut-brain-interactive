@@ -132,8 +132,8 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   const check=phone.getByRole('button',{name:'Check location',exact:true});await check.waitFor();
   await enabled(phone.getByRole('button',{name:'Rotate left',exact:true}));
   const canvas=phone.locator('canvas');await canvas.scrollIntoViewIfNeeded();
-  const box=await canvas.boundingBox();assert.ok(box);
-  for(const [x,y] of [[.5,.5],[.4,.4],[.6,.4],[.5,.3],[.4,.6],[.6,.6],[.5,.65]]){await page.mouse.click(box.x+box.width*x,box.y+box.height*y);if(await check.isEnabled())break;}
+  const brainBox=await canvas.boundingBox();assert.ok(brainBox);
+  for(const [x,y] of [[.5,.5],[.4,.4],[.6,.4],[.5,.3],[.4,.6],[.6,.6],[.5,.65]]){await page.mouse.click(brainBox.x+brainBox.width*x,brainBox.y+brainBox.height*y);if(await check.isEnabled())break;}
   assert.ok(await check.isEnabled(),'No selectable atlas mesh visible in medial view');
   await check.click();await phone.getByText('Correct anatomy is highlighted in green.',{exact:false}).waitFor();
   await page.screenshot({path:out+'/08-medial-brain-feedback.png'});
