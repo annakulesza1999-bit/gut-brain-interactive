@@ -1,4 +1,5 @@
 import React,{useState} from 'react';
+import {ResultPager,ResultViews} from './ResultPager';
 import {useQuiz} from '../../context/QuizContext';
 import {curveIdentity,safeMedia} from '../../activities.js';
 import {GRAPH_TYPES,CLAIM_LABELS,researchTemplate,normalizeResearch,publicResearch,researchProblem,researchSummary} from '../../researchActivities.js';
@@ -70,7 +71,8 @@ function Calibration({summary}){
  <svg viewBox="0 0 300 180" className="w-full max-w-md mx-auto" role="img" aria-label="Confidence and observed accuracy by confidence group"><path d="M35 10 V150 H285" stroke="#354D60" fill="none"/><path d="M35 150 L285 10" stroke="#CA8ADB" strokeDasharray="4 4"/>{[0,25,50,75,100].map(v=><g key={v}><text x={35+v*2.5} y="163" textAnchor="middle" fontSize="8" fill="#354D60">{v}</text><text x="30" y={153-v*1.4} textAnchor="end" fontSize="8" fill="#354D60">{v}</text></g>)}{summary.bins.filter(b=>b.count).map(b=><circle key={b.low} cx={35+b.meanConfidence*2.5} cy={150-b.accuracy*1.4} r={Math.min(9,3+Math.sqrt(b.count))} fill="#005C99"><title>{b.low}–{b.high}%: {b.count} responses, {pct(b.accuracy)} correct</title></circle>)}<text x="160" y="178" textAnchor="middle" fontSize="9" fill="#354D60">Mean confidence (%)</text><text transform="translate(10 80) rotate(-90)" textAnchor="middle" fontSize="9" fill="#354D60">Accuracy (%)</text></svg>
  <div className="space-y-1 text-xs">{summary.bins.filter(b=>b.count).map(b=><div key={b.low} className="grid grid-cols-3 gap-2"><span>{b.low}–{b.high}% band</span><span>{b.count} answers</span><span>{pct(b.accuracy)} correct</span></div>)}</div><p className="text-xs text-slate-400">Based on {summary.ratedCount} rated answers. Each dot is a confidence band. Small groups are noisy; this is a discussion aid, not a measure of individual ability.</p></div>;
 }
-export function ResearchResults({question,result,revealed,showResults=revealed,count,participant=false}){
+export function ResearchResults(props){return props.participant?<ParticipantResearchResults {...props}/>:<PresenterResearchResults {...props}/>;}
+function ParticipantResearchResults({question,result,revealed,showResults=revealed,count,participant=false}){
  const q=publicResearch(question),pred=q.researchKind==='prediction',n=pred?1:q.researchClaims.length,choices=pred?q.researchOptions.map(o=>o.label):CLAIM_LABELS;
  const entries=result?.researchResults||[],key=result?.researchKey??null,me=useIdentity(),mine=participant?entries.find(e=>e.label===me.label):null;
  const summary=researchSummary(entries,key,n,choices.length);
@@ -82,4 +84,25 @@ export function ResearchResults({question,result,revealed,showResults=revealed,c
  {q.researchConfidence&&key&&<Calibration summary={summary}/>}
  {(result?.researchReveal||result?.researchFigure||result?.researchSource)&&<div className={panel}><h3 className="font-semibold">Study findings / explanation</h3><p className="whitespace-pre-wrap text-sm">{result.researchReveal}</p>{safeMedia(result.researchFigure)&&<img src={result.researchFigure} alt={result.researchFigureAlt||'Research figure supplied by presenter'} className="w-full max-h-[480px] object-contain"/>}{result.researchSource&&<p className="text-xs text-slate-400">Source: {result.researchSource}</p>}</div>}
  </>}</section>;
+}
+
+function PresenterResearchResults({question,result,revealed,showResults=revealed,count}){
+ const q=publicResearch(question),pred=q.researchKind==='prediction',n=pred?1:q.researchClaims.length,choices=pred?q.researchOptions.map(o=>o.label):CLAIM_LABELS;
+ const entries=showResults?result?.researchResults||[]:[],key=revealed?result?.researchKey??null:null,summary=researchSummary(entries,key,n,choices.length);
+ const [view,setView]=useState('responses'),[page,setPage]=useState(0);
+ const findings=revealed&&(result?.researchReveal||result?.researchFigure||result?.researchSource);
+ const calibration=revealed&&q.researchConfidence&&key&&summary.ratedCount>0;
+ const views=[{id:'responses',label:'Responses'},...(findings?[{id:'findings',label:'Study findings'}]:[]),...(calibration?[{id:'confidence',label:'Confidence analysis'}]:[])];
+ const active=views.some(v=>v.id===view)?view:'responses';
+ // Up to four graphs or two evidence claims per screen. Long explanations remain visible on their claim page.
+ const pageSize=pred?4:2,total=pred?choices.length:n,pages=Math.max(1,Math.ceil(total/pageSize)),current=Math.min(page,pages-1),start=current*pageSize,end=Math.min(total,start+pageSize);
+ return <section className="gm-research-presenter space-y-3">
+ <h2 className="text-2xl">{question.question}</h2>
+ <div className="gm-result-meta"><span>{showResults?entries.length+' submitted':(count||0)+' submitted · predictions hidden until reveal'}</span><ResultViews views={views} value={active} onChange={v=>{setView(v);setPage(0);}}/></div>
+ {active==='responses'&&<><p className="gm-research-context whitespace-pre-wrap text-sm">{q.researchContext}</p>
+ {pred?<><div className={'gm-prediction-board '+(end-start<=2?'gm-two-options':'')}>{q.researchOptions.slice(start,end).map((o,k)=>{const j=start+k,row=summary.rows[0];return <div className="gm-prediction-tile" key={j}><h3>{o.label}{key?.[0]===j&&<span className="gm-answer-key"> · Answer key</span>}</h3><div className="gm-prediction-graphic"><Graph option={o} q={q}/></div>{showResults&&<Bar label="Responses" count={row.counts[j]} total={row.count} correct={key?.[0]===j}/>}</div>;})}</div><Legend q={q}/>{q.researchConfidence&&showResults&&<p className="text-sm">Mean confidence: {pct(summary.rows[0]?.meanConfidence)}{key?' · Accuracy: '+pct(summary.rows[0]?.accuracy):''}</p>}</>:<div className="gm-evidence-board">{q.researchClaims.slice(start,end).map((c,k)=>{const i=start+k,row=summary.rows[i];return <article className="gm-evidence-card" key={i}><h3>{i+1}. {c.text}</h3>{showResults&&<div className="gm-evidence-bars">{choices.map((label,j)=><Bar key={j} label={label} count={row.counts[j]} total={row.count} correct={key?.[i]===j}/>)}</div>}{q.researchConfidence&&showResults&&<p className="text-xs">Mean confidence: {pct(row.meanConfidence)}{key?' · Accuracy: '+pct(row.accuracy):''}</p>}{revealed&&result?.researchReasons?.[i]&&<p className="gm-evidence-reason">{result.researchReasons[i]}</p>}</article>;})}</div>}
+ <ResultPager page={current} pages={pages} onChange={setPage} label={pred?'Options':'Statements'}/></>}
+ {active==='findings'&&findings&&<div className={'gm-findings-view '+(safeMedia(result.researchFigure)?'gm-has-study-figure':'')}><div><h3>Study findings / explanation</h3><p className="whitespace-pre-wrap">{result.researchReveal}</p></div>{safeMedia(result.researchFigure)&&<figure><img src={result.researchFigure} alt={result.researchFigureAlt||'Research figure supplied by presenter'}/></figure>}{result.researchSource&&<footer className="gm-slide-sources">Source: {result.researchSource}</footer>}</div>}
+ {active==='confidence'&&calibration&&<div className="gm-calibration-page"><Calibration summary={summary}/></div>}
+ </section>;
 }
