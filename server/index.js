@@ -896,7 +896,7 @@ io.on('connection', (socket) => {
   // Trainer manually reveals the answer
   socket.on('reveal_answer', ({ sessionCode }) => {
     const session = sessions.get(sessionCode);
-    if (!session || session.questionState!=='active') return;
+    if (!session || session.trainerSocketId!==socket.id || session.questionState!=='active') return;
     const q=session.questions[session.currentQuestionIndex];
     if(q?.type==='text'){if(socket.id===session.trainerSocketId){session.textVisible=Math.min(textLines(q).length,(session.textVisible||0)+1);broadcastText(session);}return;}
 
@@ -925,7 +925,7 @@ io.on('connection', (socket) => {
   // Trainer proceeds to Next Question
   socket.on('next_question', ({ sessionCode }) => {
     const session = sessions.get(sessionCode);
-    if (!session) return;
+    if (!session || session.trainerSocketId!==socket.id) return;
 
     const current=session.questions[session.currentQuestionIndex];
     if(current?.type==='text' && (session.textVisible||0)<textLines(current).length){if(socket.id===session.trainerSocketId){session.textVisible++;broadcastText(session);}return;}
@@ -992,7 +992,7 @@ io.on('connection', (socket) => {
   // Trainer jumps directly to a specific question
   socket.on('jump_to_question', ({ sessionCode, questionIndex }) => {
     const session = sessions.get(sessionCode);
-    if (!session) return;
+    if (!session || session.trainerSocketId!==socket.id) return;
     if (questionIndex < 0 || questionIndex >= session.questions.length) return;
 
     session.currentQuestionIndex = questionIndex;

@@ -7,10 +7,10 @@ const button='px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-sm 
 function identity(participants,name,phone){return curveIdentity(participants.findIndex(p=>(phone&&p.phone===phone)||p.name===name));}
 function useIdentity(){const {participants,participantName,participantPhone}=useQuiz();return identity(participants,participantName,participantPhone);}
 function PointImage({question,points=[],target,radius,onPick,highlight}){
- const svg=useRef(null);const [w,h]=mapDimensions(question),unit=Math.min(w,h),media=safeMedia(question.mapImage);
- function pick(e){if(!onPick)return;const p=svg.current.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const pos=p.matrixTransform(svg.current.getScreenCTM().inverse());const value=normalizePoint([pos.x/w,pos.y/h]);if(value)onPick(value);}
+ const svg=useRef(null),body=useRef(null);const [w,h]=mapDimensions(question),unit=Math.min(w,h),media=safeMedia(question.mapImage);
+ function pick(e){if(!onPick)return;const p=svg.current.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const pos=p.matrixTransform(svg.current.getScreenCTM().inverse());if(!media&&body.current?.isPointInFill&&!body.current.isPointInFill(pos))return;const value=normalizePoint([pos.x/w,pos.y/h]);if(value)onPick(value);}
  return <svg ref={svg} viewBox={'0 0 '+w+' '+h} className="w-full max-h-[440px] bg-slate-950 rounded-xl border border-slate-800" style={{cursor:onPick?'crosshair':'default',touchAction:'manipulation'}} role="img" aria-label="Select a location on the image" onClick={pick}>
- {media?<image href={media} width={w} height={h} preserveAspectRatio="none"/>:<g><path d={bodyPath} fill="#E1E8DD" stroke="#718C7B" strokeWidth="1.5"/><path d="M130 114 Q140 104 150 120 Q160 104 170 114 Q180 128 150 145 Q120 128 130 114 M131 157 Q123 171 142 175 Q163 183 169 165 Q171 151 158 151" stroke="#A8B3A7" fill="none" strokeWidth="1.2"/></g>}
+ {media?<image href={media} width={w} height={h} preserveAspectRatio="none"/>:<g><path ref={body} d={bodyPath} fill="#E1E8DD" stroke="#718C7B" strokeWidth="1.5"/><path d="M130 114 Q140 104 150 120 Q160 104 170 114 Q180 128 150 145 Q120 128 130 114 M131 157 Q123 171 142 175 Q163 183 169 165 Q171 151 158 151" stroke="#A8B3A7" fill="none" strokeWidth="1.2"/></g>}
  {normalizePoint(target)&&Number.isFinite(radius)&&<circle cx={target[0]*w} cy={target[1]*h} r={radius*unit} fill="#718C7B" fillOpacity=".15" stroke="#42634F" strokeDasharray={unit*.012+' '+unit*.007} strokeWidth={unit*.005}/>}
  {points.map((p,i)=><g key={p.label||i}><circle cx={p.point[0]*w} cy={p.point[1]*h} r={unit*(highlight===p.label ? .026:.015)} fill={p.color||'#42634F'} fillOpacity={highlight&&highlight!==p.label ? .42:.86} stroke="#FFFEFA" strokeWidth={unit*.003}><title>{p.label}</title></circle></g>)}
  </svg>;
