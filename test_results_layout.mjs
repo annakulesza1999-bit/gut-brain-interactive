@@ -96,9 +96,11 @@ test('audience layout regression with fourteen demo responses, live and revealed
      const metrics=await stage.evaluate(s=>{
       const c=s.closest('.gm-slide-canvas'),a=c.getBoundingClientRect(),footer=s.querySelector('.gm-slide-sources').getBoundingClientRect(),img=s.querySelector('.gm-slide-figures figure:not(.gm-qr) img'),qr=s.querySelector('.gm-qr img'),box=img.getBoundingClientRect(),scale=a.width/1280;
       const logicalWidth=Math.min(box.width,box.height*img.naturalWidth/img.naturalHeight)/scale;
-      return {logicalWidth,footerBottom:footer.bottom-a.bottom,qrWidth:qr?qr.getBoundingClientRect().width/scale:0};
+      const figBottom=Math.max(...[...s.querySelectorAll('.gm-slide-figures figure')].map(f=>f.getBoundingClientRect().bottom));
+      return {logicalWidth,footerBottom:footer.bottom-a.bottom,figureFooterGap:(footer.top-figBottom)/scale,qrWidth:qr?qr.getBoundingClientRect().width/scale:0};
      });
      assert.ok(metrics.footerBottom<=2,name+' source footer clipped '+JSON.stringify(metrics));
+     assert.ok(metrics.figureFooterGap>=-1,name+' figure/caption overlaps footer '+JSON.stringify(metrics));
      if(q.figureLayout==='wide')assert.ok(metrics.logicalWidth>=850,name+' wide figure too small '+JSON.stringify(metrics));
      if(q.figureLayout==='large')assert.ok(metrics.logicalWidth>=280,name+' portrait figure too small '+JSON.stringify(metrics));
      if(q.textImages.length===2)assert.ok(metrics.qrWidth>=65&&metrics.qrWidth<=90,name+' QR size '+JSON.stringify(metrics));

@@ -102,9 +102,14 @@
 
 /* Keep research figures large without pushing the source footer off the 16:9 canvas.
    The logical canvas is 1280x720; the figure retains its original aspect ratio. */
-.gm-audience-content .gm-text-slide:has(.gm-figure-wide),.gm-audience-content .gm-text-slide:has(.gm-figure-led){padding:24px 34px 16px;gap:14px}
-.gm-audience-content .gm-slide-body.gm-figure-wide{grid-template-columns:minmax(0,1fr);gap:12px;align-content:start}
-.gm-audience-content .gm-figure-wide .gm-slide-bullets{gap:.22em}
+.gm-audience-content .gm-text-slide:not(.gm-cover-slide):has(.gm-figure-wide),.gm-audience-content .gm-text-slide:not(.gm-cover-slide):has(.gm-figure-led){padding:24px 34px 16px;gap:14px}
+.gm-audience-content .gm-slide-body.gm-figure-wide{display:flex;flex-direction:column;flex:0 0 auto;gap:12px;align-content:start}
+.gm-audience-content .gm-figure-wide .gm-slide-bullets{display:block}
+.gm-audience-content .gm-figure-wide .gm-slide-bullets li{display:flex;gap:.45em;margin-bottom:6px}
+.gm-audience-content .gm-figure-wide .gm-slide-bullets li::before{flex:none;width:.65em}
+.gm-audience-content .gm-figure-wide .gm-slide-bullets li>span{min-width:0}
+.gm-audience-content .gm-figure-wide .gm-slide-bullets li.gm-muted-line,.gm-audience-content .gm-figure-wide .gm-slide-bullets li.gm-subheading{display:block}
+.gm-audience-content .gm-figure-wide .gm-slide-bullets li:last-child{margin-bottom:0}
 .gm-audience-content .gm-figure-wide .gm-slide-figures{gap:12px;align-content:center}
 .gm-audience-content .gm-figure-wide .gm-slide-figures img{max-height:400px}
 .gm-audience-content .gm-figure-wide.gm-wide-medium .gm-slide-figures img{max-height:350px}
