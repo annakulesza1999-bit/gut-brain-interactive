@@ -20,7 +20,10 @@ test('phone nickname, accumulated points, scorecard, tie ranks and midline retur
  {type:'curve',question:'Draw a prediction'},
  {...brainTemplate(),brainView:'sagittal-map',brainTargets:[-101],brainAnchor:null,brainTolerance:0,question:'Locate the hypothalamus'},
  {type:'pointmap',mapGraded:false,question:'Where might you notice stress?'},
- {...researchTemplate('evidence'),question:'Evidence detective: optional confidence'}
+ {...researchTemplate('evidence'),question:'Evidence detective: optional confidence'},
+ {...researchTemplate('prediction','curve'),researchGraded:true,researchCorrect:0,question:'Curve prediction: optional confidence'},
+ {...researchTemplate('prediction','scatter'),researchGraded:true,researchCorrect:0,question:'Association prediction: optional confidence'},
+ {...researchTemplate('prediction','scatter'),researchGraded:true,researchCorrect:0,question:'Second association: optional confidence'}
  ].map((q,i)=>({options:[],correctAnswer:null,...q,id:i+1,scoringMode:'simple',timerSeconds:0}));
  await page.goto(url);await page.getByRole('heading',{name:'My presentations'}).waitFor();
  await page.locator('input[type=file][accept=".json,application/json"]').setInputFiles({name:'score-test.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({format:'gut-mind-presentation',schemaVersion:1,content:{title:'Synthetic scorecard fixture',questions,settings:{timerDuration:0}},history:[]}))});
@@ -43,7 +46,8 @@ test('phone nickname, accumulated points, scorecard, tie ranks and midline retur
  await go(5);const map=phone.getByRole('img',{name:'Select a location on the image'});await map.click();await phone.getByRole('button',{name:/Submit/}).click();await strip.getByText('3 points',{exact:true}).waitFor();
  await page.getByRole('button',{name:'Reveal results',exact:true}).click();await strip.getByText('3 points',{exact:true}).waitFor();
  await go(6);await phone.getByRole('button',{name:'Supported by the evidence',exact:true}).first().click();await phone.getByText('Optional - not rated',{exact:true}).waitFor();const submit=phone.getByRole('button',{name:'Submit classifications'});assert.equal(await submit.isEnabled(),true);await submit.click();await phone.getByText('Submitted - waiting for findings.').waitFor();await page.getByRole('button',{name:'Reveal results',exact:true}).click();await strip.getByText('4 points',{exact:true}).waitFor();
- await go(0);await strip.getByText('4 points',{exact:true}).waitFor();await strip.click();await sheet.getByText('3. Choose the correct option').waitFor();
+ for(const [i,label] of [[7,'Lower response'],[8,'Negative association'],[9,'Negative association']]){await go(i);await phone.getByRole('button',{name:label,exact:false}).first().click();await phone.getByText('Optional - not rated',{exact:true}).waitFor();const send=phone.getByRole('button',{name:'Submit prediction'});assert.equal(await send.isEnabled(),true);await send.click();await phone.getByText('Submitted - waiting for findings.').waitFor();await page.getByRole('button',{name:'Reveal results',exact:true}).click();await strip.getByText((i-2)+' points',{exact:true}).waitFor();}
+ await go(0);await strip.getByText('7 points',{exact:true}).waitFor();await strip.click();await sheet.getByText('3. Choose the correct option').waitFor();
  await page.screenshot({path:'preview-test-output/phone-scorecard.png',timeout:3000}).catch(()=>{});
  assert.deepEqual(errors,[]);
 });

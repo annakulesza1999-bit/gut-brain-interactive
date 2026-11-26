@@ -38,9 +38,9 @@ export function normalizeResearchResponse(q,value){
  if(!Array.isArray(value.answers)||value.answers.length!==n||value.answers.some(a=>!(flexible&&a===null)&&(!Number.isInteger(a)||a<0||a>=limit))||!value.answers.some(Number.isInteger))return null;
  let confidence=[];
  if(r.researchConfidence){
-  if(flexible&&(value.confidence===undefined||Array.isArray(value.confidence)&&value.confidence.length===0))confidence=Array(n).fill(null);
+  if(value.confidence===undefined||Array.isArray(value.confidence)&&value.confidence.length===0)confidence=Array(n).fill(null);
   else{
-   if(!Array.isArray(value.confidence)||value.confidence.length!==n||value.confidence.some(c=>!(flexible&&c===null)&&(!Number.isInteger(c)||c<0||c>100)))return null;
+   if(!Array.isArray(value.confidence)||value.confidence.length!==n||value.confidence.some(c=>c!==null&&(!Number.isInteger(c)||c<0||c>100)))return null;
    confidence=value.confidence.map((c,i)=>flexible&&value.answers[i]===null?null:c);
   }
  }

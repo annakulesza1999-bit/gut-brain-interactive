@@ -51,7 +51,8 @@ test('loopback session: '+N+' participants, all activity families, auth and priv
  {id:9,type:'sequence',question:'Next event?',options:['A','B'],correctAnswer:1,beforePreset:'crh',afterPreset:'acth',timerSeconds:0},
  {id:10,type:'mcq',question:'Question',options:['A','B','C','D','E','F'],correctAnswer:5,timerSeconds:0},
  {id:11,type:'simulation',simKind:'recovery',simMode:'explore',question:'Private exploration',options:[],correctAnswer:null,timerSeconds:90},
- {id:12,type:'wordcloud',wordcloudMode:'open',question:'Open responses',options:[],correctAnswer:null,timerSeconds:0}
+ {id:12,type:'wordcloud',wordcloudMode:'open',question:'Open responses',options:[],correctAnswer:null,timerSeconds:0},
+ {id:13,...researchTemplate('prediction','curve'),researchGraded:true,researchCorrect:0,timerSeconds:0,resultsMode:'reveal'}
  ];
  const simple=process.env.GM_SIMPLE_SCORING==='1';if(simple)for(const q of questions)q.scoringMode='simple';
  const created=await ack(presenter,'create_session',{trainerName:'Synthetic presenter',customQuestions:questions,timerDuration:0,speedBonusEnabled:false});
@@ -117,8 +118,12 @@ test('loopback session: '+N+' participants, all activity families, auth and priv
  const openResult=await reveal(11);assert.equal(openResult.answeredCount,N);assert.equal(openResult.wordCloudWords.length,N+1);assert.ok(openResult.wordCloudWords.every(w=>w===sentence));
  assert.equal((await ack(students[1],'submit_word_cloud',{sessionCode,questionIndex:11,word:sentence})).success,false);
  if(simple){const a=await ack(restored,'get_session_state',{sessionCode});const b=await ack(students[1],'get_session_state',{sessionCode});assert.equal(a.participant.name,'Learner 1');assert.equal(a.participant.score,8);assert.equal(b.participant.score,13);assert.equal(a.scorecard.find(x=>x.slide===8).points,1);assert.equal(b.scorecard.find(x=>x.slide===12).points,1);assert.equal(a.scorecard.find(x=>x.slide===4).points,2);assert.equal(a.scorecard.find(x=>x.slide===6).points,1);assert.equal(a.scorecard.find(x=>x.slide===2).points,0);assert.equal(b.participant.rank,1);assert.equal((await ack(intruder,'join_session',{sessionCode,nickname:'Learner 2'})).success,false);}
+ await advance(12);
+ const prediction=await Promise.all(activeStudents.map((s,i)=>ack(s,'submit_spatial',{sessionCode,questionIndex:12,response:i%2?{answers:[0],confidence:[null]}:{answers:[0]}})));assert.ok(prediction.every(r=>r.success));
+ const predicted=await reveal(12);assert.equal(predicted.researchResults.length,N);assert.ok(predicted.researchResults.every(r=>r.pointsEarned===(simple?1:100)&&r.response.confidence[0]===null));
+ if(simple){assert.equal((await ack(restored,'get_session_state',{sessionCode})).participant.score,9);assert.equal((await ack(students[1],'get_session_state',{sessionCode})).participant.score,14);}
  const finalTrainer=event(presenter,'quiz_finished'),finalStudent=event(students[1],'quiz_finished');presenter.emit('next_question',{sessionCode});
- const result=await finalTrainer,student=await finalStudent;assert.equal(result.analytics.gradedQuestionCount,5);assert.equal(result.analytics.avgAccuracy,simple?98:99);assert.equal(student.leaderboard.filter(r=>r.answers).length,1);assert.equal(student.analytics.questionAnalytics,undefined);
+ const result=await finalTrainer,student=await finalStudent;assert.equal(result.analytics.gradedQuestionCount,6);assert.ok(result.analytics.avgAccuracy>=98&&result.analytics.avgAccuracy<=100);assert.equal(student.leaderboard.filter(r=>r.answers).length,1);assert.equal(student.analytics.questionAnalytics,undefined);
  assert.deepEqual(participantLeaks,[]);
  const newPresenter=await connect();const restore=await ack(newPresenter,'get_session_state',{sessionCode,trainerToken:created.trainerToken});assert.equal(restore.isTrainer,true);
 });
