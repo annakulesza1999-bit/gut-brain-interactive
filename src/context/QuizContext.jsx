@@ -589,6 +589,12 @@ export function QuizProvider({ children }) {
     });
   }, [sessionCode, currentQuestionIndex, participantPhone]);
 
+  const submitSpatial=useCallback(response=>new Promise(resolve=>{
+    if(isAnswerSubmitted||questionState!=='active'||!sessionCode||!socket.connected)return resolve({success:false,error:'Activity unavailable.'});
+    socket.timeout(8000).emit('submit_spatial',{sessionCode,questionIndex:currentQuestionIndex,response},(err,res)=>{
+      if(err)return resolve({success:false,error:'Connection timed out.'});if(res?.success)setIsAnswerSubmitted(true);resolve(res||{success:false,error:'Submission failed.'});
+    });
+  }),[isAnswerSubmitted,questionState,sessionCode,currentQuestionIndex]);
   const submitCurve = useCallback((points) => new Promise(resolve => {
     if (isAnswerSubmitted || questionState !== 'active' || !sessionCode || !socket.connected) return resolve({success:false,error:'Activity unavailable.'});
     socket.timeout(8000).emit('submit_curve',{sessionCode,questionIndex:currentQuestionIndex,points},(err,res)=>{
@@ -663,7 +669,7 @@ export function QuizProvider({ children }) {
       upvoteQAQuestion,
       toggleQAAnswered,
       submitWordCloud,
-      submitCurve,
+      submitCurve,submitSpatial,
       resetToHome,
       clearDatabase
     }}>

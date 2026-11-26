@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import {SpatialResults} from '../common/SpatialActivity';
 import TextSlide from '../common/TextSlide';
 import {textLines} from '../../activities.js';
 import {CurveResults} from '../common/CurveActivity';
@@ -97,7 +98,7 @@ export default function TrainerLiveQuestion() {
 
       if (e.key === ' ' || e.key === 'ArrowRight') {
         e.preventDefault();
-        if (hasHiddenText) revealTextLine(); else if (['curve','sequence'].includes(currentQuestion?.type) && !isRevealed) revealAnswer(); else nextQuestion();
+        if (hasHiddenText) revealTextLine(); else if (['curve','sequence','pointmap','matching'].includes(currentQuestion?.type) && !isRevealed) revealAnswer(); else nextQuestion();
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
         if (hasHiddenText) revealTextLine(); else if (!isRevealed && currentQuestion?.type!=='text') revealAnswer();
@@ -243,7 +244,7 @@ export default function TrainerLiveQuestion() {
           leaderboard={leaderboard}
           onClose={() => setViewMode('question')}
         />
-      ) : currentQuestion.type === 'text' ? <TextSlide question={currentQuestion} visible={textVisible} presenter/> : currentQuestion.type === 'curve' ? <CurveResults key={currentQuestionIndex} question={currentQuestion} curves={revealData?.curves||[]} revealed={isRevealed} count={answeredCount}/> : currentQuestion.type === 'wordcloud' ? (
+      ) : ['pointmap','matching'].includes(currentQuestion.type) ? <SpatialResults key={currentQuestionIndex} question={currentQuestion} result={revealData} revealed={isRevealed} count={answeredCount}/> : currentQuestion.type === 'text' ? <TextSlide question={currentQuestion} visible={textVisible} presenter/> : currentQuestion.type === 'curve' ? <CurveResults key={currentQuestionIndex} question={currentQuestion} curves={revealData?.curves||[]} revealed={isRevealed} count={answeredCount}/> : currentQuestion.type === 'wordcloud' ? (
         <WordCloudDisplay
           words={wordCloudWords}
           totalResponses={wordCloudWords.length}
@@ -349,7 +350,7 @@ export default function TrainerLiveQuestion() {
           {/* Next Question / Finish */}
           <button
             onClick={hasHiddenText?revealTextLine:nextQuestion}
-            disabled={['curve','sequence'].includes(currentQuestion.type) && !isRevealed}
+            disabled={['curve','sequence','pointmap','matching'].includes(currentQuestion.type) && !isRevealed}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-lg shadow-blue-500/25 transition-all transform hover:scale-105"
           >
             <span>{hasHiddenText?'Reveal next line':currentQuestionIndex + 1 >= totalQuestions ? 'Finish Quiz & Results' : 'Next Question'}</span>

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import {MapEditor,MatchingEditor} from '../common/SpatialActivity';
+import {defaultPairs} from '../../spatialActivities.js';
 import { hpaStages, safeMedia } from '../../activities.js';
 import { 
   Plus, 
@@ -99,7 +101,7 @@ export default function QuestionEditorModal({
       const group = hpaStages.map((stage,i)=>({id:newId+i,type:'sequence',sequenceTitle:'HPA axis — What happens next?',sequenceStep:i+1,sequenceTotal:hpaStages.length,category:'Stress physiology',difficulty:'Medium',...stage}));
       setQuestions(prev=>[...prev,...group]); setSelectedIndex(questions.length); return;
     }
-    const newQuestion = type === 'text' ? {id:newId,type:'text',question:'Key takeaways',body:'First point\nSecond point\nThird point',revealMode:'step',options:[],correctAnswer:null} : type === 'curve' ? {id:newId,type:'curve',question:'Predict the cortisol response after a stressful event.',xLabel:'Time (minutes)',yLabel:'Relative cortisol level',xTicks:'Before,0,15,30,45,60',stressMarker:0.2,category:'Stress physiology',difficulty:'Medium',options:[],correctAnswer:null} : type === 'wordcloud' ? {
+    const newQuestion = type==='pointmap'?{id:newId,type,question:'Where do you feel stress?',mapGraded:false,mapRadius:.06,mapPoints:100,options:[],correctAnswer:null}:type==='matching'?{id:newId,type,question:'Match the gut–brain communication pathways',matchPairs:defaultPairs.map(p=>({...p})),matchPoints:100,options:[],correctAnswer:null}:type === 'text' ? {id:newId,type:'text',question:'Key takeaways',body:'First point\nSecond point\nThird point',revealMode:'step',options:[],correctAnswer:null} : type === 'curve' ? {id:newId,type:'curve',question:'Predict the cortisol response after a stressful event.',xLabel:'Time (minutes)',yLabel:'Relative cortisol level',xTicks:'Before,0,15,30,45,60',stressMarker:0.2,category:'Stress physiology',difficulty:'Medium',options:[],correctAnswer:null} : type === 'wordcloud' ? {
       id: newId,
       type: 'wordcloud',
       question: 'In one word, what was the most valuable concept you learned today?',
@@ -248,6 +250,8 @@ export default function QuestionEditorModal({
               <button onClick={()=>handleAddQuestion('sequence')} className="p-2 rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-700 text-xs font-semibold">+ Sequence (5 stages)</button>
               <button onClick={()=>handleAddQuestion('curve')} className="p-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 text-xs font-semibold">+ Draw a curve</button>
               <button onClick={()=>handleAddQuestion('text')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Text slide</button>
+              <button onClick={()=>handleAddQuestion('pointmap')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Point map</button>
+              <button onClick={()=>handleAddQuestion('matching')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Match pairs</button>
             </div>
 
             {/* List */}
@@ -279,7 +283,7 @@ export default function QuestionEditorModal({
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
                         isWordCloud ? 'bg-sky-500/20 text-sky-300' : 'bg-slate-800 text-slate-400'
                       }`}>
-                        {isWordCloud ? 'Cloud' : q.type === 'text' ? 'Text' : q.type === 'curve' ? 'Draw' : q.type === 'sequence' ? 'Stage '+q.sequenceStep : 'MCQ'}
+                        {isWordCloud ? 'Cloud' : q.type==='pointmap'?'Map':q.type==='matching'?'Match':q.type === 'text' ? 'Text' : q.type === 'curve' ? 'Draw' : q.type === 'sequence' ? 'Stage '+q.sequenceStep : 'MCQ'}
                       </span>
                     </div>
                   </div>
@@ -309,6 +313,8 @@ export default function QuestionEditorModal({
                     <option value="wordcloud">Live Word Cloud</option>
                     <option value="curve">Draw a curve</option>
                     <option value="text">Text slide</option>
+                    <option value="pointmap">Point map / anatomy quiz</option>
+                    <option value="matching">Match pairs</option>
                     <option value="sequence">Interactive sequence stage</option>
                   </select>
                 </div>
@@ -368,6 +374,8 @@ export default function QuestionEditorModal({
                 {currentQ.timerSeconds>0&&<label className="block text-sm">Seconds (1–3600)<input type="number" min="1" max="3600" value={currentQ.timerSeconds} onChange={ev=>handleUpdateCurrentQ('timerSeconds',Math.max(1,Math.min(3600,Number(ev.target.value)||1)))} className="block w-full p-2 rounded-lg border border-slate-700 bg-slate-950"/></label>}
                 <p className="text-xs text-slate-400">When time expires, submissions close and results are revealed. Advance when ready.</p>
               </section>}
+              {currentQ.type==='pointmap'&&<MapEditor key={currentQ.id} question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>}
+              {currentQ.type==='matching'&&<MatchingEditor question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>}
               {currentQ.type==='text'&&<section className="p-4 border border-slate-800 rounded-2xl space-y-3">
                 <label className="block text-sm">Slide content (one revealable point per line)<textarea rows={7} className="block w-full mt-1 p-3 border border-slate-700 bg-slate-950 rounded-lg" value={currentQ.body||''} onChange={ev=>handleUpdateCurrentQ('body',ev.target.value)}/></label>
                 <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={currentQ.revealMode==='step'} onChange={ev=>handleUpdateCurrentQ('revealMode',ev.target.checked?'step':'all')}/> Reveal one line per click</label>
@@ -393,7 +401,7 @@ export default function QuestionEditorModal({
               </section>}
 
               {/* MCQ Options List (If MCQ) */}
-              {!['wordcloud','curve','text'].includes(currentQ.type) && (
+              {!['wordcloud','curve','text','pointmap','matching'].includes(currentQ.type) && (
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
