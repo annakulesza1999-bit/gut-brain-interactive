@@ -78,7 +78,15 @@ export function previewData(deck,state){
  if(q.type==='simulation')reveal.simulationResults=entries;
  if(q.type==='research')Object.assign(reveal,revealResearch(q),{researchResults:entries});
  if(q.type==='brain')Object.assign(reveal,brainReveal(q),{brainResults:entries});
+ const publicEntries=rows.map(({i,response})=>({...curveIdentity(i),response}));
+ const live={optionDist:reveal.optionDist};
+ if(q.type==='curve')live.curves=publicEntries.map(e=>({label:e.label,color:e.color,points:e.response}));
+ if(q.type==='pointmap')live.mapResults=publicEntries.map(e=>({label:e.label,color:e.color,point:e.response}));
+ if(q.type==='matching')live.matchResults=publicEntries.map(e=>({label:e.label,color:e.color,selection:e.response}));
+ if(q.type==='simulation')live.simulationResults=publicEntries;
+ if(q.type==='research')live.researchResults=publicEntries;
+ if(q.type==='brain')live.brainResults=publicEntries;
  const ownScore=own&&state.revealed&&q.type!=='wordcloud'?score(q,state.response):null;
  const question={id:q.id,question:q.question,options:q.options||[],category:q.category,difficulty:q.difficulty,...publicActivity(q,state.visible)};
- return {question,participants,words,completed:rows.length,own,reveal:state.revealed?reveal:null,ownScore,thumbs:reactionSummary(state.thumb?{preview:state.thumb}:{})};
+ return {question,participants,words,completed:rows.length,own,live,reveal:state.revealed?reveal:null,ownScore,thumbs:reactionSummary(state.thumb?{preview:state.thumb}:{})};
 }

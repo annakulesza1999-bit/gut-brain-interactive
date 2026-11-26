@@ -392,6 +392,7 @@ export default function QuestionEditorModal({
                 />
               </div>
 
+              {currentQ.type!=='text'&&<section className="p-4 border border-slate-800 rounded-2xl space-y-2"><label className="block text-sm">Response visibility<select className="block w-full mt-1 p-2 rounded-lg border border-slate-700 bg-slate-950" value={currentQ.resultsMode==='reveal'?'reveal':'live'} onChange={ev=>handleUpdateCurrentQ('resultsMode',ev.target.value)}><option value="live">Live — show responses as they arrive</option><option value="reveal">Hidden — show only after reveal</option></select></label><p className="text-xs text-slate-400">Live displays responses, not the correct answer or score. Use Hidden for independent predictions.</p></section>}
               {currentQ.type!=='text' && <section className="p-4 border border-slate-800 rounded-2xl space-y-3">
                 <label className="block text-sm font-medium">Countdown</label>
                 <select className="w-full p-2 rounded-lg border border-slate-700 bg-slate-950" aria-label="Countdown mode" value={currentQ.timerSeconds==null?'default':currentQ.timerSeconds===0?'off':'custom'} onChange={ev=>handleUpdateCurrentQ('timerSeconds',ev.target.value==='default'?null:ev.target.value==='off'?0:30)}><option value="default">Use session default</option><option value="off">No countdown</option><option value="custom">Custom duration</option></select>

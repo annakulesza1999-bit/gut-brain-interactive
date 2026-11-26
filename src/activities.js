@@ -69,3 +69,5 @@ export function reactionSummary(votes={}) {
 
 /** Restrict figures to bounded local image data; speaker notes never enter the participant payload. */
 export function safeTextImages(value){return Array.isArray(value)?value.slice(0,4).map(x=>({media:safeMedia(x?.media),alt:typeof x?.alt==='string'?x.alt.slice(0,300):''})).filter(x=>x.media):[];}
+
+export const liveResultsEnabled=q=>q?.resultsMode!=='reveal';

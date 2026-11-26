@@ -1,93 +1,10 @@
-import React, { useMemo } from 'react';
-import { Cloud } from 'lucide-react';
-
-const COLOR_PALETTE = ['#42634F', '#79648D', '#805726', '#3E6471', '#8B4949', '#665177', '#557B62', '#855132'];
-
-export default function WordCloudDisplay({ words = [], totalResponses = 0 }) {
-  // Compute frequency map
-  const wordStats = useMemo(() => {
-    if (!words || words.length === 0) return [];
-
-    const map = {};
-    words.forEach(entry => {
-      const clean = (entry.text || entry || '').trim();
-      if (!clean) return;
-      const lower = clean.toLowerCase();
-      if (!map[lower]) {
-        map[lower] = { text: clean, count: 0 };
-      }
-      map[lower].count += 1;
-    });
-
-    const list = Object.values(map);
-    list.sort((a, b) => b.count - a.count);
-
-    const maxCount = list[0]?.count || 1;
-    const minCount = list[list.length - 1]?.count || 1;
-
-    return list.map((item, index) => {
-      // Scale font size from 18px to 64px based on relative frequency
-      const normalized = maxCount === minCount ? 0.5 : (item.count - minCount) / (maxCount - minCount);
-      const fontSize = Math.round(18 + normalized * 46);
-      const color = COLOR_PALETTE[index % COLOR_PALETTE.length];
-      const rotation = 0;
-
-      return {
-        ...item,
-        fontSize,
-        color,
-        rotation,
-      };
-    });
-  }, [words]);
-
-  return (
-    <div className="w-full bg-slate-900/60 border border-slate-800 rounded-3xl p-6 lg:p-10 shadow-2xl relative overflow-hidden backdrop-blur-md">
-      {/* Background glow decoration */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Header Info */}
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800/80">
-        <div className="flex items-center gap-2 text-blue-400">
-          <Cloud className="w-6 h-6 animate-pulse" />
-          <span className="font-semibold text-sm uppercase tracking-wider">Live word cloud</span>
-        </div>
-        <div className="bg-slate-800/80 px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-300 border border-slate-700/60">
-          {totalResponses} {totalResponses === 1 ? 'submission' : 'submissions'} • {wordStats.length} unique words
-        </div>
-      </div>
-
-      {/* Cloud Container */}
-      {wordStats.length === 0 ? (
-        <div className="py-24 text-center text-slate-500 flex flex-col items-center justify-center">
-          <Cloud className="w-16 h-16 mb-4 opacity-30 stroke-1 " />
-          <p className="text-lg font-medium text-slate-400">Waiting for participants to submit words...</p>
-          <p className="text-xs text-slate-500 mt-1">Words will appear here live with dynamic frequency sizing</p>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 min-h-[360px] p-4 select-none">
-          {wordStats.map((item, idx) => (
-            <span
-              key={idx}
-              className="inline-block transition-all duration-300 hover:scale-125 cursor-default font-semibold tracking-tight animate-fade-in"
-              style={{
-                fontSize: `${item.fontSize}px`,
-                color: item.color,
-                transform: `rotate(${item.rotation}deg)`,
-                lineHeight: 1.1,
-              }}
-              title={`${item.text}: ${item.count} ${item.count === 1 ? 'vote' : 'votes'}`}
-            >
-              {item.text}
-              {item.count > 1 && (
-                <sup className="text-xs font-semibold ml-1 opacity-70 bg-slate-800/80 px-1.5 py-0.5 rounded-full">
-                  {item.count}
-                </sup>
-              )}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+import React,{useMemo} from 'react';
+import {wordFrequencies,layoutWords,wordColor} from '../../wordCloudLayout.js';
+export default function WordCloudDisplay({words=[],totalResponses=0,hidden=false}){
+ const stats=useMemo(()=>wordFrequencies(words),[words]);
+ const layout=useMemo(()=>{const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');return layoutWords(stats,(word,size)=>{if(!ctx)return word.length*size*.75;ctx.font='700 '+size+'px Arial, sans-serif';return ctx.measureText(word).width;});},[stats]);
+ return <section className="rounded-2xl border border-slate-800 overflow-hidden" style={{background:'#FFFEFA',color:'#34473E'}}>
+ <div className="flex items-center justify-between px-5 pt-4 gap-3 text-xs" style={{color:'#637167'}}><span className="tracking-widest uppercase">{hidden?'Hidden responses':'Word cloud'}</span><span>{hidden?'Waiting for reveal':totalResponses+' responses · '+stats.length+' unique'}</span></div>
+ {hidden||!stats.length?<div className="min-h-[320px] grid place-items-center text-center px-6"><div><p className="font-serif text-2xl">{hidden?'Responses are hidden':'What comes to mind?'}</p><p className="text-sm mt-2" style={{color:'#637167'}}>{hidden?'Reveal when everyone is ready.':'Words will appear here as participants submit them.'}</p></div></div>:layout.length===stats.length?<svg viewBox="0 0 900 460" role="img" aria-label="Live frequency word cloud" className="block w-full" style={{fontFamily:'Arial, sans-serif',overflow:'hidden'}}>{layout.map(w=><text key={w.key} x={w.x} y={w.y} textAnchor="middle" dominantBaseline="central" fontWeight="700" fontSize={w.size} fill={wordColor(w.key)}><title>{w.count} {w.count===1?'response':'responses'}</title>{w.text}</text>)}</svg>:<div className="flex flex-wrap gap-3 p-6 items-center justify-center">{stats.map(w=><span key={w.key} style={{color:wordColor(w.key),fontSize:14+32*Math.sqrt(w.count/stats[0].count),fontWeight:700}}>{w.text}</span>)}</div>}
+ <details className="px-5 pb-3 text-xs"><summary className="cursor-pointer">Response frequencies</summary><ul className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-1">{stats.map(w=><li key={w.key}>{w.text}: {w.count}</li>)}</ul></details></section>;
 }
