@@ -87,7 +87,7 @@ export default function ParticipantQuestionScreen() {
   const qSeed = (currentQuestion.id || (currentQuestionIndex + 1)) * 7;
 
   return (
-    <div className="max-w-xl mx-auto px-3 sm:px-4 py-4 sm:py-8 animate-fade-in flex flex-col justify-between min-h-[calc(100dvh-4.5rem)] select-none">
+    <div className="gm-live-question max-w-xl mx-auto px-3 sm:px-4 py-4 sm:py-8 animate-fade-in flex flex-col select-none">
       
       {/* Top Header: Progress & Timer */}
       <div>
@@ -99,7 +99,7 @@ export default function ParticipantQuestionScreen() {
         />
 
         {/* Status Bar */}
-        <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="gm-question-status flex items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-1.5">
             {speedBonusEnabled && (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 px-2 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
@@ -151,7 +151,7 @@ export default function ParticipantQuestionScreen() {
                       isSelected
                         ? theme.activeCard
                         : isAnswerSubmitted
-                        ? 'bg-slate-950/40 border-slate-800/80 text-slate-500 cursor-not-allowed opacity-50'
+                        ? 'bg-slate-950/40 border-slate-800/80 text-slate-500 cursor-not-allowed'
                         : `${theme.card} text-slate-100 active:scale-[0.98]`
                     }`}
                   >
@@ -185,7 +185,7 @@ export default function ParticipantQuestionScreen() {
 
       {/* Answer Submitted Sticky Feedback */}
       {isAnswerSubmitted && !['wordcloud','curve','text','pointmap','matching','simulation','research','brain'].includes(currentQuestion.type) && (
-        <div className="mt-6 mb-16 p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-200 flex items-center justify-center gap-2.5 animate-slide-up shadow-xl">
+        <div className="gm-submitted-note mt-6 mb-4 p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/50 text-slate-100 flex items-center justify-center gap-2.5 animate-slide-up shadow-xl">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
           <span className="font-extrabold text-xs sm:text-sm">
             Answer submitted ✓ &bull; Waiting for results...

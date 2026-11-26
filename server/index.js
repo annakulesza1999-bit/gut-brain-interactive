@@ -556,7 +556,7 @@ io.on('connection', (socket) => {
     }, 1000);
   }
 
-  function autoCloseQuestion(session) {
+  function autoCloseQuestion(session,showReveal=true) {
     if(session.questionState==='revealed')return;
     session.questionState = 'revealed';
     const index=session.currentQuestionIndex,q0=session.questions[index];
@@ -569,6 +569,7 @@ io.on('connection', (socket) => {
     }
     if(simpleScoring(q0)&&q0.type==='curve')for(const entry of session.curveSubmissions?.[index]||[]){const p=session.participants.find(p=>p.id===entry.participantId);if(p&&!p.answers[index])p.answers[index]={isCorrect:null,pointsEarned:0,selectedOption:null};}
     publishStandings(session);
+    if(!showReveal)return;
     for(const p of session.participants){const ans=p.answers[index];if(ans&&p.connected)io.to(p.socketId).emit('private_answer_result',{questionIndex:index,...ans,currentScore:p.score});}
     const analytics = calculateSessionAnalytics(session);
     const currQA = analytics.questionAnalytics[session.currentQuestionIndex];
@@ -716,13 +717,13 @@ io.on('connection', (socket) => {
   });
 
   // Trainer proceeds to Next Question
-  socket.on('next_question', ({ sessionCode }) => {
+  socket.on('next_question', ({ sessionCode,advance=false }) => {
     const session = sessions.get(sessionCode);
     if (!session || session.trainerSocketId!==socket.id) return;
 
     const current=session.questions[session.currentQuestionIndex];
-    if(current?.type==='text' && (session.textVisible||0)<textLines(current).length){if(socket.id===session.trainerSocketId){session.textVisible++;broadcastText(session);}return;}
-    if(current?.type!=='text'&&!isExploreSimulation(current)&&session.questionState==='active'){if(socket.id===session.trainerSocketId){if(session.timerInterval)clearInterval(session.timerInterval);session.timerInterval=null;autoCloseQuestion(session);}return;}
+    if(advance!==true&&current?.type==='text' && (session.textVisible||0)<textLines(current).length){if(socket.id===session.trainerSocketId){session.textVisible++;broadcastText(session);}return;}
+    if(current?.type!=='text'&&!isExploreSimulation(current)&&session.questionState==='active'){if(socket.id===session.trainerSocketId){if(session.timerInterval)clearInterval(session.timerInterval);session.timerInterval=null;autoCloseQuestion(session,advance!==true);}if(advance!==true)return;}
     if (!session.completedQuestions.includes(session.currentQuestionIndex)) {
       session.completedQuestions.push(session.currentQuestionIndex);
     }

@@ -32,7 +32,7 @@ test('production pilot fails closed and only admits authenticated sessions behin
  await connect({...headers,Origin:'https://evil.invalid'},'connect_error');await connect({...headers,'X-Forwarded-Proto':'http'},'connect_error');
  const presenter=await connect(),guest=await connect(),phones=await Promise.all(Array.from({length:30},()=>connect()));
  const ack=(s,event,data)=>s.timeout(8000).emitWithAck(event,data);
- const qs=[{id:1,type:'mcq',question:'Synthetic question',options:['Wrong','Right'],correctAnswer:1,timerSeconds:0,scoringMode:'simple'}];
+ const qs=[{id:1,type:'mcq',question:'Synthetic question',options:['Wrong','Right'],correctAnswer:1,timerSeconds:0,scoringMode:'simple'},{id:2,type:'mcq',question:'Second synthetic question',options:['Wrong','Right'],correctAnswer:1,timerSeconds:0,scoringMode:'simple'},{id:3,type:'text',question:'End',body:'Thank you.',options:[],correctAnswer:null,scoringMode:'simple'}];
  assert.equal((await ack(guest,'create_session',{customQuestions:qs,presenterSecret:'wrong'})).success,false);
  const created=await ack(presenter,'create_session',{customQuestions:qs,presenterSecret:secret,timerDuration:0});assert.ok(created.success,created.error);assert.equal(created.joinUrl,origin);
  const {sessionCode,inviteToken}=created;assert.equal((await ack(guest,'join_session',{sessionCode,nickname:'Guest'})).success,false);
@@ -43,5 +43,6 @@ test('production pilot fails closed and only admits authenticated sessions behin
  const revealed=once(phones[0],'answer_revealed');presenter.emit('reveal_answer',{sessionCode});await revealed;
  const state=await ack(phones[0],'get_session_state',{sessionCode});assert.equal(state.participant.score,1);assert.equal(state.scorecard[0].points,1);assert.equal(state.inviteToken,undefined);
  assert.ok(!(await ack(guest,'join_session',{sessionCode,inviteToken,nickname:'Late guest'})).success);
- console.log('Verified restricted production startup, proxy policy and 30 authenticated clients using synthetic data.');
+ const arrived=once(phones[0],'participant_question');presenter.emit('next_question',{sessionCode,advance:true});await arrived;assert.ok((await Promise.all(phones.map(s=>ack(s,'submit_answer',{sessionCode,questionIndex:1,selectedOption:1})))).every(r=>r.success));let accidentalReveal=0;phones[0].on('answer_revealed',()=>accidentalReveal++);const next=once(phones[0],'participant_question');presenter.emit('next_question',{sessionCode,advance:true});const [end]=await next;assert.equal(end.index,2);assert.equal(accidentalReveal,0);assert.equal((await ack(phones[0],'get_session_state',{sessionCode})).participant.score,2);
+ console.log('Verified restricted production startup, proxy policy and 30 authenticated clients using synthetic data, including silent scoring on skip.');
 });

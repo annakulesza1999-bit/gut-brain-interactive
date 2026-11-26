@@ -515,9 +515,9 @@ export function QuizProvider({ children }) {
     socket.emit('show_leaderboard', { sessionCode });
   }, [sessionCode]);
 
-  const nextQuestion = useCallback(() => {
+  const nextQuestion = useCallback((advance=false) => {
     if (!sessionCode) return;
-    socket.emit('next_question', { sessionCode });
+    socket.emit('next_question', { sessionCode,advance:advance===true });
   }, [sessionCode]);
 
   const jumpToQuestion = useCallback((qIndex) => {

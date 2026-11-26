@@ -3,7 +3,7 @@ import '../../preview.css';
 import {BrainResults} from '../common/BrainActivity';
 import {ResearchResults} from '../common/ResearchActivity';
 import {SimulationResults} from '../common/SimulationActivity';
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {SpatialResults} from '../common/SpatialActivity';
 import TextSlide from '../common/TextSlide';
 import {isExploreSimulation} from '../../simulations.js';
@@ -64,6 +64,12 @@ export default function TrainerLiveQuestion() {
     toggleTopicVisibility
   } = useQuiz();
 
+  const stageRef=useRef(null),hideTimer=useRef(null);
+  const [presentationMode,setPresentationMode]=useState(false),[chromeVisible,setChromeVisible]=useState(true);
+  const showChrome=()=>{setChromeVisible(true);clearTimeout(hideTimer.current);hideTimer.current=setTimeout(()=>{if(!stageRef.current?.querySelector('.gm-live-toolbar:focus-within,.gm-live-nav:focus-within'))setChromeVisible(false);},2600);};
+  const enterPresentation=async()=>{setPresentationMode(true);showChrome();try{await stageRef.current?.requestFullscreen?.();}catch{/* CSS full-window mode on unsupported browsers. */}};
+  const exitPresentation=()=>{setPresentationMode(false);clearTimeout(hideTimer.current);if(document.fullscreenElement===stageRef.current)document.exitFullscreen().catch(()=>{});};
+  useEffect(()=>{const changed=()=>{if(!document.fullscreenElement)setPresentationMode(false);};document.addEventListener('fullscreenchange',changed);return()=>{document.removeEventListener('fullscreenchange',changed);clearTimeout(hideTimer.current);};},[]);
   const [viewMode, setViewMode] = useState('question'); // 'question' | 'leaderboard'
   const [isQAOpen, setIsQAOpen] = useState(false);
   const [isRemoteModalOpen, setIsRemoteModalOpen] = useState(false);
@@ -106,7 +112,10 @@ export default function TrainerLiveQuestion() {
 
       if (e.key === ' ' || e.key === 'ArrowRight') {
         e.preventDefault();
-        if (hasHiddenText) revealTextLine(); else if (['curve','sequence','pointmap','matching','simulation','research','brain'].includes(currentQuestion?.type) && !explore && !isRevealed) revealAnswer(); else nextQuestion();
+        nextQuestion(true);
+      } else if (e.key==='ArrowLeft') {e.preventDefault();if(currentQuestionIndex>0)jumpToQuestion(currentQuestionIndex-1);
+      } else if(e.key==='Escape'&&presentationMode){exitPresentation();
+      } else if(e.key==='f'||e.key==='F'){e.preventDefault();presentationMode?exitPresentation():enterPresentation();
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
         if (hasHiddenText) revealTextLine(); else if (!isRevealed && currentQuestion?.type!=='text' && !explore) revealAnswer();
@@ -134,7 +143,7 @@ export default function TrainerLiveQuestion() {
     if (!currentQuestion) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentQuestion, hasHiddenText, revealTextLine, isRevealed, sessionStatus, totalQuestions, nextQuestion, revealAnswer, pauseQuiz, resumeQuiz, jumpToQuestion]);
+  }, [currentQuestion,currentQuestionIndex,presentationMode,hasHiddenText, revealTextLine, isRevealed, sessionStatus, totalQuestions, nextQuestion, revealAnswer, pauseQuiz, resumeQuiz, jumpToQuestion]);
 
   if (!currentQuestion) {
     return (
@@ -146,14 +155,14 @@ export default function TrainerLiveQuestion() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 animate-fade-in">
+    <div ref={stageRef} className={'gm-live-presenter '+(presentationMode?'gm-live-fullscreen '+(chromeVisible?'gm-chrome-visible':'gm-chrome-hidden'):'gm-live-normal')} onPointerMove={presentationMode?showChrome:undefined} onPointerDown={presentationMode?showChrome:undefined} onFocusCapture={presentationMode?showChrome:undefined}>
       
       {/* Top Controls & Status Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-800">
+      <div className="gm-live-toolbar flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         
         {/* Left: Question Number & Tags */}
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="font-mono text-xs sm:text-sm font-black uppercase tracking-wider px-3 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+          <button type="button" className="gm-live-fullscreen-button" onClick={presentationMode?exitPresentation:enterPresentation}><Maximize2 size={16}/> {presentationMode?'Exit full screen':'Full screen'}</button><span className="font-mono text-xs sm:text-sm font-black uppercase tracking-wider px-3 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
             QUESTION {currentQuestionIndex + 1} / {totalQuestions}
           </span>
           <button
@@ -303,10 +312,10 @@ export default function TrainerLiveQuestion() {
 
       </SlideFrame>
       {/* Trainer Bottom Control Panel */}
-      <div className="mt-8 p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+      <div className="gm-live-nav p-2 rounded-lg bg-slate-900 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2">
         
         {/* Question Navigator Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0">
+        <div className="gm-live-slide-list flex items-center gap-1.5 overflow-x-auto min-w-0 max-w-full">
           {Array.from({ length: totalQuestions }).map((_, qIdx) => {
             const isActive = qIdx === currentQuestionIndex;
             const isCompleted = qIdx < currentQuestionIndex;
@@ -316,7 +325,7 @@ export default function TrainerLiveQuestion() {
                 key={qIdx}
                 onClick={() => jumpToQuestion(qIdx)}
                 title={`Jump to Question ${qIdx + 1}`}
-                className={`w-8 h-8 rounded-lg font-mono text-xs font-bold transition-all flex items-center justify-center ${
+                className={`w-8 h-8 shrink-0 rounded-lg font-mono text-xs font-bold transition-all flex items-center justify-center ${
                   isActive
                     ? 'bg-blue-600 text-white ring-2 ring-blue-400/50 shadow-md shadow-blue-500/30'
                     : isCompleted
@@ -331,7 +340,7 @@ export default function TrainerLiveQuestion() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+        <div className="gm-live-actions flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end"><button type="button" className="gm-live-fullscreen-button" disabled={currentQuestionIndex===0} onClick={()=>jumpToQuestion(currentQuestionIndex-1)}>Previous</button>{hasHiddenText&&<button type="button" className="gm-live-fullscreen-button" onClick={revealTextLine}>Reveal next line</button>}
           
           {/* Toggle Leaderboard */}
           <button
@@ -359,11 +368,10 @@ export default function TrainerLiveQuestion() {
 
           {/* Next Question / Finish */}
           <button
-            onClick={hasHiddenText?revealTextLine:nextQuestion}
-            disabled={['curve','sequence','pointmap','matching','simulation','research','brain'].includes(currentQuestion.type) && !explore && !isRevealed}
+            onClick={()=>nextQuestion(true)}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-lg shadow-blue-500/25 transition-all transform hover:scale-105"
           >
-            <span>{hasHiddenText?'Reveal next line':currentQuestionIndex + 1 >= totalQuestions ? 'Finish Quiz & Results' : 'Next Question'}</span>
+            <span>{currentQuestionIndex + 1 >= totalQuestions ? 'Finish Quiz & Results' : 'Next Question'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
 

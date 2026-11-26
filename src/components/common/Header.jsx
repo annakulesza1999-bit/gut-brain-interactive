@@ -68,7 +68,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
+      {role==='participant'?<header className="gm-mobile-header"><span className="gm-brand">Gut &amp; Mind</span><span className="gm-mobile-session-status" role="status">{connected?(sessionStatus==='paused'?'Paused':sessionStatus==='ready'?'Ready':sessionStatus==='finished'?'Finished':'Connected'):'Reconnecting…'}</span><button type="button" aria-label="Audience Q&A" onClick={()=>setShowQAWall(true)}><MessageSquare size={17}/></button><button type="button" aria-label="Leave Session" onClick={()=>{if(confirm('Return to home screen?'))resetToHome();}}><LogOut size={17}/></button></header>:<header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
           
           {/* Brand & Course Title */}
@@ -182,7 +182,7 @@ export default function Header() {
             )}
           </div>
         </div>
-      </header>
+      </header>}
 
       {/* Floating Reactions Overlay */}
       {sessionCode && <FloatingReactionsOverlay isTrainer={role === 'trainer'} />}

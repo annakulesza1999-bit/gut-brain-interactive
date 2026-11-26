@@ -169,7 +169,7 @@ export default function TrainerLogin({ onBack }) {
             <Presentation className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl sm:text-2xl font-black text-white">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-100">
               Trainer Setup
             </h2>
             <p className="text-xs text-slate-400">
@@ -240,7 +240,7 @@ export default function TrainerLogin({ onBack }) {
               placeholder="Presenter name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-medium transition-all"
+              className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-medium transition-all"
             />
           </div>
 
@@ -281,7 +281,7 @@ export default function TrainerLogin({ onBack }) {
                 <Zap className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-white">Speed Bonus Scoring</div>
+                <div className="text-xs font-bold text-slate-100">Speed Bonus Scoring</div>
                 <div className="text-[11px] text-slate-400">
                   Awards up to +50 bonus points for faster correct responses
                 </div>
@@ -305,7 +305,7 @@ export default function TrainerLogin({ onBack }) {
                 <Tag className="w-4 h-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-white">Show Topic / Category on Questions</div>
+                <div className="text-xs font-bold text-slate-100">Show Topic / Category on Questions</div>
                 <div className="text-[11px] text-slate-400">
                   {showTopic ? 'Topic badges visible on screen' : 'Hidden by default to avoid giving category hints'}
                 </div>
