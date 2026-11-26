@@ -74,9 +74,8 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   await page.getByRole('button',{name:'Reveal next line'}).click();
   await page.getByRole('button',{name:'Next slide',exact:true}).click();
   await phone.getByRole('button',{name:'Submit prediction'}).waitFor();
-  const graph=phone.getByRole('img',{name:'Prediction graph'}); 
   const svg=phone.locator('svg[aria-label="Prediction graph"]');
-  const box=await svg.boundingBox();assert.ok(box);
+  await svg.scrollIntoViewIfNeeded();const box=await svg.boundingBox();assert.ok(box);
   await page.mouse.move(box.x+box.width*.15,box.y+box.height*.7);await page.mouse.down();
   await page.mouse.move(box.x+box.width*.5,box.y+box.height*.3,{steps:10});
   await page.mouse.move(box.x+box.width*.85,box.y+box.height*.65,{steps:10});await page.mouse.up();
