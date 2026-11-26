@@ -1,6 +1,7 @@
 import React,{useEffect,useReducer,useState,useRef,useMemo} from 'react';
 import {ArrowLeft,ArrowRight,Maximize2,Smartphone,Play,Pause,Eye,RotateCcw} from 'lucide-react';
 import {RehearsalProvider} from '../../context/QuizContext';
+import {useSlideScrollReset} from '../../useSlideScrollReset.js';
 import {startSlide,previewReducer,previewData} from '../../previewSession.js';
 import {simpleSession} from '../../scoring.js';
 import {isExploreSimulation} from '../../simulations.js';
@@ -69,6 +70,7 @@ export default function Rehearsal({content,startIndex=0,onExit,onEdit}){
 }
 export function PhoneRehearsal(){
  const [payload,setPayload]=useState(null),pending=useRef(new Map()),serial=useRef(0),[nickname,setNickname]=useState(''),[joinError,setJoinError]=useState('');
+ useSlideScrollReset(!!payload&&(!payload.context.scoringEnabled||payload.context.nicknameChosen),payload?.context.currentQuestionIndex);
  useEffect(()=>{
   if(window.parent===window)return;
   const receive=e=>{if(e.origin!==location.origin||e.source!==window.parent||e.data?.channel!==CHANNEL)return;if(e.data.type==='state')setPayload(e.data);if(e.data.type==='ack'){const done=pending.current.get(e.data.id);if(done){pending.current.delete(e.data.id);done({success:e.data.success,error:e.data.success?'':'Submission unavailable. Try resetting the slide.'});}}};

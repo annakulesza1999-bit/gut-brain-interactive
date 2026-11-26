@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { QuizProvider, useQuiz } from './context/QuizContext';
+import {useSlideScrollReset} from './useSlideScrollReset.js';
 import Header from './components/common/Header';
 import RoleSelection from './components/auth/RoleSelection';
 import TrainerLogin from './components/auth/TrainerLogin';
@@ -14,7 +15,8 @@ import ParticipantResultScreen from './components/participant/ParticipantResultS
 import ParticipantFinalScreen from './components/participant/ParticipantFinalScreen';
 
 function MainApp() {
-  const { role, setRole, sessionStatus, questionState, sessionCode, setSessionCode } = useQuiz();
+  const { role, setRole, sessionStatus, questionState, sessionCode, setSessionCode,currentQuestionIndex } = useQuiz();
+  useSlideScrollReset(role==='participant'&&(sessionStatus==='running'||sessionStatus==='paused'),sessionCode+':'+currentQuestionIndex);
   const [selectedRolePrompt, setSelectedRolePrompt] = useState(null); // 'trainer' | 'participant' | 'remote' | null
 
   // Check URL parameters for remote mode
