@@ -1,6 +1,6 @@
 import React,{useState,useRef,useId} from 'react';
 import {useQuiz} from '../../context/QuizContext';
-import {curveIdentity,normalizeCurve} from '../../activities.js';
+import {curveIdentity,normalizeCurve,averageCurves} from '../../activities.js';
 const X=50,Y=20,W=310,H=185;
 const line=points=>points.map(([x,y],i)=>(i?'L':'M')+(X+x*W)+' '+(Y+(1-y)*H)).join(' ');
 function Graph({question,children,svgRef,...handlers}){
@@ -34,12 +34,14 @@ export function CurveInput({question}){
  {error&&<p role="alert" className="text-sm text-rose-700">{error}</p>}</section>;
 }
 export function CurveResults({question,curves=[],revealed,count,participant=false}){
- const identity=useIdentity();const [opacity,setOpacity]=useState(.28),[width,setWidth]=useState(.8),[highlight,setHighlight]=useState('');
+ const identity=useIdentity();const [opacity,setOpacity]=useState(.28),[width,setWidth]=useState(.8),[highlight,setHighlight]=useState(''),[showAverage,setShowAverage]=useState(false);
  const selected=participant?identity.label:highlight;
+ const average=React.useMemo(()=>showAverage?averageCurves(curves):[],[showAverage,curves]);
  return <section className="space-y-4 p-4 sm:p-6 bg-slate-900 border border-slate-800 rounded-2xl"><h2 className="text-2xl">{question.question}</h2>
  <p className="text-sm text-slate-400">{revealed?curves.length+' predictions':count+' predictions submitted · hidden until reveal'}</p>
- <Graph question={question}>{revealed&&curves.map(c=><path key={c.label} d={line(c.points)} stroke={c.color} strokeWidth={width} vectorEffect="non-scaling-stroke" opacity={selected===c.label?Math.max(opacity,.85):opacity} fill="none" strokeLinecap="round" strokeLinejoin="round"><title>{c.label}</title></path>)}</Graph>
+ <Graph question={question}>{revealed&&curves.map(c=><path key={c.label} d={line(c.points)} stroke={c.color} strokeWidth={width} vectorEffect="non-scaling-stroke" opacity={selected===c.label?Math.max(opacity,.85):opacity} fill="none" strokeLinecap="round" strokeLinejoin="round"><title>{c.label}</title></path>)}{revealed&&showAverage&&average.length>1&&<path d={line(average)} stroke="#34473E" strokeWidth="1.7" strokeDasharray="5 3" fill="none" vectorEffect="non-scaling-stroke"><title>Mean of submitted predictions</title></path>}</Graph>
  {revealed&&<div className="flex flex-wrap gap-2">{curves.map(c=><button type="button" disabled={participant} key={c.label} onClick={()=>setHighlight(h=>h===c.label?'':c.label)} aria-pressed={selected===c.label} className="text-xs px-2 py-1 border border-slate-700 rounded-lg" style={{borderColor:selected===c.label?c.color:undefined}}><span style={{background:c.color}} className="inline-block w-3 h-3 rounded-full mr-1"/>{c.label}{participant&&c.label===identity.label?' (you)':''}</button>)}</div>}
- {revealed&&!participant&&<div className="flex flex-wrap gap-5 text-xs"><label>Opacity {Math.round(opacity*100)}% <input type="range" min=".05" max=".8" step=".05" value={opacity} onChange={e=>setOpacity(+e.target.value)}/></label><label>Line width {width.toFixed(1)} px <input type="range" min=".3" max="2" step=".1" value={width} onChange={e=>setWidth(+e.target.value)}/></label></div>}
+ {revealed&&!participant&&<div className="flex flex-wrap gap-5 text-xs"><label>Opacity {Math.round(opacity*100)}% <input type="range" min=".05" max=".8" step=".05" value={opacity} onChange={e=>setOpacity(+e.target.value)}/></label><label>Line width {width.toFixed(1)} px <input type="range" min=".3" max="2" step=".1" value={width} onChange={e=>setWidth(+e.target.value)}/></label><label className="flex items-center gap-2"><input type="checkbox" checked={showAverage} onChange={e=>setShowAverage(e.target.checked)}/> Group mean</label></div>}
+ {revealed&&showAverage&&<p className="text-xs text-slate-400">Dashed line: mean of submitted predictions over the shared time range (not measured cortisol).</p>}
  </section>;
 }

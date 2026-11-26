@@ -72,15 +72,6 @@ export default function TrainerLiveQuestion() {
     setIsRemoteModalOpen(true);
   };
 
-  if (!currentQuestion) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <div className="w-12 h-12 rounded-full bg-slate-800 animate-spin mx-auto mb-4 border-2 border-blue-500 border-t-transparent" />
-        <h3 className="text-lg font-bold text-white">Loading Question...</h3>
-      </div>
-    );
-  }
-
   const optionLetters = ['A', 'B', 'C', 'D','E','F'];
   const optionColors = [
     { border: 'border-blue-500/40', bg: 'bg-blue-600', badge: 'bg-blue-600', text: 'text-blue-100' },
@@ -91,7 +82,7 @@ export default function TrainerLiveQuestion() {
     { border: 'border-cyan-500/40', bg: 'bg-cyan-600', badge: 'bg-cyan-600', text: 'text-cyan-100' }
   ];
 
-  const qSeed = (currentQuestion.id || (currentQuestionIndex + 1)) * 7;
+  const qSeed = (currentQuestion?.id || (currentQuestionIndex + 1)) * 7;
   const totalParticipantsCount = participants.length || liveAnswerCount.totalParticipants;
   const answeredCount = liveAnswerCount.answeredCount;
   const isRevealed = questionState === 'revealed' || questionState === 'closed';
@@ -104,7 +95,7 @@ export default function TrainerLiveQuestion() {
 
       if (e.key === ' ' || e.key === 'ArrowRight') {
         e.preventDefault();
-        if (['curve','sequence'].includes(currentQuestion.type) && !isRevealed) revealAnswer(); else nextQuestion();
+        if (['curve','sequence'].includes(currentQuestion?.type) && !isRevealed) revealAnswer(); else nextQuestion();
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
         if (!isRevealed) revealAnswer();
@@ -129,9 +120,19 @@ export default function TrainerLiveQuestion() {
       }
     };
 
+    if (!currentQuestion) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentQuestion?.type, isRevealed, sessionStatus, totalQuestions, nextQuestion, revealAnswer, pauseQuiz, resumeQuiz, jumpToQuestion]);
+  }, [currentQuestion, isRevealed, sessionStatus, totalQuestions, nextQuestion, revealAnswer, pauseQuiz, resumeQuiz, jumpToQuestion]);
+
+  if (!currentQuestion) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
+        <div className="w-12 h-12 rounded-full bg-slate-800 animate-spin mx-auto mb-4 border-2 border-blue-500 border-t-transparent" />
+        <h3 className="text-lg font-bold text-white">Loading Question...</h3>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 animate-fade-in">

@@ -26,3 +26,21 @@ export const hpaStages = [
  {question:'Which hormone is released by the adrenal cortex in response to ACTH?',options:['Dopamine','CRH','Cortisol'],correctAnswer:2,explanation:'Cortisol supports adaptation and energy regulation.',beforePreset:'acth',afterPreset:'cortisol'},
  {question:'How does cortisol help regulate further HPA activity?',options:['Permanently activates CRH release','Provides negative feedback','Directly produces gut microbes'],correctAnswer:1,explanation:'Cortisol helps inhibit further CRH and ACTH release.',beforePreset:'cortisol',afterPreset:'feedback'}
 ];
+
+/** Average only where all curves have data; linearly interpolate on a shared grid. */
+export function averageCurves(curves, samples=101) {
+  const valid = curves.map(c=>normalizeCurve(c.points)).filter(Boolean);
+  if (!valid.length || !Number.isInteger(samples) || samples<2 || samples>501) return [];
+  const left=Math.max(...valid.map(c=>c[0][0])),right=Math.min(...valid.map(c=>c[c.length-1][0]));
+  if(right<=left)return [];
+  return Array.from({length:samples},(_,i)=>{
+    const x=left+(right-left)*i/(samples-1);
+    const ys=valid.map(c=>{
+      let j=c.findIndex(p=>p[0]>=x);
+      if(j<=0)return j===0?c[0][1]:c[c.length-1][1];
+      const a=c[j-1],b=c[j];
+      return b[0]===a[0]?b[1]:a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]);
+    });
+    return [x,ys.reduce((a,b)=>a+b,0)/ys.length];
+  });
+}

@@ -379,6 +379,7 @@ export function QuizProvider({ children }) {
         if (res.participants) setParticipants(res.participants);
         if (res.currentQuestion) setCurrentQuestion(res.currentQuestion);
         if (res.liveAnswerCount) setLiveAnswerCount(res.liveAnswerCount);
+        if (res.revealData) setRevealData(res.revealData);
         if (res.analytics) {
           setAnalytics(res.analytics);
           setLeaderboard(res.analytics.leaderboard || []);

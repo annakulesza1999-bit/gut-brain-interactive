@@ -486,6 +486,10 @@ io.on('connection', (socket) => {
         analytics
       };
 
+      if (currQ && session.questionState === 'revealed') {
+        const qa=analytics.questionAnalytics[session.currentQuestionIndex];
+        payload.revealData={...qa,curves:currQ.type==='curve'?(session.curveSubmissions?.[session.currentQuestionIndex]||[]).map(({participantId,...curve})=>curve):undefined,afterMedia:currQ.afterMedia,afterPreset:currQ.afterPreset,leaderboard:analytics.leaderboard.slice(0,10)};
+      }
       if (callback) callback(payload);
     } catch (e) {
       if (callback) callback({ success: false, error: e.message });
