@@ -30,6 +30,7 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   await page.getByLabel('Slide content (one revealable point per line)').fill('**First example line**\n~ *Second example line*');
   await page.getByLabel('Private speaker notes').fill('Synthetic private note');
   await page.getByLabel('Slide sources and citations').fill('Example study (2020)');
+  await page.getByLabel('Figure layout').selectOption('wide');
   await page.getByLabel('Add slide figure').setInputFiles({name:'source-figure.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGMs7KlmIAUwkaR6VMOohiGlAQCw0gGYqw/vQAAAAABJRU5ErkJggg==','base64')});
   await page.getByRole('button',{name:'Remove figure 1',exact:true}).waitFor();
   await page.getByRole('button',{name:'+ Draw a curve',exact:true}).click();
@@ -47,13 +48,14 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   await page.reload();await page.getByLabel('Presentation title').waitFor();
   assert.equal(await page.getByLabel('Presentation title').inputValue(),'Preflight saved deck');
   await page.getByRole('button',{name:'Edit slides'}).click();
-  assert.equal(await prompt.inputValue(),'Preflight example: gut and mind');
+  assert.equal(await prompt.inputValue(),'Preflight example: gut and mind');assert.equal(await page.getByLabel('Figure layout').inputValue(),'wide');
   await page.getByRole('dialog').getByText('Draw a test curve',{exact:true}).click();assert.equal(await page.getByLabel('Seconds (1–3600)').inputValue(),'45');
   await page.getByRole('dialog').getByText('Test anatomy image',{exact:true}).click();await page.getByRole('button',{name:'Use body silhouette'}).waitFor();
   await page.getByRole('button',{name:'Save & Close'}).click();await page.getByRole('heading',{name:'Presentation slide editor'}).waitFor({state:'hidden'});
   const downloaded=page.waitForEvent('download');await page.getByRole('button',{name:'Backup',exact:true}).click();const download=await downloaded;
   const file=out+'/synthetic.gutmind.json';await download.saveAs(file);
   const backup=JSON.parse(await readFile(file,'utf8'));assert.equal(backup.content.title,'Preflight saved deck');assert.equal(backup.content.questions.length,5);
+  assert.equal(backup.content.questions[0].figureLayout,'wide');
   assert.equal(backup.content.questions[0].sourceNotes,'Synthetic private note');assert.equal(backup.content.questions[0].slideSources,'Example study (2020)');assert.match(backup.content.questions[0].textImages[0].media,/^data:image\/png;base64,/);
   assert.equal(backup.content.questions[3].timerSeconds,45);assert.match(backup.content.questions[4].mapImage,/^data:image\/png;base64,/);
   await page.getByRole('button',{name:'Duplicate',exact:true}).click();await page.getByLabel('Presentation title').evaluate(el=>el.value);await page.waitForFunction(()=>document.querySelector('input[maxlength="160"]')?.value==='Preflight saved deck — copy');

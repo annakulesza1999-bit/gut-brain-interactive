@@ -158,3 +158,11 @@ button:is(.bg-emerald-600,.bg-emerald-700,.bg-blue-600,.bg-blue-700):hover:not(:
 
 /* Authored text emphasis is rendered as React text, never raw HTML. */
 .gm-slide-bullets strong{font-weight:700;color:inherit}.gm-slide-bullets em{font-style:italic}.gm-slide-bullets .gm-muted-line{display:block;font-size:.8em;color:var(--gm-muted);line-height:1.35}.gm-slide-bullets .gm-muted-line::before{content:none}.gm-slide-bullets .gm-indent-line{margin-left:1.6em;font-size:.9em}.gm-slide-bullets .gm-indent-line::before{content:'–';color:var(--gm-muted)}.gm-cover-slide .gm-slide-bullets .gm-muted-line{color:white;opacity:.85}.gm-slide-figures .gm-qr{max-width:90px;justify-self:end}.gm-slide-figures .gm-qr img{width:78px;height:78px}
+
+/* An opt-in stacked layout for landscape study figures. Phone content can scroll. */
+.gm-slide-body.gm-figure-wide{grid-template-columns:minmax(0,1fr)}
+.gm-figure-wide .gm-slide-figures{min-width:0;align-content:center}
+.gm-figure-wide .gm-slide-figures figcaption{text-align:center}
+.gm-figure-wide .gm-slide-figures.gm-has-qr{grid-template-columns:minmax(0,1fr) 90px;align-items:end;gap:12px}
+.gm-figure-wide .gm-slide-figures .gm-qr img{width:78px;height:78px;max-width:100%}
+@media(max-width:600px){.gm-figure-wide .gm-slide-figures.gm-has-qr{grid-template-columns:minmax(0,1fr)}}

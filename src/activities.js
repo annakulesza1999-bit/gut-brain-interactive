@@ -16,7 +16,7 @@ export function normalizeCurve(points) {
   return points.map(p => p.map(v => Math.round(v*10000)/10000));
 }
 export function publicActivity(q, visible=initialTextCount(q)) {
-  return {type:q.type || 'mcq', ...(q.type==='simulation'?simulationConfig(q):{}), ...(q.type==='research'?publicResearch(q):{}), ...(q.type==='brain'?publicBrain(q):{}), mapImage:q.type==='pointmap'?safeMedia(q.mapImage):undefined,mapWidth:q.mapWidth,mapHeight:q.mapHeight,mapGraded:q.mapGraded,matchLeft:q.type==='matching'?(q.matchPairs||[]).map(p=>p.left):undefined,matchChoices:q.type==='matching'?matchChoices(q):undefined, timerSeconds:q.timerSeconds, revealMode:q.revealMode, visibleLines:q.type==='text'?textLines(q).slice(0,visible):undefined, textTotal:q.type==='text'?textLines(q).length:undefined, slideSources:slideSources(q),slideLayout:slideLayout(q),figureLayout:q.figureLayout==='large'?'large':'normal',axisExplanation:typeof q.axisExplanation==='string'?q.axisExplanation.slice(0,400):undefined,textImages:q.type==='text'?safeTextImages(q.textImages):undefined, slideArtwork:q.type==='text'?safeSlideArtwork(q.slideArtwork):undefined, artworkAlt:q.type==='text'&&typeof q.artworkAlt==='string'?q.artworkAlt.slice(0,300):undefined, xLabel:q.xLabel, yLabel:q.yLabel, xTicks:q.xTicks, stressMarker:q.stressMarker, sequenceTitle:q.sequenceTitle, sequenceStep:q.sequenceStep, sequenceTotal:q.sequenceTotal, beforeMedia:q.beforeMedia, beforePreset:q.beforePreset};
+  return {type:q.type || 'mcq', ...(q.type==='simulation'?simulationConfig(q):{}), ...(q.type==='research'?publicResearch(q):{}), ...(q.type==='brain'?publicBrain(q):{}), mapImage:q.type==='pointmap'?safeMedia(q.mapImage):undefined,mapWidth:q.mapWidth,mapHeight:q.mapHeight,mapGraded:q.mapGraded,matchLeft:q.type==='matching'?(q.matchPairs||[]).map(p=>p.left):undefined,matchChoices:q.type==='matching'?matchChoices(q):undefined, timerSeconds:q.timerSeconds, revealMode:q.revealMode, visibleLines:q.type==='text'?textLines(q).slice(0,visible):undefined, textTotal:q.type==='text'?textLines(q).length:undefined, slideSources:slideSources(q),slideLayout:slideLayout(q),figureLayout:slideFigureLayout(q),axisExplanation:typeof q.axisExplanation==='string'?q.axisExplanation.slice(0,400):undefined,textImages:q.type==='text'?safeTextImages(q.textImages):undefined, slideArtwork:q.type==='text'?safeSlideArtwork(q.slideArtwork):undefined, artworkAlt:q.type==='text'&&typeof q.artworkAlt==='string'?q.artworkAlt.slice(0,300):undefined, xLabel:q.xLabel, yLabel:q.yLabel, xTicks:q.xTicks, stressMarker:q.stressMarker, sequenceTitle:q.sequenceTitle, sequenceStep:q.sequenceStep, sequenceTotal:q.sequenceTotal, beforeMedia:q.beforeMedia, beforePreset:q.beforePreset};
 }
 export function safeMedia(value) {
   if (typeof value !== 'string' || value.length > 500000) return '';
@@ -61,6 +61,7 @@ export function textLines(q) {
 }
 export function slideSources(q){return typeof q?.slideSources==='string'?q.slideSources.slice(0,2500):'';}
 export function slideLayout(q){return q?.slideLayout==='cover'?'cover':'content';}
+export function slideFigureLayout(q){return ['large','wide'].includes(q?.figureLayout)?q.figureLayout:'normal';}
 export function initialTextCount(q) {
  return q?.type==='text'?(q.revealMode==='step'?0:textLines(q).length):0;
 }

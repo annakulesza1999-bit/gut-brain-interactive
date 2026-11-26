@@ -60,3 +60,9 @@ test('slide source footer is separate from revealable bullets, bounded and publi
 
 import {parseSlideLine,shortDashes} from './src/slideText.js';
 test('safe authored emphasis and line styles',()=>{assert.deepEqual(parseSlideLine('~ **Sample:** *N = 74* — adults'),{kind:'muted',tokens:[{kind:'bold',text:'Sample:'},{kind:'plain',text:' '},{kind:'italic',text:'N = 74'},{kind:'plain',text:' - adults'}]});assert.equal(parseSlideLine('> example').kind,'indent');assert.equal(parseSlideLine('<script>').tokens[0].text,'<script>');assert.equal(shortDashes('A — B'),'A - B');});
+
+import {slideFigureLayout} from './src/activities.js';
+test('wide figure mode is opt-in and survives the public slide payload',()=>{
+ for(const layout of ['wide','large','normal']){const q={type:'text',body:'First point\nSecond point',figureLayout:layout,revealMode:'step',sourceNotes:'private'};assert.equal(slideFigureLayout(q),layout);assert.equal(publicActivity(q,1).figureLayout,layout);assert.deepEqual(publicActivity(q,1).visibleLines,['First point']);assert.equal(publicActivity(q,1).sourceNotes,undefined);}
+ assert.equal(slideFigureLayout({figureLayout:'invalid'}),'normal');assert.equal(slideFigureLayout({}),'normal');
+});

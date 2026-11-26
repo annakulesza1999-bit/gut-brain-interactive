@@ -30,6 +30,19 @@ test('audience layout regression with fourteen demo responses, live and revealed
  }
  try{
   await page.goto(url);await page.getByRole('heading',{name:'My presentations'}).waitFor();
+  // Generated raster fixtures match the geometry, not the contents, of wide and portrait research figures.
+  const media=await page.evaluate(()=>{
+   function image(w,h){const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const c=canvas.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,w,h);c.strokeStyle='#0063A6';c.lineWidth=3;c.strokeRect(4,4,w-8,h-8);c.fillStyle='#032138';c.font='24px sans-serif';c.fillText('Synthetic geometry fixture',20,35);for(let x=30;x<w-30;x+=80){c.beginPath();c.moveTo(x,55);c.lineTo(x,h-25);c.stroke();}return canvas.toDataURL('image/png');}
+   return {wide:image(1057,375),timeline:image(1302,432),portrait:image(1127,1750),qr:image(90,90)};
+  });
+  const fixtures=[
+   {question:'Wide findings: compare three original-sized panels',body:'**Main association:** a fictional finding, not measured data.\n~ Group A: n = 35 | Group B: n = 39',figureLayout:'wide',revealMode:'all',textImages:[{media:media.wide,alt:'Wide geometry fixture'}]},
+   {question:'Study design and sample: wide timeline and compact QR',body:'~ **Sample:** fictional participants, 18-35 years; initial N = 80\n~ **Groups:** A n = 35 | B n = 39\n**Sampling:** salivary and microbiome measurements\n**Behavioral data:** subjective ratings and a representative questionnaire\n**Microbiome:** composition and hypothetical functional measures',figureLayout:'wide',revealMode:'all',textImages:[{media:media.timeline,alt:'Timeline geometry fixture'},{media:media.qr,alt:'QR geometry fixture',role:'qr'}]},
+   {question:'Portrait illustration and longer source footer',body:'**Nervous system:** alertness and vigilance\n**Cardiovascular and respiratory systems:** heart rate and breathing rate\n**Energy mobilization:** glucose availability and skeletal muscle blood flow\n**Digestive system:** changes in motility and secretion',figureLayout:'large',revealMode:'all',textImages:[{media:media.portrait,alt:'Portrait geometry fixture: includes illustrative acute and chronic effects.'}]},
+   {question:'Wide figure with gradual reveal',body:'First visible point\nSecond visible point\nThird visible point',figureLayout:'wide',revealMode:'step',textImages:[{media:media.timeline,alt:'Step geometry fixture'}]}
+  ];
+  for(const [j,q] of fixtures.entries())questions.push({...q,type:'text',options:[],correctAnswer:null,id:questions.length+1,timerSeconds:0,slideSources:'Synthetic reference with supporting source details; no real study data or private lecture figures.',sourceNotes:'Private fixture note'});
+
   await page.locator('input[type=file][accept=".json,application/json"]').setInputFiles({name:'layout-test.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({format:'gut-mind-presentation',schemaVersion:1,content:{title:'Synthetic audience layout fixture',questions,settings:{timerDuration:0}},history:[]}))});
   await page.waitForFunction(()=>document.querySelector('input[maxlength="160"]')?.value==='Synthetic audience layout fixture');
   await page.getByRole('button',{name:'Present',exact:true}).click();
@@ -58,6 +71,49 @@ test('audience layout regression with fourteen demo responses, live and revealed
   for(let i=0;i<questions.length;i++){
    const q=questions[i],name=(i+1)+'-'+q.type+(q.simKind?'-'+q.simKind:'')+(q.researchKind?'-'+q.researchKind:'');
    await nav.locator('button').nth(i).click();
+   if(q.type==='text'){
+    // The full-size canvas should fit almost entirely without global shrinking.
+    const phoneToggle=page.getByRole('button',{name:'Student phone',exact:true});
+    if(await phoneToggle.getAttribute('aria-pressed')!=='true')await phoneToggle.click();
+    const phone=page.frameLocator('iframe[title="Student phone preview"]');
+    await phone.getByRole('img',{name:q.textImages[0].alt,exact:true}).waitFor();
+    assert.equal(await phone.getByText('Private fixture note',{exact:true}).count(),0);
+    if(q.revealMode==='step'){
+     assert.equal(await phone.getByText('First visible point',{exact:true}).count(),0);
+     for(const line of q.body.split('\n')){
+      await page.getByRole('button',{name:'Reveal next line',exact:true}).click();
+      await phone.getByText(line,{exact:true}).waitFor();
+     }
+    }
+    await phoneToggle.click();
+    await page.setViewportSize({width:1280,height:720});
+    await page.getByRole('button',{name:'Full screen',exact:true}).click();
+    await page.waitForFunction(()=>!!document.fullscreenElement);
+    const figures=async suffix=>{
+     await stage.locator('.gm-slide-figures img').first().waitFor();
+     await page.waitForFunction(()=>[...document.querySelectorAll('.gm-stage-content .gm-slide-figures img')].every(i=>i.complete&&i.naturalWidth>0));
+     await fit(name+' '+suffix,.96);
+     const metrics=await stage.evaluate(s=>{
+      const c=s.closest('.gm-slide-canvas'),a=c.getBoundingClientRect(),footer=s.querySelector('.gm-slide-sources').getBoundingClientRect(),img=s.querySelector('.gm-slide-figures figure:not(.gm-qr) img'),qr=s.querySelector('.gm-qr img'),box=img.getBoundingClientRect(),scale=a.width/1280;
+      const logicalWidth=Math.min(box.width,box.height*img.naturalWidth/img.naturalHeight)/scale;
+      return {logicalWidth,footerBottom:footer.bottom-a.bottom,qrWidth:qr?qr.getBoundingClientRect().width/scale:0};
+     });
+     assert.ok(metrics.footerBottom<=2,name+' source footer clipped '+JSON.stringify(metrics));
+     if(q.figureLayout==='wide')assert.ok(metrics.logicalWidth>=850,name+' wide figure too small '+JSON.stringify(metrics));
+     if(q.figureLayout==='large')assert.ok(metrics.logicalWidth>=280,name+' portrait figure too small '+JSON.stringify(metrics));
+     if(q.textImages.length===2)assert.ok(metrics.qrWidth>=65&&metrics.qrWidth<=90,name+' QR size '+JSON.stringify(metrics));
+     await page.screenshot({path:out+'/layout-'+name+'-'+suffix+'.png'});
+    };
+    await figures('720p');
+    await page.getByRole('button',{name:'Exit full screen'}).click();await page.waitForFunction(()=>!document.fullscreenElement);
+    await page.setViewportSize({width:1920,height:1080});
+    await page.getByRole('button',{name:'Full screen',exact:true}).click();await page.waitForFunction(()=>!!document.fullscreenElement);
+    await figures('1080p');
+    await page.getByRole('button',{name:'Exit full screen'}).click();await page.waitForFunction(()=>!document.fullscreenElement);
+    await page.setViewportSize({width:1366,height:768});
+    continue;
+   }
+
    if(q.simMode!=='explore'){await page.getByRole('button',{name:'Add demo responses'}).click();await page.getByRole('status').filter({hasText:'14/15 completed'}).waitFor();}
    if(q.type==='wordcloud'){
     await cloudFit(name+' normal live',11);

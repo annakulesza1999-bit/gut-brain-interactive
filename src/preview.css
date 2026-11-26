@@ -99,3 +99,14 @@
 .gm-anatomy-feedback.gm-feedback-retry{border-left-color:#B46B33;background:#FFF7D8}
 
 .gm-audience-content .gm-prediction-board.gm-two-options .gm-prediction-graphic svg,.gm-audience-content .gm-prediction-board.gm-two-options .gm-prediction-graphic img{height:240px}
+
+/* Keep research figures large without pushing the source footer off the 16:9 canvas.
+   The logical canvas is 1280x720; the figure retains its original aspect ratio. */
+.gm-audience-content .gm-text-slide:has(.gm-figure-wide),.gm-audience-content .gm-text-slide:has(.gm-figure-led){padding:24px 34px 16px;gap:14px}
+.gm-audience-content .gm-slide-body.gm-figure-wide{grid-template-columns:minmax(0,1fr);gap:12px;align-content:start}
+.gm-audience-content .gm-figure-wide .gm-slide-bullets{gap:.22em}
+.gm-audience-content .gm-figure-wide .gm-slide-figures{gap:12px;align-content:center}
+.gm-audience-content .gm-figure-wide .gm-slide-figures img{max-height:400px}
+.gm-audience-content .gm-figure-wide.gm-wide-medium .gm-slide-figures img{max-height:350px}
+.gm-audience-content .gm-figure-wide.gm-wide-dense .gm-slide-figures img{max-height:300px}
+.gm-audience-content .gm-figure-wide .gm-slide-figures .gm-qr img{width:78px;height:78px;max-height:78px}
