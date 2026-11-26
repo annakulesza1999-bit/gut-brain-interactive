@@ -1061,7 +1061,7 @@ io.on('connection', (socket) => {
       timestamp: Date.now()
     });
 
-    if(simpleScoring(session.questions[qIdx])){const count=session.wordCloudSubmissions[qIdx].filter(e=>e.participantId===participant.id).length;participant.answers[qIdx]={...scoreWithPolicy(session.questions[qIdx],{isCorrect:null},count),selectedOption:null};participant.score+=1;publishStandings(session);}
+    if(simpleScoring(session.questions[qIdx])&&!participant.answers[qIdx]){participant.answers[qIdx]={...scoreWithPolicy(session.questions[qIdx],{isCorrect:null}),selectedOption:null};participant.score+=1;publishStandings(session);}
     const currentWords = session.wordCloudSubmissions[qIdx].map(({text,timestamp})=>({text,timestamp}));
     io.to(session.code).emit('live_answer_count',completionPayload(session));
 

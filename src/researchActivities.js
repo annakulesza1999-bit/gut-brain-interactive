@@ -1,4 +1,6 @@
 // Version-independent research activity data and pure scoring helpers.
+import {simpleScoring} from './scoring.js';
+export const flexibleEvidence=q=>simpleScoring(q)&&q.researchKind==='evidence';
 export const GRAPH_TYPES=['none','curve-low','curve-same','curve-high','scatter-negative','scatter-flat','scatter-positive','image'];
 export const CLAIM_LABELS=['Supported by the evidence','Not established by the evidence'];
 const str=(v,max=2000)=>typeof v==='string'?v.slice(0,max):'';
@@ -32,11 +34,15 @@ export function publicResearch(q){
 export function normalizeResearchResponse(q,value){
  if(!value||typeof value!=='object'||Array.isArray(value)||researchProblem(q))return null;
  const r=normalizeResearch(q),n=r.researchKind==='prediction'?1:r.researchClaims.length,limit=r.researchKind==='prediction'?r.researchOptions.length:2;
- if(!Array.isArray(value.answers)||value.answers.length!==n||value.answers.some(a=>!Number.isInteger(a)||a<0||a>=limit))return null;
+ const flexible=flexibleEvidence(q);
+ if(!Array.isArray(value.answers)||value.answers.length!==n||value.answers.some(a=>!(flexible&&a===null)&&(!Number.isInteger(a)||a<0||a>=limit))||!value.answers.some(Number.isInteger))return null;
  let confidence=[];
  if(r.researchConfidence){
-  if(!Array.isArray(value.confidence)||value.confidence.length!==n||value.confidence.some(c=>!Number.isInteger(c)||c<0||c>100))return null;
-  confidence=value.confidence.slice();
+  if(flexible&&(value.confidence===undefined||Array.isArray(value.confidence)&&value.confidence.length===0))confidence=Array(n).fill(null);
+  else{
+   if(!Array.isArray(value.confidence)||value.confidence.length!==n||value.confidence.some(c=>!(flexible&&c===null)&&(!Number.isInteger(c)||c<0||c>100)))return null;
+   confidence=value.confidence.map((c,i)=>flexible&&value.answers[i]===null?null:c);
+  }
  }
  return {answers:value.answers.slice(),confidence};
 }
