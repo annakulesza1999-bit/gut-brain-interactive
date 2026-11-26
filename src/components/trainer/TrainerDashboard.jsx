@@ -12,14 +12,14 @@ export default function TrainerDashboard() {
     timerDuration, 
     speedBonusEnabled, 
     startQuiz, 
-    serverInfo,
+    serverInfo,inviteToken,
     trainerName
   } = useQuiz();
 
   const [showQr, setShowQr] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const joinUrl = `${serverInfo.joinUrl}?code=${sessionCode}`;
+  const joinUrl = `${serverInfo.joinUrl}?code=${encodeURIComponent(sessionCode)}${inviteToken?'#invite='+encodeURIComponent(inviteToken):''}`;
   const remoteUrl = `${serverInfo.joinUrl}?role=remote&session=${sessionCode}`;
 
   const copyLink = () => {
@@ -176,7 +176,7 @@ export default function TrainerDashboard() {
                 Waiting for participants to join...
               </h3>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Share session code <strong className="text-blue-400 font-mono">{sessionCode}</strong> or display the QR code on the projector.
+                {serverInfo.pilot?'Share the private link or QR code before starting. New joins close at start.':'Share session code'} <strong className="text-blue-400 font-mono">{sessionCode}</strong> or display the QR code on the projector.
               </p>
             </div>
           ) : (

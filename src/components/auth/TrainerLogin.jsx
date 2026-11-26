@@ -8,7 +8,8 @@ import PresentationLibrary from '../trainer/PresentationLibrary';
 import {launchProblem,blankSlide} from '../../presentations.js';
 
 export default function TrainerLogin({ onBack }) {
-  const { createSession, reconnectTrainer, errorMessage } = useQuiz();
+  const { createSession, reconnectTrainer, errorMessage,serverInfo } = useQuiz();
+  const [presenterSecret,setPresenterSecret]=useState('');
   const [name, setName] = useState(() => localStorage.getItem('dw_trainer_name') || '');
   const library=usePresentationLibrary();
   const [fallbackSettings,setFallbackSettings]=useState({timerDuration:30,speedBonus:false,showTopic:false});
@@ -96,8 +97,9 @@ export default function TrainerLogin({ onBack }) {
       timer: timerDuration,
       speedBonus,
       showTopic,
-      customQuestions
-    }, () => {
+      customQuestions,presenterSecret
+    }, (result) => {
+      if(result?.success)setPresenterSecret('');
       setIsSubmitting(false);
     });
   };
@@ -241,6 +243,7 @@ export default function TrainerLogin({ onBack }) {
             />
           </div>
 
+          {serverInfo?.pilot&&<label className="block text-sm">Presenter access secret<input required type="password" autoComplete="off" value={presenterSecret} onChange={e=>setPresenterSecret(e.target.value)} className="block w-full mt-1 p-3 rounded-xl border border-slate-700 bg-slate-950"/></label>}
           {/* Question Timer Configuration */}
           <div>
             <div className="flex items-center justify-between mb-2">

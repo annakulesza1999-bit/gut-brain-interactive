@@ -12,12 +12,13 @@ const saveToken=(kind,code,value)=>{try{if(value)sessionStorage.setItem(tokenKey
 
 
 export function QuizProvider({ children }) {
-  const [role, setRole] = useState(() => localStorage.getItem('dw_role') || null);
+  const [role, setRole] = useState(() => {const requested=new URLSearchParams(location.search).get('code');if(requested&&(localStorage.getItem('dw_role')!=='participant'||localStorage.getItem('dw_session_code')!==requested))return null;return localStorage.getItem('dw_role') || null;});
   const [trainerName, setTrainerName] = useState(() => localStorage.getItem('dw_trainer_name') || '');
   const [participantName, setParticipantName] = useState(() => localStorage.getItem('dw_participant_name') || '');
   const [participantPhone, setParticipantPhone] = useState('');
   const [sessionCode, setSessionCode] = useState(() => localStorage.getItem('dw_session_code') || '');
   
+  const [inviteToken,setInviteToken]=useState('');
   const [sessionStatus, setSessionStatus] = useState('ready'); // 'ready' | 'running' | 'paused' | 'finished'
   const [timerDuration, setTimerDuration] = useState(30);
   const [activeDuration,setActiveDuration]=useState(30);
@@ -80,7 +81,7 @@ export function QuizProvider({ children }) {
         if (data && data.serverIp) {
           setServerInfo({
             ip: data.serverIp,
-            joinUrl: `http://${data.serverIp}:${data.port || 3000}`
+            joinUrl: data.joinUrl||window.location.origin,pilot:!!data.pilot
           });
         }
       })
@@ -94,10 +95,11 @@ export function QuizProvider({ children }) {
 
   // Sync Session on Connection & Reload
   const syncStateWithServer = useCallback(() => {
-    if (!sessionCode) return;
+    if (!sessionCode||!role) return;
 
     socket.emit('get_session_state', { sessionCode, trainerToken:role==='trainer'?readToken('trainer',sessionCode):'',participantToken:role==='participant'?readToken('participant',sessionCode):'' }, (res) => {
       if (res && res.success) {
+        if(res.isTrainer)setInviteToken(res.inviteToken||'');
         if(res.participant?.name)setParticipantName(res.participant.name);if(Array.isArray(res.scorecard))setScorecard(res.scorecard);
         setSessionStatus(res.status);
         setCurrentQuestionIndex(res.currentQuestionIndex);
@@ -367,7 +369,7 @@ export function QuizProvider({ children }) {
   }, [sessionCode, participantName, participantPhone, role, syncStateWithServer]);
 
   // Actions
-  const createSession = useCallback(({ name, timer, speedBonus, showTopic, customQuestions }, callback) => {
+  const createSession = useCallback(({ name, timer, speedBonus, showTopic, customQuestions,presenterSecret }, callback) => {
     setErrorMessage(null);
     setTrainerName(name);
     setTimerDuration(timer);
@@ -379,10 +381,10 @@ export function QuizProvider({ children }) {
       timerDuration: timer,
       speedBonusEnabled: speedBonus,
       showTopic: showTopic !== undefined ? showTopic : false,
-      customQuestions
+      customQuestions,presenterSecret
     }, (res) => {
       if (res && res.success) {
-        saveToken('trainer',res.sessionCode,res.trainerToken);
+        saveToken('trainer',res.sessionCode,res.trainerToken);setInviteToken(res.inviteToken||'');
         setSessionCode(res.sessionCode);
         setRole('trainer');
         setParticipants([]);
@@ -404,7 +406,7 @@ export function QuizProvider({ children }) {
       trainerName: cleanName,trainerToken:readToken('trainer',cleanCode)
     }, (res) => {
       if (res && res.success) {
-        setSessionCode(cleanCode);
+        setInviteToken(res.inviteToken||'');setSessionCode(cleanCode);
         setTrainerName(res.trainerName || cleanName);
         setRole('trainer');
         setSessionStatus(res.status || 'ready');
@@ -439,7 +441,7 @@ export function QuizProvider({ children }) {
     socket.emit('toggle_topic_visibility', { sessionCode });
   }, [sessionCode]);
 
-  const joinSession = useCallback(({ code, name, phone }, callback) => {
+  const joinSession = useCallback(({ code, name, phone,inviteToken }, callback) => {
     setErrorMessage(null);
     const cleanCode = (code || '').toUpperCase().trim();
     const cleanName = (name || '').trim();
@@ -447,7 +449,7 @@ export function QuizProvider({ children }) {
 
     socket.emit('join_session', {
       sessionCode: cleanCode,
-      nickname:cleanName||undefined,
+      nickname:cleanName||undefined,inviteToken,
       participantToken:readToken('participant',cleanCode)
     }, (res) => {
       if (res && res.success) {
@@ -455,7 +457,8 @@ export function QuizProvider({ children }) {
         saveToken('participant',cleanCode,res.participantToken);
         setParticipantName(res.participant?.name||'Participant');setScorecard(res.scorecard||[]);
         setParticipantPhone('');
-        setRole('participant');
+        setRole('participant');setInviteToken('');
+        if(location.hash)history.replaceState(null,'',location.pathname+location.search);
         setSessionStatus(res.sessionStatus || 'ready');
         setTimerDuration(res.timerDuration??30);setActiveDuration(res.activeDuration??res.timerDuration??30);setTimeRemaining(res.timeRemaining??0);applyActivityUI(res);
         setTotalQuestions(res.totalQuestions || 20);
@@ -674,7 +677,7 @@ export function QuizProvider({ children }) {
       revealData,liveResults,brainFeedback,
       liveAnswerCount,
       connected,
-      serverInfo,
+      serverInfo,inviteToken,
       errorMessage,
       setErrorMessage,
       createSession,

@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - design/academic-minimalism
+      - deployment/private-pilot
   workflow_dispatch:
 concurrency:
   group: gut-mind-preflight-${{ github.ref }}
@@ -24,7 +25,7 @@ jobs:
         id: install
         run: npm ci --ignore-scripts
       - name: Unit tests
-        run: node --test test_activities.js test_anatomy_activities.js test_presentations.js test_research_activities.js test_simulations.js test_spatial_activities.js test_word_cloud.js test_scoring.js
+        run: node --test test_activities.js test_anatomy_activities.js test_presentations.js test_research_activities.js test_simulations.js test_spatial_activities.js test_word_cloud.js test_scoring.js test_pilot_policy.js
       - name: Prepare pinned anatomical model
         run: npm run prepare:atlas
       - name: Prepare verified offline design fonts
@@ -37,6 +38,9 @@ jobs:
         run: GM_TEST_CLIENTS=30 node --test test_session_smoke.js
       - name: 30-client simple scoring and nickname verification
         run: GM_TEST_CLIENTS=30 GM_SIMPLE_SCORING=1 node --test test_session_smoke.js
+      - name: Private pilot access controls with 30 real clients (loopback only)
+        if: github.ref == 'refs/heads/deployment/private-pilot'
+        run: GM_TEST_CLIENTS=30 GM_SIMPLE_SCORING=1 GM_TEST_PILOT=1 node --test test_session_smoke.js
       - name: Dependency audit
         if: ${{ always() && steps.install.outcome == 'success' }}
         run: npm audit --audit-level=low

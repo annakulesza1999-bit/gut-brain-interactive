@@ -17,7 +17,7 @@ import ParticipantFinalScreen from './components/participant/ParticipantFinalScr
 function MainApp() {
   const { role, setRole, sessionStatus, questionState, sessionCode, setSessionCode,currentQuestionIndex } = useQuiz();
   useSlideScrollReset(role==='participant'&&(sessionStatus==='running'||sessionStatus==='paused'),sessionCode+':'+currentQuestionIndex);
-  const [selectedRolePrompt, setSelectedRolePrompt] = useState(null); // 'trainer' | 'participant' | 'remote' | null
+  const [selectedRolePrompt, setSelectedRolePrompt] = useState(()=>new URLSearchParams(location.search).has('code')?'participant':null); // 'trainer' | 'participant' | 'remote' | null
 
   // Check URL parameters for remote mode
   useEffect(() => {

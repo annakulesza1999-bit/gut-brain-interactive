@@ -3,6 +3,8 @@ import {simpleScoring,simpleSession,scoreWithPolicy,sharedRanks,cleanNickname,sc
 import {curveReference} from '../src/activities.js';
 import {personalBrainFeedback} from '../src/anatomyActivities.js';
 import {randomBytes} from 'node:crypto';
+import {pilotConfig,equalSecret,allowedRequest,isExpired,rateAllowed} from './pilotPolicy.js';
+import {launchProblem} from '../src/presentations.js';
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -28,18 +30,21 @@ const __dirname = path.dirname(__filename);
 // Temporary production guard until inherited access-control and privacy issues are fixed.
 if(process.env.NODE_ENV==='production')throw new Error('Public deployment blocked: security hardening is incomplete. See SECURITY-REVIEW.md.');
 
+const pilot=pilotConfig();
 const token=()=>randomBytes(32).toString('hex');
-const matchesToken=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===64&&a===b;
+const matchesToken=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===64&&b.length===64&&equalSecret(a,b);
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   maxHttpBufferSize: 8 * 1024 * 1024,
-  allowRequest: (req,done)=>{const origin=req.headers.origin;done(null,!origin||/^http:\/\/(localhost|127\.0\.0\.1):(3000|5173|[1-9][0-9]{3,4})$/.test(origin));}
+  allowRequest: (req,done)=>{if(pilot)return done(null,allowedRequest(pilot,req)&&(io.engine?.clientsCount||0)<pilot.maxConnections);const origin=req.headers.origin;done(null,!origin||/^http:\/\/(localhost|127\.0\.0\.1):(3000|5173|[1-9][0-9]{3,4})$/.test(origin));}
 });
 
 const PORT = process.env.PORT || 3000;
 
 app.use((req,res,next)=>{
+  res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Frame-Options','DENY');
+  if(pilot){if(!allowedRequest(pilot,req))return res.status(403).json({error:'Origin not allowed'});return next();}
   if(!['localhost','127.0.0.1'].includes(req.hostname))return res.status(403).json({error:'Local preview only'});
   if(req.headers.origin&&!/^http:\/\/(localhost|127\.0\.0\.1):[0-9]+$/.test(req.headers.origin))return res.status(403).json({error:'Local preview only'});
   next();
@@ -79,6 +84,9 @@ try {
 
 // In-Memory Sessions Store (live running sessions)
 const sessions = new Map();
+const joinOrigin=pilot?.origin||'http://127.0.0.1:'+PORT;
+if(pilot){const sweep=setInterval(()=>{for(const [code,s] of sessions){if(!isExpired(s,Date.now(),pilot.lifetimeMs))continue;if(s.timerInterval)clearInterval(s.timerInterval);io.to(code).emit('sessions_cleared');for(const id of io.sockets.adapter.rooms.get(code)||[]){const member=io.sockets.sockets.get(id);if(member){delete member.data.pilotMembership;member.leave(code);}}sessions.delete(code);}},30000);sweep.unref();}
+function wrongMembership(socket,session,role){const m=socket.data.pilotMembership;return !!(pilot&&m&&(m.code!==session.code||m.role!==role));}
 const publicParticipant=p=>({id:p.id,name:p.name,phone:'',score:p.score,rank:p.currentRank,currentRank:p.currentRank,previousRank:p.previousRank,rankDelta:p.rankDelta,connected:p.connected});
 const publicLeaderboard=(session,ownId=null)=>[...session.participants].sort((a,b)=>b.score-a.score).map(p=>({...publicParticipant(p),...(p.id===ownId?{answers:p.answers}:{} )}));
 const participantFor=(session,socket)=>session?.participants.find(p=>p.socketId===socket.id&&p.connected);
@@ -87,6 +95,7 @@ function attachSocket(session,person,socket){
  if(oldId&&oldId!==socket.id)io.sockets?.sockets?.get(oldId)?.leave(session.code);
  if(person){person.socketId=socket.id;person.connected=true;}else session.trainerSocketId=socket.id;
  socket.join(session.code);
+ if(pilot)socket.data.pilotMembership={code:session.code,role:person?'participant':'trainer'};
 }
 function gradedQuestion(q){
  if(['curve','wordcloud','text','simulation'].includes(q.type))return false;
@@ -283,7 +292,7 @@ app.get('/api/info', (req, res) => {
     serverIp: localIp,
     port: PORT,
     activeSessions: sessions.size,
-    joinUrl: `http://${localIp}:${PORT}`
+    joinUrl: joinOrigin,pilot:!!pilot
   });
 });
 
@@ -380,20 +389,22 @@ app.post('/api/reset', (req, res) => {
 
 // Socket.io Real-time Event Handling
 io.on('connection', (socket) => {
+  if(pilot){const all={},auth={};socket.use((packet,next)=>{const [event,payload]=packet;const cb=typeof packet.at(-1)==='function'?packet.at(-1):null;const reject=error=>{if(cb)cb({success:false,error});};if(!rateAllowed(all,Date.now(),180,60000))return reject('Too many requests.');if(['create_session','join_session','get_session_state','reconnect_trainer'].includes(event)&&!rateAllowed(auth,Date.now(),20,60000))return reject('Too many access attempts.');if(event!=='leave_session'&&(!payload||typeof payload!=='object'||Array.isArray(payload)))return reject('Invalid request.');if(packet.length>(event==='leave_session'?2:3)||packet.length===3&&!cb)return reject('Invalid request.');if(event!=='create_session'&&event!=='leave_session'&&JSON.stringify(payload).length>65536)return reject('Request too large.');if(event!=='create_session'&&event!=='leave_session'&&typeof payload.sessionCode!=='string')return reject('Invalid session code.');next();});}
 
   // Trainer creates a session
-  socket.on('create_session', ({ trainerName, sessionCode, timerDuration = 30, speedBonusEnabled = true, showTopic = false, customQuestions = null }, callback) => {
+  socket.on('create_session', ({ trainerName, sessionCode, timerDuration = 30, speedBonusEnabled = true, showTopic = false, customQuestions = null,presenterSecret }, callback) => {
     try {
+      if(pilot){if(!equalSecret(pilot.secret,presenterSecret))return callback&&callback({success:false,error:'Presenter access denied.'});if(socket.data.pilotMembership)return callback&&callback({success:false,error:'Leave your current session first.'});if(!Array.isArray(customQuestions)||customQuestions.length<1||customQuestions.length>100||customQuestions.some(q=>!q||typeof q!=='object'||typeof q.question!=='string'||q.question.length>3000||!Array.isArray(q.options)||q.options.some(o=>typeof o!=='string'||o.length>3000))||launchProblem({questions:customQuestions}))return callback&&callback({success:false,error:'Invalid presentation.'});}
       const code = (typeof sessionCode==='string'&&sessionCode?sessionCode:'GM-'+randomBytes(3).toString('hex')).toUpperCase().trim();
-      if(!/^[A-Z0-9-]{4,12}$/.test(code)||sessions.has(code)||sessions.size>=30)return callback&&callback({success:false,error:'Session code unavailable or local session limit reached.'});
+      if(!/^[A-Z0-9-]{4,12}$/.test(code)||sessions.has(code)||sessions.size>=(pilot?.maxSessions||30))return callback&&callback({success:false,error:'Session code unavailable or local session limit reached.'});
       const questionSet = ((customQuestions && customQuestions.length > 0) ? customQuestions : defaultQuestions).map(q => ({...q, beforeMedia: safeMedia(q.beforeMedia), afterMedia: safeMedia(q.afterMedia),mapImage:safeMedia(q.mapImage),...(q.type==='simulation'?simulationConfig(q):{}),...(q.type==='research'?normalizeResearch(q):{})}));
       if(questionSet.some(q=>q.type==='brain'&&brainProblem(q)))return callback&&callback({success:false,error:'Check anatomy activity settings before presenting.'});
       for(const q of questionSet)if(q.type==='brain')Object.assign(q,normalizeBrain(q));
       if(questionSet.some(q=>q.type==='research'&&researchProblem(q)))return callback&&callback({success:false,error:'Check research activity settings before presenting.'});
 
       const newSession = {
-        code,
-        trainerName: trainerName || 'Trainer',
+        code,createdAt:Date.now(),inviteToken:pilot?token():undefined,
+        trainerName: typeof trainerName==='string'?trainerName.slice(0,80)||'Trainer':'Trainer',
         trainerSocketId: socket.id,
         trainerToken:token(),
         status: 'ready',
@@ -418,19 +429,20 @@ io.on('connection', (socket) => {
 
       sessions.set(code, newSession);
       socket.join(code);
+      if(pilot)socket.data.pilotMembership={code,role:'trainer'};
 
       // Local preview: do not persist presenter or participant identities.
 
-      console.log(`[Session Created] Code: ${code} by ${newSession.trainerName} with ${questionSet.length} questions (ShowTopic: ${newSession.showTopic})`);
+      console.log('[Session Created]');
 
       if (callback) {
         callback({
           success: true,
           sessionCode: code,
-          trainerToken:newSession.trainerToken,
+          trainerToken:newSession.trainerToken,inviteToken:newSession.inviteToken,
           localIp,
           port: PORT,
-          joinUrl: `http://${localIp}:${PORT}`,
+          joinUrl: joinOrigin,
           session: {
             code,
             trainerName: newSession.trainerName,
@@ -458,10 +470,11 @@ io.on('connection', (socket) => {
         return callback && callback({ success: false, error: 'Session not found or is no longer active.' });
       }
 
+      if(wrongMembership(socket,session,'trainer'))return callback&&callback({success:false,error:'Leave your current session first.'});
       if(session.trainerSocketId!==socket.id&&!matchesToken(session.trainerToken,trainerToken))return callback&&callback({success:false,error:'Presenter authentication required.'});
       attachSocket(session,null,socket);
 
-      console.log(`[Trainer Reconnected] Session ${code} reconnected by trainer: ${session.trainerName}`);
+      console.log('[Trainer Reconnected]');
 
       const analytics = calculateSessionAnalytics(session);
       const currQ = session.questions[session.currentQuestionIndex];
@@ -483,7 +496,7 @@ io.on('connection', (socket) => {
       const payload = {
         success: true,
         sessionCode: code,
-        trainerName: session.trainerName,
+        trainerName: session.trainerName,inviteToken:session.inviteToken,
         status: session.status,
         currentQuestionIndex: session.currentQuestionIndex,
         questionState: session.questionState,
@@ -537,16 +550,18 @@ io.on('connection', (socket) => {
   });
 
   // Anonymous per-session identities. No student accounts, real names or phone numbers.
-  socket.on('join_session', ({sessionCode,participantToken,nickname}={},callback)=>{
+  socket.on('join_session', ({sessionCode,participantToken,nickname,inviteToken}={},callback)=>{
     const reply=typeof callback==='function'?callback:()=>{};
     if(typeof sessionCode!=='string')return reply({success:false,error:'Enter a session code.'});
     const code=sessionCode.toUpperCase().trim(),session=sessions.get(code);
-    if(!session)return reply({success:false,error:'Session not found.'});
+    if(!session)return reply({success:false,error:pilot?'Invitation invalid or expired.':'Session not found.'});
+    if(wrongMembership(socket,session,'participant'))return reply({success:false,error:'Leave your current session first.'});
     let p=participantFor(session,socket);
     if(!p&&participantToken)p=session.participants.find(x=>matchesToken(x.token,participantToken));
     if(!p&&participantToken)return reply({success:false,error:'This saved participation has expired. Join again.'});
     const resumed=!!p;
     if(!p){
+      if(pilot&&(!matchesToken(session.inviteToken,inviteToken)||session.status!=='ready'||session.admissionClosed))return reply({success:false,error:'Invitation invalid, expired or joining is closed.'});
       if(session.participants.length>=30)return reply({success:false,error:'Session is full.'});
       const number=session.participants.length+1;
       let name=cleanNickname(nickname);
@@ -572,6 +587,7 @@ io.on('connection', (socket) => {
     if (!session || session.trainerSocketId!==socket.id) return;
 
     session.status = 'running';
+    if(pilot)session.admissionClosed=true;
     session.currentQuestionIndex = 0;
     session.questionState = 'active';
     session.questionStartTime = Date.now();
@@ -812,7 +828,7 @@ io.on('connection', (socket) => {
       updateSessionRankings(session);
       const finalAnalytics = calculateSessionAnalytics(session);
 
-      console.log(`[Quiz Finished] Session ${sessionCode} completed. Recording in permanent DB...`);
+      console.log('[Quiz Finished] In-memory session.');
 
       // Keep classroom responses in memory only. Presenter receives full report; each student receives only their own answers.
       io.to(session.trainerSocketId).emit('quiz_finished',{analytics:finalAnalytics,leaderboard:[...finalAnalytics.leaderboard].sort((a,b)=>b.score-a.score)});
@@ -1080,6 +1096,7 @@ io.on('connection', (socket) => {
     if (!session) return callback && callback({ success: false, error: 'Session not active' });
 
     const isTrainer=socket.id===session.trainerSocketId||matchesToken(session.trainerToken,trainerToken);
+    if(wrongMembership(socket,session,isTrainer?'trainer':'participant'))return callback&&callback({success:false,error:'Leave your current session first.'});
     const participantObj=isTrainer?null:(participantFor(session,socket)||session.participants.find(p=>matchesToken(p.token,participantToken)));
     if(!isTrainer&&!participantObj)return callback&&callback({success:false,error:'Session authentication required.'});
     attachSocket(session,participantObj,socket);
@@ -1107,7 +1124,7 @@ io.on('connection', (socket) => {
 
     const payload = {
       success: true,
-      isTrainer,
+      isTrainer,...(isTrainer?{inviteToken:session.inviteToken}:{}),
       sessionCode: session.code,
       trainerName: session.trainerName,
       status: session.status,
@@ -1190,6 +1207,7 @@ io.on('connection', (socket) => {
 
   // Explicit leave removes membership without a reconnect race. Tokens can restore the same identity.
   socket.on('leave_session',()=>{
+    delete socket.data.pilotMembership;
     for(const session of sessions.values()){
       if(session.trainerSocketId===socket.id){session.trainerSocketId=null;socket.leave(session.code);}
       const p=participantFor(session,socket);

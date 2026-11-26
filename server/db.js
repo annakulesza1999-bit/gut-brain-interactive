@@ -17,7 +17,7 @@ const defaultDb = {
 class Database {
   constructor() {
     this.data = structuredClone(defaultDb);
-    this.load();
+    if(process.env.GM_PILOT_TEST!=='1')this.load();
   }
 
   load() {
@@ -38,6 +38,7 @@ class Database {
   }
 
   save() {
+    if(process.env.GM_PILOT_TEST==='1')return;
     try {
       fs.writeFileSync(DB_PATH, JSON.stringify(this.data, null, 2), 'utf8');
     } catch (e) {

@@ -4,11 +4,11 @@ import { useQuiz } from '../../context/QuizContext';
 import { X, Copy, Check, Smartphone, Wifi, ExternalLink } from 'lucide-react';
 
 export default function QRCodeModal({ onClose }) {
-  const { sessionCode, serverInfo } = useQuiz();
+  const { sessionCode, serverInfo,inviteToken } = useQuiz();
   const [copied, setCopied] = useState(false);
 
   // Direct join URL with prefilled session code
-  const joinUrl = `${serverInfo.joinUrl}?code=${sessionCode}`;
+  const joinUrl = `${serverInfo.joinUrl}?code=${encodeURIComponent(sessionCode)}${inviteToken?'#invite='+encodeURIComponent(inviteToken):''}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(joinUrl);
@@ -37,7 +37,7 @@ export default function QRCodeModal({ onClose }) {
         </div>
 
         <p className="text-xs text-slate-400 mb-6">
-          Connect your device to the same Wi-Fi network and scan the QR code to participate.
+          {serverInfo.pilot?'Scan the private invitation QR code before the session starts.':'Connect your device to the same Wi-Fi network and scan the QR code to participate.'}
         </p>
 
         {/* QR Code Container */}
@@ -86,7 +86,7 @@ export default function QRCodeModal({ onClose }) {
         {/* Network Hint */}
         <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
           <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Local network: <strong className="text-slate-300">{serverInfo.ip}</strong></span>
+          <span>{serverInfo.pilot?'Server:':'Local network:'} <strong className="text-slate-300">{serverInfo.ip}</strong></span>
         </div>
       </div>
     </div>

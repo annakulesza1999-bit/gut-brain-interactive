@@ -28,7 +28,8 @@ const N=Number(process.env.GM_TEST_CLIENTS||30);
 assert.ok([15,30].includes(N),'Use 15 or 30 participants for the smoke test');
 test('loopback session: '+N+' participants, all activity families, auth and private results', {timeout:120000}, async t=>{
  const p=await port(),url='http://127.0.0.1:'+p;
- const child=spawn(process.execPath,['server/index.js'],{env:{...process.env,NODE_ENV:'test',PORT:String(p)},stdio:['ignore','pipe','pipe']});
+ const pilot=process.env.GM_TEST_PILOT==='1',presenterSecret='synthetic_test_only_secret_0123456789abcdef';
+ const child=spawn(process.execPath,['server/index.js'],{env:{...process.env,NODE_ENV:'test',PORT:String(p),...(pilot?{GM_PILOT_TEST:'1',GM_PUBLIC_ORIGIN:url,GM_PRESENTER_SECRET:presenterSecret}:{})},stdio:['ignore','pipe','pipe']});
  let output='';child.stdout.on('data',d=>output=(output+d).slice(-2000));child.stderr.on('data',d=>output=(output+d).slice(-2000));
  const sockets=[];
  t.after(()=>{for(const socket of sockets)socket.disconnect();child.kill();});
@@ -55,18 +56,21 @@ test('loopback session: '+N+' participants, all activity families, auth and priv
  {id:13,...researchTemplate('prediction','curve'),researchGraded:true,researchCorrect:0,timerSeconds:0,resultsMode:'reveal'}
  ];
  const simple=process.env.GM_SIMPLE_SCORING==='1';if(simple)for(const q of questions)q.scoringMode='simple';
- const created=await ack(presenter,'create_session',{trainerName:'Synthetic presenter',customQuestions:questions,timerDuration:0,speedBonusEnabled:false});
- assert.ok(created.success,created.error);const sessionCode=created.sessionCode;
- const firstJoin=simple?await ack(students[0],'join_session',{sessionCode,nickname:'Learner 1'}):null;
- if(simple){assert.ok(firstJoin.success);const duplicate=await ack(intruder,'join_session',{sessionCode,nickname:' learner 1 '});assert.equal(duplicate.success,false);assert.match(duplicate.error,/already taken/);}
- const joined=simple?[firstJoin,...await Promise.all(students.slice(1).map((socket,i)=>ack(socket,'join_session',{sessionCode,nickname:'Learner '+(i+2)})))]:await Promise.all(students.map(socket=>ack(socket,'join_session',{sessionCode})));for(const r of joined){assert.ok(r.success,r.error);assert.equal(r.participant.phone,'');}
+ if(pilot){assert.equal((await ack(intruder,'create_session',{trainerName:'Intruder',customQuestions:questions})).success,false);assert.equal((await fetch(url+'/api/info',{headers:{Origin:'https://other.invalid'}})).status,403);assert.equal((await fetch(url+'/api/info',{headers:{Host:'other.invalid'}})).status,403);}
+ const created=await ack(presenter,'create_session',{trainerName:'Synthetic presenter',customQuestions:questions,timerDuration:0,speedBonusEnabled:false,...(pilot?{presenterSecret}:{})});
+ assert.ok(created.success,created.error);const sessionCode=created.sessionCode,invite=pilot?{inviteToken:created.inviteToken}:{};
+ if(pilot){assert.match(created.inviteToken,/^[a-f0-9]{64}$/);assert.equal(created.joinUrl,url);assert.equal((await ack(intruder,'join_session',{sessionCode,nickname:'No invitation'})).success,false);assert.equal((await ack(presenter,'join_session',{sessionCode,nickname:'Wrong role',...invite})).success,false);}
+ const firstJoin=simple?await ack(students[0],'join_session',{sessionCode,nickname:'Learner 1',...invite}):null;
+ if(simple){assert.ok(firstJoin.success);const duplicate=await ack(intruder,'join_session',{sessionCode,nickname:' learner 1 ',...invite});assert.equal(duplicate.success,false);assert.match(duplicate.error,/already taken/);}
+ const joined=simple?[firstJoin,...await Promise.all(students.slice(1).map((socket,i)=>ack(socket,'join_session',{sessionCode,nickname:'Learner '+(i+2),...invite})))]:await Promise.all(students.map(socket=>ack(socket,'join_session',{sessionCode})));for(const r of joined){assert.ok(r.success,r.error);assert.equal(r.participant.phone,'');}
  assert.equal(new Set(joined.map(r=>r.participant.id)).size,N);
- if(N===30){const overflow=await connect();const refused=await ack(overflow,'join_session',{sessionCode});assert.equal(refused.success,false);assert.equal(refused.error,'Session is full.');}
- assert.equal(new Set(joined.map(r=>r.participant.name)).size,N);
+ if(N===30){const overflow=await connect();const refused=await ack(overflow,'join_session',{sessionCode,...invite});assert.equal(refused.success,false);assert.equal(refused.error,'Session is full.');}
+ assert.equal(new Set(joined.map(r=>r.participant.name)).size,N);if(pilot){assert.ok(joined.every(r=>!('inviteToken'in r)&&!('trainerToken'in r)));}
  assert.equal((await ack(intruder,'get_session_state',{sessionCode,role:'trainer'})).success,false);
  assert.equal((await ack(intruder,'reconnect_trainer',{sessionCode})).success,false);
  assert.equal((await ack(intruder,'get_session_state',{sessionCode,role:'participant'})).success,false);
  const started=event(presenter,'trainer_question',q=>q.index===0);presenter.emit('start_quiz',{sessionCode});await started;
+ if(pilot){const denied=await ack(intruder,'join_session',{sessionCode,nickname:'Late join',...invite});assert.equal(denied.success,false);assert.match(denied.error,/closed/);}
  const first=event(students[0],'text_reveal_updated');presenter.emit('reveal_text_line',{sessionCode,questionIndex:0});assert.deepEqual((await first).visibleLines,['First']);
  const second=event(students[0],'text_reveal_updated');presenter.emit('next_question',{sessionCode});assert.deepEqual((await second).visibleLines,['First','Second']);
  async function advance(index){const arrived=event(presenter,'trainer_question',q=>q.index===index);presenter.emit('next_question',{sessionCode});await arrived;}
