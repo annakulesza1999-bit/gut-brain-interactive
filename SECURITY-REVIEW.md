@@ -43,3 +43,5 @@ Candidate run [45834680350](https://github.com/annakulesza1999-bit/gut-brain-int
 
 ## Restricted editor preview
 Separate static frontend entry point uses the actual editor and IndexedDB library; no QuizProvider or active socket connection. The packaged loopback-only Python static launcher serves only the preview HTML, assets and atlas, sets restrictive browser headers and does not provide API endpoints. No public deployment or student session access. Browser verification required before distribution; actual classroom server remains guarded.
+
+The local rehearsal uses an embedded same-origin participant page and validates postMessage sender, origin and visit. No actual session connection, no QR joining and no data exported from practice responses. Both presenter and phone use existing activity components. Browser verification required; public server guard remains unchanged.

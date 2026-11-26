@@ -30,7 +30,7 @@ export default function QuestionEditorModal({
   isOpen,
   onClose,
   initialQuestions = [],
-  onSaveQuestions,onChangeQuestions,saveStatus,saveError,onExportPresentation
+  onSaveQuestions,onChangeQuestions,saveStatus,saveError,onExportPresentation,onPreview,initialSelectedIndex=0
 }) {
   const [questions, setQuestions] = useState(() => {
     return initialQuestions && initialQuestions.length > 0 ? JSON.parse(JSON.stringify(initialQuestions)) : [
@@ -52,7 +52,7 @@ export default function QuestionEditorModal({
     ];
   });
 
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState(()=>Math.max(0,Math.min(initialSelectedIndex,questions.length-1)));
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saving,setSaving]=useState(false);
   const lastQuestions=useRef(questions);
@@ -205,6 +205,7 @@ export default function QuestionEditorModal({
           </div>
 
           <div className="flex items-center gap-2">
+            {onPreview&&<button type="button" disabled={saving} className="px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold" onClick={async()=>{setSaving(true);try{const ok=await onSaveQuestions?.(questions);if(ok!==false)onPreview(selectedIndex);}finally{setSaving(false);}}}>Present this slide</button>}
             <button
               type="button"
               onClick={onExportPresentation||handleExportJSON}

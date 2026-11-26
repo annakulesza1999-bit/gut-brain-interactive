@@ -4,6 +4,8 @@ import { soundFX } from '../services/soundEffects';
 import defaultQuestionsData from '../data/questions.json';
 
 const QuizContext = createContext();
+// Isolated rehearsal uses the same components without starting a network session.
+export function RehearsalProvider({value,children}){return <QuizContext.Provider value={value}>{children}</QuizContext.Provider>;}
 const tokenKey=(kind,code)=>'gm_session_'+kind+'_'+code;
 const readToken=(kind,code)=>{try{return sessionStorage.getItem(tokenKey(kind,code))||'';}catch{return '';}};
 const saveToken=(kind,code,value)=>{try{if(value)sessionStorage.setItem(tokenKey(kind,code),value);else sessionStorage.removeItem(tokenKey(kind,code));}catch{}};
