@@ -104,7 +104,7 @@ export default function ParticipantFinalScreen() {
         <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
           Final Cohort Standing
         </span>
-        <div className="font-mono text-4xl sm:text-5xl font-black text-white mt-1 mb-4">
+        <div className="font-mono text-4xl sm:text-5xl font-black text-slate-100 mt-1 mb-4">
           Rank #{rank}
         </div>
 

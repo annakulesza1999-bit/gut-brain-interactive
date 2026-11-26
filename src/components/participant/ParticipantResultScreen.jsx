@@ -54,10 +54,10 @@ export default function ParticipantResultScreen() {
       {/* Result Status Banner */}
       <div className={`p-5 sm:p-7 rounded-3xl border text-center shadow-xl animate-scale-in ${
         isCorrect 
-          ? 'bg-gradient-to-b from-emerald-950/70 to-slate-900 border-emerald-500/50 text-emerald-100' 
+          ? 'bg-gradient-to-b from-emerald-950/70 to-slate-900 border-emerald-500/50 text-emerald-700' 
           : selectedOption === null
           ? 'bg-slate-900 border-slate-700 text-slate-300'
-          : 'bg-gradient-to-b from-rose-950/70 to-slate-900 border-rose-500/50 text-rose-100'
+          : 'bg-gradient-to-b from-rose-950/70 to-slate-900 border-rose-500/50 text-rose-700'
       }`}>
         
         <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg">
@@ -94,7 +94,7 @@ export default function ParticipantResultScreen() {
               </>
             )}
             <span>=</span>
-            <span className="text-white font-black">+{pointsEarned} pts</span>
+            <span className="text-slate-100 font-black">+{pointsEarned} pts</span>
           </div>
         ) : (
           <div className="text-xs text-slate-400 font-mono">
@@ -112,7 +112,7 @@ export default function ParticipantResultScreen() {
           </div>
           <div>
             <span className="text-[10px] sm:text-[11px] text-slate-400 uppercase font-semibold">Your Rank</span>
-            <div className="font-mono text-base sm:text-lg font-black text-white flex items-center gap-1.5">
+            <div className="font-mono text-base sm:text-lg font-black text-slate-100 flex items-center gap-1.5">
               <span>#{myRank}</span>
               {myDelta > 0 && (
                 <span className="text-xs text-emerald-400 flex items-center font-bold">
@@ -152,9 +152,9 @@ export default function ParticipantResultScreen() {
               key={idx}
               className={`relative overflow-hidden p-3 rounded-xl border text-xs sm:text-sm font-medium transition-all ${
                 isThisCorrect
-                  ? 'bg-emerald-950/30 border-emerald-500/50 text-emerald-100 ring-1 ring-emerald-500/30'
+                  ? 'bg-emerald-950/30 border-emerald-500/50 text-emerald-700 ring-1 ring-emerald-500/30'
                   : isMyChoice
-                  ? 'bg-rose-950/20 border-rose-500/40 text-rose-200'
+                  ? 'bg-rose-950/20 border-rose-500/40 text-rose-700'
                   : 'bg-slate-950/60 border-slate-800 text-slate-300'
               }`}
             >
@@ -178,7 +178,7 @@ export default function ParticipantResultScreen() {
                   )}
                 </div>
 
-                <div className="font-mono font-bold text-white flex-shrink-0">
+                <div className="font-mono font-bold text-slate-100 flex-shrink-0">
                   {dist.pct}%
                 </div>
               </div>
@@ -189,7 +189,7 @@ export default function ParticipantResultScreen() {
 
       {/* Educational Explanation Box */}
       {explanation && (
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-blue-950/30 border border-blue-500/30 text-blue-100 flex items-start gap-2.5">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-blue-950/30 border border-blue-500/30 text-blue-700 flex items-start gap-2.5">
           <Lightbulb className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
           <div className="text-xs leading-relaxed">
             <strong className="text-blue-300 block mb-0.5">Explanation:</strong>

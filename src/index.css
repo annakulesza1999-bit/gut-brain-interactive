@@ -238,3 +238,10 @@ input::placeholder,textarea::placeholder{color:#536A7B;opacity:1}
 .gm-live-fullscreen.gm-chrome-hidden>.gm-live-toolbar,.gm-live-fullscreen.gm-chrome-hidden>.gm-live-nav{opacity:0;pointer-events:none}
 .gm-live-fullscreen>.gm-live-toolbar:has(:focus-visible),.gm-live-fullscreen>.gm-live-nav:has(:focus-visible){opacity:1!important;pointer-events:auto!important}
 @media(max-width:600px){.gm-live-participant .gm-participant-content{padding:8px 10px 104px}.gm-live-participant .gm-live-question h2{line-height:1.2}.gm-live-participant .gm-live-question .rounded-3xl{padding:12px;margin-bottom:10px}.gm-live-participant .gm-live-question .rounded-2xl{padding:10px}.gm-live-participant .gm-score-dock{max-width:none}.gm-live-participant .gm-score-strip{font-size:12px}.gm-live-participant .gm-score-strip strong{font-size:14px}}
+
+/* Avoid the old doubled bottom padding in the real participant shell. */
+body:has(.gm-score-dock) .gm-live-participant .gm-participant-content{padding-bottom:104px}
+body:has(.gm-score-dock) .gm-live-participant .gm-participant-content>div{padding-bottom:0}
+.gm-live-participant .gm-live-question .gm-question-status>div{margin:0}
+.gm-live-participant .gm-reaction-controls>div:first-child button{flex:1 1 0;min-width:24px}
+@media(max-width:350px){.gm-live-participant .gm-reaction-controls button{padding:3px;min-width:24px;font-size:16px}.gm-live-participant .gm-reaction-controls button:has(svg){font-size:10px}.gm-mobile-header{gap:5px;padding-inline:8px}.gm-mobile-header .gm-brand{font-size:15px}}

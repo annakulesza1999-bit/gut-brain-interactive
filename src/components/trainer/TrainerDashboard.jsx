@@ -92,7 +92,7 @@ export default function TrainerDashboard() {
             </span>
             <FileText className="w-4 h-4 text-blue-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white font-mono">
+          <div className="text-2xl sm:text-3xl font-black text-slate-100 font-mono">
             {totalQuestions}
           </div>
           <div className="text-[11px] text-slate-400 mt-1">
@@ -124,7 +124,7 @@ export default function TrainerDashboard() {
             </span>
             <Clock className="w-4 h-4 text-amber-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white font-mono">
+          <div className="text-2xl sm:text-3xl font-black text-slate-100 font-mono">
             {timerDuration > 0 ? `${timerDuration}s` : 'None'}
           </div>
           <div className="text-[11px] text-slate-400 mt-1">
@@ -140,7 +140,7 @@ export default function TrainerDashboard() {
             </span>
             <Zap className="w-4 h-4 text-purple-400" />
           </div>
-          <div className="text-lg sm:text-xl font-bold text-white">
+          <div className="text-lg sm:text-xl font-bold text-slate-100">
             {speedBonusEnabled ? 'Base + Speed' : 'Standard (100pt)'}
           </div>
           <div className="text-[11px] text-slate-400 mt-1">
@@ -158,7 +158,7 @@ export default function TrainerDashboard() {
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-emerald-400" />
-              <h2 className="text-lg font-bold text-white">
+              <h2 className="text-lg font-bold text-slate-100">
                 Participants Joined ({participants.length})
               </h2>
             </div>
@@ -197,7 +197,7 @@ export default function TrainerDashboard() {
         {/* Right 1 Col: Big Action Panel */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
           <div>
-            <h2 className="text-lg font-bold text-white mb-2">
+            <h2 className="text-lg font-bold text-slate-100 mb-2">
               Ready to Begin?
             </h2>
             <p className="text-xs text-slate-400 mb-6 leading-relaxed">
@@ -207,7 +207,7 @@ export default function TrainerDashboard() {
             <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 mb-6 space-y-2 text-xs">
               <div className="flex justify-between text-slate-400">
                 <span>Activity count:</span>
-                <span className="text-white font-mono font-bold">{totalQuestions} Questions</span>
+                <span className="text-slate-100 font-mono font-bold">{totalQuestions} Questions</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Active Participants:</span>

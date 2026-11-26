@@ -115,7 +115,7 @@ export default function ParticipantQuestionScreen() {
         {scoringRule(currentQuestion)&&<p className="gm-point-rule">{scoringRule(currentQuestion)}</p>}
         {/* Paused Overlay Notice */}
         {sessionStatus === 'paused' && (
-          <div className="mb-4 p-3.5 rounded-2xl bg-purple-950/60 border border-purple-500/40 text-purple-200 flex items-center gap-2.5 animate-pulse text-xs sm:text-sm font-semibold">
+          <div className="mb-4 p-3.5 rounded-2xl bg-purple-950/60 border border-purple-500/40 text-purple-700 flex items-center gap-2.5 animate-pulse text-xs sm:text-sm font-semibold">
             <Pause className="w-4 h-4 text-purple-400 flex-shrink-0" />
             <span>Quiz paused by trainer.</span>
           </div>
