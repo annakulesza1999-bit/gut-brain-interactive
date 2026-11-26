@@ -14,7 +14,7 @@ export default function TrainerDistribution({ revealData, currentQuestion }) {
     accuracyPct = 0
   } = revealData;
 
-  const optionLetters = ['A', 'B', 'C', 'D'];
+  const optionLetters = ['A', 'B', 'C', 'D', 'E', 'F'];
   const optionColors = [
     { bg: 'bg-blue-600', border: 'border-blue-500/40', fill: 'bg-blue-500', text: 'text-blue-400' },
     { bg: 'bg-emerald-600', border: 'border-emerald-500/40', fill: 'bg-emerald-500', text: 'text-emerald-400' },

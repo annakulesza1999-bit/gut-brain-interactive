@@ -1,4 +1,10 @@
+import {BrainResults} from '../common/BrainActivity';
+import {ResearchResults} from '../common/ResearchActivity';
+import {SimulationResults} from '../common/SimulationActivity';
+import {SpatialResults} from '../common/SpatialActivity';
 import React, { useState } from 'react';
+import {CurveResults} from '../common/CurveActivity';
+import SequenceMedia, {SequenceHeading} from '../common/SequenceMedia';
 import { useQuiz } from '../../context/QuizContext';
 import ReactionActionBar from '../common/ReactionActionBar';
 import QAModal from '../common/QAModal';
@@ -17,7 +23,7 @@ export default function ParticipantResultScreen() {
 
   const [isQAOpen, setIsQAOpen] = useState(false);
 
-  const optionLetters = ['A', 'B', 'C', 'D'];
+  const optionLetters = ['A', 'B', 'C', 'D','E','F'];
   const correctAnswer = revealData?.correctAnswer ?? currentQuestion?.correctAnswer;
   const isCorrect = selectedOption !== null && selectedOption === correctAnswer;
   const explanation = revealData?.explanation ?? currentQuestion?.explanation;
@@ -33,6 +39,13 @@ export default function ParticipantResultScreen() {
   const speedBonus = lastAnswerResult?.speedBonus ?? 0;
   const pointsEarned = lastAnswerResult?.pointsEarned ?? (basePoints + speedBonus);
 
+  if(currentQuestion?.type==='brain')return <div className="pb-24"><BrainResults question={currentQuestion} result={revealData} revealed participant/><ReactionActionBar/></div>;
+  if(currentQuestion?.type==='research')return <div className="pb-24"><ResearchResults question={currentQuestion} result={revealData} revealed participant/><ReactionActionBar/></div>;
+  if(currentQuestion?.type==='simulation')return <div className="pb-24"><SimulationResults question={currentQuestion} result={revealData} revealed participant/><ReactionActionBar/></div>;
+  if(['pointmap','matching'].includes(currentQuestion?.type))return <div className="pb-24"><SpatialResults question={currentQuestion} result={revealData} revealed participant/><ReactionActionBar/></div>;
+  if(currentQuestion?.type==='curve') return <div className="pb-24"><CurveResults question={currentQuestion} curves={revealData?.curves||[]} reference={revealData?.referenceCurve} revealed={true} participant/><ReactionActionBar/></div>;
+  if(currentQuestion?.type==='sequence') return <div className="max-w-xl mx-auto space-y-4"><SequenceHeading question={currentQuestion}/><SequenceMedia artwork={currentQuestion.sequenceArtwork} media={revealData?.afterMedia} preset={revealData?.afterPreset} phase="after"/><h2 className="text-xl">{currentQuestion.options?.[correctAnswer]}</h2><p className="text-sm">{explanation}</p><p className="text-sm text-slate-400">Waiting for the next stage.</p><ReactionActionBar/></div>;
+  if(currentQuestion?.type==='wordcloud')return <div className="p-6 pb-24"><h2>{currentQuestion.wordcloudMode==='open'?'Open-ended activity complete':'Word cloud complete'}</h2><p>Waiting for the next activity.</p><ReactionActionBar/></div>;
   return (
     <div className="max-w-xl mx-auto px-3 sm:px-4 py-4 sm:py-8 animate-fade-in space-y-4 sm:space-y-5">
       

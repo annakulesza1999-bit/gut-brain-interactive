@@ -1,11 +1,21 @@
+import SlideFrame from '../common/SlideFrame';
+import '../../preview.css';
+import {BrainResults} from '../common/BrainActivity';
+import {ResearchResults} from '../common/ResearchActivity';
+import {SimulationResults} from '../common/SimulationActivity';
 import React, { useState } from 'react';
+import {SpatialResults} from '../common/SpatialActivity';
+import TextSlide from '../common/TextSlide';
+import {isExploreSimulation} from '../../simulations.js';
+import {textLines,liveResultsEnabled} from '../../activities.js';
+import {CurveResults} from '../common/CurveActivity';
+import SequenceMedia, {SequenceHeading} from '../common/SequenceMedia';
 import { useQuiz } from '../../context/QuizContext';
 import ProgressBar from '../common/ProgressBar';
 import TimerDisplay from '../common/TimerDisplay';
 import TrainerDistribution from './TrainerDistribution';
 import TrainerLeaderboard from './TrainerLeaderboard';
 import WordCloudDisplay from './WordCloudDisplay';
-import FloatingReactions from '../common/FloatingReactions';
 import QAModal from '../common/QAModal';
 import { soundFX } from '../../services/soundEffects';
 import { QRCodeSVG } from 'qrcode.react';
@@ -35,9 +45,9 @@ export default function TrainerLiveQuestion() {
     totalQuestions,
     questionState,
     timeRemaining,
-    timerDuration,
+    timerDuration,activeDuration,textVisible,thumbs,resetThumbs,revealTextLine,
     showTopic,
-    revealData,
+    revealData,liveResults,
     liveAnswerCount,
     participants,
     leaderboard,
@@ -70,16 +80,7 @@ export default function TrainerLiveQuestion() {
     setIsRemoteModalOpen(true);
   };
 
-  if (!currentQuestion) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <div className="w-12 h-12 rounded-full bg-slate-800 animate-spin mx-auto mb-4 border-2 border-blue-500 border-t-transparent" />
-        <h3 className="text-lg font-bold text-white">Loading Question...</h3>
-      </div>
-    );
-  }
-
-  const optionLetters = ['A', 'B', 'C', 'D'];
+  const optionLetters = ['A', 'B', 'C', 'D','E','F'];
   const optionColors = [
     { border: 'border-blue-500/40', bg: 'bg-blue-600', badge: 'bg-blue-600', text: 'text-blue-100' },
     { border: 'border-emerald-500/40', bg: 'bg-emerald-600', badge: 'bg-emerald-600', text: 'text-emerald-100' },
@@ -89,23 +90,26 @@ export default function TrainerLiveQuestion() {
     { border: 'border-cyan-500/40', bg: 'bg-cyan-600', badge: 'bg-cyan-600', text: 'text-cyan-100' }
   ];
 
-  const qSeed = (currentQuestion.id || (currentQuestionIndex + 1)) * 7;
+  const qSeed = (currentQuestion?.id || (currentQuestionIndex + 1)) * 7;
   const totalParticipantsCount = participants.length || liveAnswerCount.totalParticipants;
   const answeredCount = liveAnswerCount.answeredCount;
   const isRevealed = questionState === 'revealed' || questionState === 'closed';
+  const showResults=isRevealed||liveResultsEnabled(currentQuestion),liveData=liveResults?.questionIndex===currentQuestionIndex?liveResults.data:null,result=isRevealed?revealData:showResults?liveData:null;
+  const explore=isExploreSimulation(currentQuestion);
+  const hasHiddenText=currentQuestion?.type==='text' && textVisible<textLines(currentQuestion).length;
 
   // Global Trainer Keyboard Shortcuts (Space/ArrowRight=Next, R=Reveal, L=Leaderboard, P=Pause/Resume, M=Mute, Q=Q&A)
   React.useEffect(() => {
     const handleKeyDown = (e) => {
       // Don't intercept if typing in an input
-      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(e.target.tagName) || e.target.isContentEditable) return;
 
       if (e.key === ' ' || e.key === 'ArrowRight') {
         e.preventDefault();
-        nextQuestion();
+        if (hasHiddenText) revealTextLine(); else if (['curve','sequence','pointmap','matching','simulation','research','brain'].includes(currentQuestion?.type) && !explore && !isRevealed) revealAnswer(); else nextQuestion();
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
-        if (!isRevealed) revealAnswer();
+        if (hasHiddenText) revealTextLine(); else if (!isRevealed && currentQuestion?.type!=='text' && !explore) revealAnswer();
       } else if (e.key === 'l' || e.key === 'L') {
         e.preventDefault();
         setViewMode(v => v === 'leaderboard' ? 'question' : 'leaderboard');
@@ -127,9 +131,19 @@ export default function TrainerLiveQuestion() {
       }
     };
 
+    if (!currentQuestion) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isRevealed, sessionStatus, totalQuestions, nextQuestion, revealAnswer, pauseQuiz, resumeQuiz, jumpToQuestion]);
+  }, [currentQuestion, hasHiddenText, revealTextLine, isRevealed, sessionStatus, totalQuestions, nextQuestion, revealAnswer, pauseQuiz, resumeQuiz, jumpToQuestion]);
+
+  if (!currentQuestion) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
+        <div className="w-12 h-12 rounded-full bg-slate-800 animate-spin mx-auto mb-4 border-2 border-blue-500 border-t-transparent" />
+        <h3 className="text-lg font-bold text-white">Loading Question...</h3>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 animate-fade-in">
@@ -200,16 +214,14 @@ export default function TrainerLiveQuestion() {
           {/* Live Responses Counter */}
           <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-medium text-slate-300">
             <Users className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Answered:</span>
-            <strong className="text-white font-mono">{answeredCount}</strong>
-            <span className="text-slate-500">/</span>
-            <span className="text-slate-400 font-mono">{totalParticipantsCount}</span>
+            <span>{participants.length} joined · {participants.filter(p=>p.connected).length} online</span>
+            {currentQuestion.type!=='text'&&!explore&&<span className="ml-2">Completed:</span>}
+            {currentQuestion.type!=='text'&&!explore&&<strong className="font-mono">{answeredCount}/{totalParticipantsCount}</strong>}
           </div>
 
           {/* Countdown Timer */}
-          {!isRevealed && (
-            <TimerDisplay timeRemaining={timeRemaining} totalDuration={timerDuration} />
-          )}
+          {!isRevealed && currentQuestion.type!=='text' && !explore && <TimerDisplay timeRemaining={timeRemaining} totalDuration={activeDuration} />}
+          <div className="flex items-center gap-2 text-sm border border-slate-800 rounded-xl px-3 py-1.5" aria-label="Current check-in"><span>👍 {thumbs.up}</span><span>👎 {thumbs.down}</span><button className="text-xs underline" onClick={resetThumbs}>Reset</button></div>
 
           {/* Pause / Resume Button */}
           {sessionStatus === 'paused' ? (
@@ -235,19 +247,20 @@ export default function TrainerLiveQuestion() {
       </div>
 
       {/* Main Presentation Area */}
-      {viewMode === 'leaderboard' ? (
+      <SlideFrame>{viewMode === 'leaderboard' ? (
         <TrainerLeaderboard
           leaderboard={leaderboard}
           onClose={() => setViewMode('question')}
         />
-      ) : currentQuestion.type === 'wordcloud' ? (
-        <WordCloudDisplay
-          words={wordCloudWords}
-          totalResponses={wordCloudWords.length}
+      ) : currentQuestion.type==='brain'?<BrainResults key={currentQuestionIndex} question={currentQuestion} result={result} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : currentQuestion.type==='research'?<ResearchResults key={currentQuestionIndex} question={currentQuestion} result={result} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : currentQuestion.type==='simulation'? <SimulationResults key={currentQuestionIndex} question={currentQuestion} result={result} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : ['pointmap','matching'].includes(currentQuestion.type) ? <SpatialResults key={currentQuestionIndex} question={currentQuestion} result={result} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : currentQuestion.type === 'text' ? <TextSlide question={currentQuestion} visible={textVisible} presenter/> : currentQuestion.type === 'curve' ? <CurveResults key={currentQuestionIndex} question={currentQuestion} curves={result?.curves||[]} reference={result?.referenceCurve} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : currentQuestion.type === 'wordcloud' ? (
+        <WordCloudDisplay question={currentQuestion}
+          words={showResults?(liveData?.words||revealData?.wordCloudWords||wordCloudWords):[]}
+          totalResponses={showResults?(liveData?.words||revealData?.wordCloudWords||wordCloudWords).length:0} hidden={!showResults}
         />
       ) : (
         <div className="space-y-6">
           
+          {currentQuestion.type === 'sequence' && <div className="space-y-2"><SequenceHeading question={currentQuestion}/><SequenceMedia artwork={currentQuestion.sequenceArtwork} key={currentQuestionIndex+'-'+isRevealed} media={isRevealed?currentQuestion.afterMedia:currentQuestion.beforeMedia} preset={isRevealed?currentQuestion.afterPreset:currentQuestion.beforePreset} phase={isRevealed?'after':'before'}/></div>}
           {/* Large Question Card */}
           <div className="p-6 sm:p-10 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl">
             <h1 className="text-xl sm:text-3xl lg:text-4xl font-black text-white leading-tight tracking-tight">
@@ -271,6 +284,7 @@ export default function TrainerLiveQuestion() {
                     </div>
                     <span className="text-base sm:text-lg font-semibold text-slate-100">
                       {opt}
+                      {showResults&&<span className="block mt-2 text-sm text-slate-400">{liveData?.optionDist?.[idx]?.count||0} · {liveData?.optionDist?.[idx]?.pct||0}%<span className="block h-2 mt-1 rounded-full bg-slate-800"><span className="block h-2 rounded-full bg-[#CA8ADB] transition-all" style={{width:(liveData?.optionDist?.[idx]?.pct||0)+'%'}}/></span></span>}
                     </span>
                   </div>
                 );
@@ -287,6 +301,7 @@ export default function TrainerLiveQuestion() {
         </div>
       )}
 
+      </SlideFrame>
       {/* Trainer Bottom Control Panel */}
       <div className="mt-8 p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
         
@@ -332,22 +347,23 @@ export default function TrainerLiveQuestion() {
           </button>
 
           {/* Reveal Answer (if not revealed) */}
-          {!isRevealed && (
+          {!isRevealed && currentQuestion.type!=='text' && !explore && (
             <button
               onClick={revealAnswer}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all"
             >
               <Eye className="w-4 h-4" />
-              <span>Reveal Answer</span>
+              <span>{currentQuestion.type==='brain'?'Reveal locations':currentQuestion.type==='research'?'Reveal findings':currentQuestion.type==='simulation'?'Reveal simulations':currentQuestion.type==='curve'?'Reveal predictions':currentQuestion.type==='sequence'?'Reveal & animate':'Reveal Answer'}</span>
             </button>
           )}
 
           {/* Next Question / Finish */}
           <button
-            onClick={nextQuestion}
+            onClick={hasHiddenText?revealTextLine:nextQuestion}
+            disabled={['curve','sequence','pointmap','matching','simulation','research','brain'].includes(currentQuestion.type) && !explore && !isRevealed}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-lg shadow-blue-500/25 transition-all transform hover:scale-105"
           >
-            <span>{currentQuestionIndex + 1 >= totalQuestions ? 'Finish Quiz & Results' : 'Next Question'}</span>
+            <span>{hasHiddenText?'Reveal next line':currentQuestionIndex + 1 >= totalQuestions ? 'Finish Quiz & Results' : 'Next Question'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
 
@@ -356,7 +372,7 @@ export default function TrainerLiveQuestion() {
       </div>
 
       {/* Real-Time Floating Emojis Overlay on Projector Screen */}
-      <FloatingReactions />
+      {/* Floating reactions are rendered once by Header. */}
 
       {/* Audience Q&A Modal */}
       <QAModal isOpen={isQAOpen} onClose={() => setIsQAOpen(false)} />

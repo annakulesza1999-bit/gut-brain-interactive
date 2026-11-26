@@ -4,16 +4,26 @@ import { soundFX } from '../services/soundEffects';
 import defaultQuestionsData from '../data/questions.json';
 
 const QuizContext = createContext();
+// Isolated rehearsal uses the same components without starting a network session.
+export function RehearsalProvider({value,children}){return <QuizContext.Provider value={value}>{children}</QuizContext.Provider>;}
+const tokenKey=(kind,code)=>'gm_session_'+kind+'_'+code;
+const readToken=(kind,code)=>{try{return sessionStorage.getItem(tokenKey(kind,code))||'';}catch{return '';}};
+const saveToken=(kind,code,value)=>{try{if(value)sessionStorage.setItem(tokenKey(kind,code),value);else sessionStorage.removeItem(tokenKey(kind,code));}catch{}};
+
 
 export function QuizProvider({ children }) {
   const [role, setRole] = useState(() => localStorage.getItem('dw_role') || null);
   const [trainerName, setTrainerName] = useState(() => localStorage.getItem('dw_trainer_name') || '');
   const [participantName, setParticipantName] = useState(() => localStorage.getItem('dw_participant_name') || '');
-  const [participantPhone, setParticipantPhone] = useState(() => localStorage.getItem('dw_participant_phone') || '');
+  const [participantPhone, setParticipantPhone] = useState('');
   const [sessionCode, setSessionCode] = useState(() => localStorage.getItem('dw_session_code') || '');
   
   const [sessionStatus, setSessionStatus] = useState('ready'); // 'ready' | 'running' | 'paused' | 'finished'
   const [timerDuration, setTimerDuration] = useState(30);
+  const [activeDuration,setActiveDuration]=useState(30);
+  const [textVisible,setTextVisible]=useState(0);
+  const [thumbs,setThumbs]=useState({up:0,down:0});
+  const applyActivityUI=useCallback(data=>{setTextVisible(data?.activityUI?.textVisible||0);setThumbs(data?.activityUI?.thumbs||{up:0,down:0});},[]);
   const [speedBonusEnabled, setSpeedBonusEnabled] = useState(true);
   const [showTopic, setShowTopic] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
@@ -39,6 +49,8 @@ export function QuizProvider({ children }) {
   
   // Live reveal data
   const [revealData, setRevealData] = useState(null);
+  const [brainFeedback,setBrainFeedback]=useState(null);
+  const [liveResults,setLiveResults]=useState(null);
   const [liveAnswerCount, setLiveAnswerCount] = useState({ answeredCount: 0, totalParticipants: 0 });
   
   // Server connection info
@@ -55,7 +67,7 @@ export function QuizProvider({ children }) {
   useEffect(() => {
     if (trainerName) localStorage.setItem('dw_trainer_name', trainerName);
     if (participantName) localStorage.setItem('dw_participant_name', participantName);
-    if (participantPhone) localStorage.setItem('dw_participant_phone', participantPhone);
+    localStorage.removeItem('dw_participant_phone');
     if (sessionCode) localStorage.setItem('dw_session_code', sessionCode);
   }, [trainerName, participantName, participantPhone, sessionCode]);
 
@@ -83,12 +95,15 @@ export function QuizProvider({ children }) {
   const syncStateWithServer = useCallback(() => {
     if (!sessionCode) return;
 
-    socket.emit('get_session_state', { sessionCode, participantName, participantPhone, role }, (res) => {
+    socket.emit('get_session_state', { sessionCode, trainerToken:role==='trainer'?readToken('trainer',sessionCode):'',participantToken:role==='participant'?readToken('participant',sessionCode):'' }, (res) => {
       if (res && res.success) {
+        if(res.participant?.name)setParticipantName(res.participant.name);
         setSessionStatus(res.status);
         setCurrentQuestionIndex(res.currentQuestionIndex);
         setQuestionState(res.questionState);
-        setTimerDuration(res.timerDuration);
+        setTimerDuration(res.timerDuration ?? 30);
+        setActiveDuration(res.activeDuration ?? res.timerDuration ?? 30);
+        applyActivityUI(res);
         setTimeRemaining(res.timeRemaining ?? res.timerDuration);
         setSpeedBonusEnabled(res.speedBonusEnabled);
         setTotalQuestions(res.totalQuestions);
@@ -105,6 +120,7 @@ export function QuizProvider({ children }) {
           setCurrentQuestion(res.currentQuestion);
         }
 
+        setLiveResults(res.liveResults?{questionIndex:res.currentQuestionIndex,data:res.liveResults}:null);
         if (res.liveAnswerCount) {
           setLiveAnswerCount(res.liveAnswerCount);
         }
@@ -114,6 +130,7 @@ export function QuizProvider({ children }) {
           setLeaderboard(res.analytics.leaderboard || []);
         }
 
+        setBrainFeedback(res.brainFeedback??null);
         if (res.revealData) {
           setRevealData(res.revealData);
         }
@@ -123,6 +140,7 @@ export function QuizProvider({ children }) {
           setIsAnswerSubmitted(true);
         }
 
+        if (typeof res.isAnswerSubmitted === 'boolean') setIsAnswerSubmitted(res.isAnswerSubmitted);
         if (res.lastAnswerResult) {
           setLastAnswerResult(res.lastAnswerResult);
         }
@@ -134,7 +152,7 @@ export function QuizProvider({ children }) {
         if (res.wordCloudWords) {
           setWordCloudWords(res.wordCloudWords);
         }
-      }
+      }else if(res?.success===false){setErrorMessage(res.error||'Session expired. Join again.');setRole(null);setSessionCode('');localStorage.removeItem('dw_session_code');}
     });
   }, [sessionCode, participantName, participantPhone, role]);
 
@@ -157,14 +175,17 @@ export function QuizProvider({ children }) {
       setSessionStatus('running');
       setCurrentQuestionIndex(data.currentQuestionIndex || 0);
       setTotalQuestions(data.totalQuestions || 20);
-      setTimerDuration(data.timerDuration || 30);
-      setTimeRemaining(data.timerDuration || 30);
+      setTimerDuration(data.timerDuration ?? 30);
+      setActiveDuration(data.activeDuration??data.timerDuration??30);
+      setTimeRemaining(data.activeDuration??data.timerDuration??30);
+      applyActivityUI(data);
       setQuestionState('active');
       setSelectedOption(null);
       setIsAnswerSubmitted(false);
       setLastAnswerResult(null);
-      setRevealData(null);
+      setRevealData(null);setBrainFeedback(null);setLiveResults(null);
       setQuestionStartTime(Date.now());
+      setLiveAnswerCount({answeredCount:0,totalParticipants:0});
       if (data.question) {
         setCurrentQuestion(data.question);
       }
@@ -193,17 +214,21 @@ export function QuizProvider({ children }) {
       setWordCloudWords([]);
     };
 
-    const handleQuestionChanged = ({ currentQuestionIndex: idx, totalQuestions: total }) => {
+    const handleQuestionChanged = (data) => {
+      const {currentQuestionIndex:idx,totalQuestions:total}=data;
+      setActiveDuration(data.activeDuration??0);setTimeRemaining(data.activeDuration??0);applyActivityUI(data);
       setCurrentQuestionIndex(idx);
       setTotalQuestions(total);
       setQuestionState('active');
       setSelectedOption(null);
       setIsAnswerSubmitted(false);
       setLastAnswerResult(null);
-      setRevealData(null);
+      setRevealData(null);setBrainFeedback(null);setLiveResults(null);
+      setLiveAnswerCount({answeredCount:0,totalParticipants:0});
       setWordCloudWords([]);
     };
 
+    const handleLiveResults=payload=>setLiveResults(payload);
     const handleLiveAnswerCount = (data) => {
       setLiveAnswerCount({
         answeredCount: data.answeredCount,
@@ -211,6 +236,7 @@ export function QuizProvider({ children }) {
       });
     };
 
+    const handlePrivateAnswer=data=>{setLastAnswerResult(data);};
     const handleAnswerRevealed = (data) => {
       setQuestionState('revealed');
       setRevealData(data);
@@ -248,7 +274,7 @@ export function QuizProvider({ children }) {
       setSelectedOption(null);
       setIsAnswerSubmitted(false);
       setLastAnswerResult(null);
-      setRevealData(null);
+      setRevealData(null);setBrainFeedback(null);setLiveResults(null);
       setAnalytics(null);
       setLeaderboard([]);
       setWordCloudWords([]);
@@ -277,6 +303,10 @@ export function QuizProvider({ children }) {
       setWordCloudWords(words || []);
     };
 
+    const handleThumbs=data=>setThumbs({up:data.up||0,down:data.down||0});
+    const handleText=data=>{setTextVisible(data.visibleLines.length);setCurrentQuestion(q=>q?.type==='text'&&q.index===data.questionIndex?{...q,visibleLines:data.visibleLines,textTotal:data.textTotal}:q);};
+    socket.on('thumbs_updated',handleThumbs);
+    socket.on('text_reveal_updated',handleText);
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
     socket.on('participants_updated', handleParticipantsUpdated);
@@ -286,7 +316,9 @@ export function QuizProvider({ children }) {
     socket.on('participant_question', handleParticipantQuestion);
     socket.on('question_changed', handleQuestionChanged);
     socket.on('live_answer_count', handleLiveAnswerCount);
+    socket.on('live_results',handleLiveResults);
     socket.on('answer_revealed', handleAnswerRevealed);
+    socket.on('private_answer_result',handlePrivateAnswer);
     socket.on('display_leaderboard', handleDisplayLeaderboard);
     socket.on('quiz_paused', handleQuizPaused);
     socket.on('quiz_resumed', handleQuizResumed);
@@ -303,6 +335,8 @@ export function QuizProvider({ children }) {
     }
 
     return () => {
+      socket.off('thumbs_updated',handleThumbs);
+      socket.off('text_reveal_updated',handleText);
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
       socket.off('participants_updated', handleParticipantsUpdated);
@@ -312,7 +346,9 @@ export function QuizProvider({ children }) {
       socket.off('participant_question', handleParticipantQuestion);
       socket.off('question_changed', handleQuestionChanged);
       socket.off('live_answer_count', handleLiveAnswerCount);
+      socket.off('live_results',handleLiveResults);
       socket.off('answer_revealed', handleAnswerRevealed);
+      socket.off('private_answer_result',handlePrivateAnswer);
       socket.off('display_leaderboard', handleDisplayLeaderboard);
       socket.off('quiz_paused', handleQuizPaused);
       socket.off('quiz_resumed', handleQuizResumed);
@@ -342,12 +378,14 @@ export function QuizProvider({ children }) {
       customQuestions
     }, (res) => {
       if (res && res.success) {
+        saveToken('trainer',res.sessionCode,res.trainerToken);
         setSessionCode(res.sessionCode);
         setRole('trainer');
         setParticipants([]);
         if (callback) callback(res);
       } else {
         setErrorMessage(res?.error || 'Failed to create session');
+        if(callback)callback(res);
       }
     });
   }, []);
@@ -359,7 +397,7 @@ export function QuizProvider({ children }) {
 
     socket.emit('reconnect_trainer', {
       sessionCode: cleanCode,
-      trainerName: cleanName
+      trainerName: cleanName,trainerToken:readToken('trainer',cleanCode)
     }, (res) => {
       if (res && res.success) {
         setSessionCode(cleanCode);
@@ -368,14 +406,18 @@ export function QuizProvider({ children }) {
         setSessionStatus(res.status || 'ready');
         setCurrentQuestionIndex(res.currentQuestionIndex || 0);
         setQuestionState(res.questionState || 'active');
-        setTimerDuration(res.timerDuration || 30);
-        setTimeRemaining(res.timeRemaining || 30);
+        setTimerDuration(res.timerDuration ?? 30);
+        setActiveDuration(res.activeDuration ?? res.timerDuration ?? 30);
+        applyActivityUI(res);
+        setTimeRemaining(res.timeRemaining ?? 30);
         setSpeedBonusEnabled(res.speedBonusEnabled !== undefined ? res.speedBonusEnabled : true);
         setShowTopic(res.showTopic !== undefined ? res.showTopic : false);
         setTotalQuestions(res.totalQuestions || 20);
         if (res.participants) setParticipants(res.participants);
         if (res.currentQuestion) setCurrentQuestion(res.currentQuestion);
+        setLiveResults(res.liveResults?{questionIndex:res.currentQuestionIndex,data:res.liveResults}:null);
         if (res.liveAnswerCount) setLiveAnswerCount(res.liveAnswerCount);
+        if (res.revealData) setRevealData(res.revealData);
         if (res.analytics) {
           setAnalytics(res.analytics);
           setLeaderboard(res.analytics.leaderboard || []);
@@ -401,26 +443,29 @@ export function QuizProvider({ children }) {
 
     socket.emit('join_session', {
       sessionCode: cleanCode,
-      participantName: cleanName,
-      participantPhone: cleanPhone
+      participantToken:readToken('participant',cleanCode)
     }, (res) => {
       if (res && res.success) {
         setSessionCode(cleanCode);
-        setParticipantName(cleanName);
-        setParticipantPhone(cleanPhone);
+        saveToken('participant',cleanCode,res.participantToken);
+        setParticipantName(res.participant?.name||'Participant');
+        setParticipantPhone('');
         setRole('participant');
         setSessionStatus(res.sessionStatus || 'ready');
+        setTimerDuration(res.timerDuration??30);setActiveDuration(res.activeDuration??res.timerDuration??30);setTimeRemaining(res.timeRemaining??0);applyActivityUI(res);
         setTotalQuestions(res.totalQuestions || 20);
         setCurrentQuestionIndex(res.currentQuestionIndex || 0);
         setQuestionState(res.questionState || 'active');
         if (res.participants) setParticipants(res.participants);
         if (res.currentQuestion) setCurrentQuestion(res.currentQuestion);
+        if (typeof res.isAnswerSubmitted === 'boolean') setIsAnswerSubmitted(res.isAnswerSubmitted);
         if (res.selectedOption !== undefined && res.selectedOption !== null) {
           setSelectedOption(res.selectedOption);
           setIsAnswerSubmitted(true);
         }
         if (callback) callback(res);
       } else {
+        if(res?.error?.includes('expired'))saveToken('participant',cleanCode,'');
         setErrorMessage(res?.error || 'Unable to join session');
         if (callback) callback(res);
       }
@@ -448,9 +493,7 @@ export function QuizProvider({ children }) {
       selectedOption: optionIndex,
       responseTimeMs
     }, (res) => {
-      if (res && res.success) {
-        setLastAnswerResult(res);
-      }
+      if (!res?.success) {setIsAnswerSubmitted(false);setSelectedOption(null);setErrorMessage(res?.error||'Could not submit answer');}
     });
   }, [isAnswerSubmitted, questionState, sessionCode, participantName, participantPhone, currentQuestionIndex, questionStartTime]);
 
@@ -494,6 +537,7 @@ export function QuizProvider({ children }) {
     setTrainerName('');
     setParticipantName('');
     setParticipantPhone('');
+    socket.emit('leave_session');
     setSessionCode('');
     setSessionStatus('ready');
     setCurrentQuestion(null);
@@ -503,7 +547,7 @@ export function QuizProvider({ children }) {
     setSelectedOption(null);
     setIsAnswerSubmitted(false);
     setLastAnswerResult(null);
-    setRevealData(null);
+    setRevealData(null);setBrainFeedback(null);setLiveResults(null);
     localStorage.removeItem('dw_role');
     localStorage.removeItem('dw_trainer_name');
     localStorage.removeItem('dw_participant_name');
@@ -565,6 +609,21 @@ export function QuizProvider({ children }) {
     });
   }, [sessionCode, currentQuestionIndex, participantPhone]);
 
+  const submitSpatial=useCallback(response=>new Promise(resolve=>{
+    if(isAnswerSubmitted||questionState!=='active'||!sessionCode||!socket.connected)return resolve({success:false,error:'Activity unavailable.'});
+    socket.timeout(8000).emit('submit_spatial',{sessionCode,questionIndex:currentQuestionIndex,response},(err,res)=>{
+      if(err)return resolve({success:false,error:'Connection timed out.'});if(res?.success){setIsAnswerSubmitted(true);if(res.brainFeedback)setBrainFeedback(res.brainFeedback);}resolve(res||{success:false,error:'Submission failed.'});
+    });
+  }),[isAnswerSubmitted,questionState,sessionCode,currentQuestionIndex]);
+  const submitCurve = useCallback((points) => new Promise(resolve => {
+    if (isAnswerSubmitted || questionState !== 'active' || !sessionCode || !socket.connected) return resolve({success:false,error:'Activity unavailable.'});
+    socket.timeout(8000).emit('submit_curve',{sessionCode,questionIndex:currentQuestionIndex,points},(err,res)=>{
+      if (err) return resolve({success:false,error:'Connection timed out. Check your connection.'});
+      if (res?.success) setIsAnswerSubmitted(true);
+      resolve(res || {success:false,error:'Submission failed.'});
+    });
+  }),[isAnswerSubmitted,questionState,sessionCode,currentQuestionIndex]);
+
   const clearDatabase = useCallback(async () => {
     try {
       await fetch('/api/reset', { method: 'POST' });
@@ -586,6 +645,9 @@ export function QuizProvider({ children }) {
       sessionCode,
       sessionStatus,
       timerDuration,
+      activeDuration,textVisible,thumbs,
+      resetThumbs:()=>socket.emit('reset_thumbs',{sessionCode}),
+      revealTextLine:()=>socket.emit('reveal_text_line',{sessionCode,questionIndex:currentQuestionIndex}),
       speedBonusEnabled,
       showTopic,
       setShowTopic,
@@ -603,7 +665,7 @@ export function QuizProvider({ children }) {
       selectedOption,
       isAnswerSubmitted,
       lastAnswerResult,
-      revealData,
+      revealData,liveResults,brainFeedback,
       liveAnswerCount,
       connected,
       serverInfo,
@@ -627,6 +689,7 @@ export function QuizProvider({ children }) {
       upvoteQAQuestion,
       toggleQAAnswered,
       submitWordCloud,
+      submitCurve,submitSpatial,
       resetToHome,
       clearDatabase
     }}>

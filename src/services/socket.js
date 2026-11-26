@@ -3,12 +3,10 @@ import { io } from 'socket.io-client';
 // Detect appropriate socket URL:
 // In development, window.location.hostname with port 3000 or same origin
 const host = window.location.hostname;
-const socketUrl = window.location.port === '5173' 
-  ? `http://${host}:3000` 
-  : window.location.origin;
+const socketUrl = window.location.origin;
 
 export const socket = io(socketUrl, {
-  autoConnect: true,
+  autoConnect: import.meta.env.MODE !== 'editor-preview',
   reconnection: true,
   reconnectionAttempts: 10,
   reconnectionDelay: 1000,

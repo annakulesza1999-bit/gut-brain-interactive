@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Cloud, Send, CheckCircle } from 'lucide-react';
 import { useQuiz } from '../../context/QuizContext';
+import {openResponses,wordResponseLimit} from '../../activities.js';
 
 export default function WordCloudInput({ question }) {
   const { submitWordCloud, isAnswerSubmitted } = useQuiz();
+  const open=openResponses(question);
   const [word, setWord] = useState('');
   const [submittedWords, setSubmittedWords] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -14,9 +16,8 @@ export default function WordCloudInput({ question }) {
     if (!cleanWord || isSubmitting) return;
 
     setIsSubmitting(true);
-    await submitWordCloud(cleanWord);
-    setSubmittedWords(prev => [...prev, cleanWord]);
-    setWord('');
+    const ok=await submitWordCloud(cleanWord);
+    if(ok){setSubmittedWords(prev => [...prev, cleanWord]);setWord('');}
     setIsSubmitting(false);
   };
 
@@ -25,12 +26,12 @@ export default function WordCloudInput({ question }) {
       {/* Question Heading */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 text-center shadow-xl backdrop-blur-md">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-semibold mb-3 border border-blue-500/20">
-          <Cloud className="w-3.5 h-3.5" /> Word Cloud Activity
+          <Cloud className="w-3.5 h-3.5" /> {open?'Open-ended activity':'Word Cloud Activity'}
         </div>
         <h2 className="text-xl sm:text-2xl font-bold text-slate-100 leading-snug">
           {question?.question || 'What is your immediate takeaway or keyword?'}
         </h2>
-        <p className="text-xs text-slate-400 mt-2">Submit one or more words to build the live cohort cloud</p>
+        <p className="text-xs text-slate-400 mt-2">{open?'Share your interpretation in a short sentence.':'Submit one or more words to build the live cohort cloud'}</p>
       </div>
 
       {/* Input Form */}
@@ -38,15 +39,15 @@ export default function WordCloudInput({ question }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-              Enter a Word or Short Phrase
+              {open?'Your response':'Enter a Word or Short Phrase'}
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={word}
                 onChange={(e) => setWord(e.target.value)}
-                placeholder="e.g. Dynamic, VLOOKUP, Automation..."
-                maxLength={35}
+                placeholder={open?"Type your response…":"e.g. Stress, recovery, support…"}
+                maxLength={wordResponseLimit(question)}
                 className="flex-1 bg-slate-950 border border-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 outline-none text-base"
               />
               <button

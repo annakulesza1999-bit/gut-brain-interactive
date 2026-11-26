@@ -33,7 +33,7 @@ function MainApp() {
 
   // Flow 0: Remote Mode (Mentimote)
   if (role === 'remote') {
-    return <TrainerRemote />;
+    return <main className="p-8 max-w-lg mx-auto"><h1>Remote control unavailable in local preview</h1><p>Use the presenter screen until secure device pairing is implemented.</p><button className="underline mt-4" onClick={()=>{setRole(null);setSessionCode('');window.history.replaceState(null,'',window.location.pathname);}}>Return to studio</button></main>;
   }
 
   // Flow 1: No role selected or not authenticated yet

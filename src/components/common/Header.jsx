@@ -74,15 +74,15 @@ export default function Header() {
           {/* Brand & Course Title */}
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20 flex-shrink-0">
-              <span className="text-white font-black text-xs sm:text-sm tracking-wider">DW</span>
+              <span className="text-white font-black text-xs sm:text-sm tracking-wider">Gm</span>
             </div>
             <div>
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="font-extrabold text-slate-100 text-xs sm:text-base tracking-tight">
-                  Digi Warriors
+                <span className="gm-brand text-slate-100 text-sm sm:text-xl">
+                  Gut &amp; Mind
                 </span>
                 <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
-                  Portal
+                  Studio
                 </span>
               </div>
             </div>
@@ -113,30 +113,6 @@ export default function Header() {
               >
                 <Settings className="w-3.5 h-3.5" />
                 <span className="hidden md:inline">Settings & Themes</span>
-              </button>
-            )}
-
-            {/* Trainer: Student Directory */}
-            {role === 'trainer' && (
-              <button
-                onClick={() => setShowDirectoryModal(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-blue-600/15 border border-blue-500/30 hover:bg-blue-600/25 text-blue-400 text-xs font-bold transition-colors"
-                title="View All Students & Historical Analytics"
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Student Directory</span>
-              </button>
-            )}
-
-            {/* Participant: My Profile */}
-            {role === 'participant' && (
-              <button
-                onClick={() => setShowProfileModal(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-600/15 border border-emerald-500/30 hover:bg-emerald-600/25 text-emerald-400 text-xs font-bold transition-colors"
-                title="View Profile & Past Scores"
-              >
-                <UserCheck className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">My Profile</span>
               </button>
             )}
 
@@ -190,21 +166,7 @@ export default function Header() {
             </div>
 
             {/* Clear DB Button (Trainer only) */}
-            {role === 'trainer' && (
-              <button
-                onClick={() => {
-                  if (confirm('Clear active live session state? (Student histories in db.json will be preserved)')) {
-                    clearDatabase();
-                  }
-                }}
-                title="Reset Live Session"
-                className="p-1.5 sm:p-2 rounded-lg bg-slate-900 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/30 text-slate-400 hover:text-rose-400 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </button>
-            )}
-
-            {/* Exit / Leave */}
+                        {/* Exit / Leave */}
             {role && (
               <button
                 onClick={() => {

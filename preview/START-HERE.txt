@@ -1,0 +1,32 @@
+GUT & MIND — LOCAL EDITOR PREVIEW
+================================
+This package contains the actual presentation library and slide editor, not the live classroom server. No npm installation is required. You need Python 3 and a current browser.
+
+1. Extract the entire ZIP into one folder.
+2. Open Terminal (macOS/Linux) or PowerShell (Windows) in that folder.
+3. macOS/Linux: python3 open-preview.py
+   Windows:      py -3 open-preview.py
+4. Your browser should open http://127.0.0.1:8765/editor-preview.html. If not, paste that address into it.
+5. Keep the terminal open while editing. Press Ctrl+C to stop the local preview.
+
+Use the practice presentation or create a new test deck. Save & Close, then Backup to export a .gutmind.json file. Storage is tied to your browser and this exact local address. Back up before switching browser, computer or future website. Do not enter real student data. The live server, student joining and PowerPoint import are intentionally absent. Do not expose this port or use a tunnel.
+
+The 3D anatomy model is bundled for offline use. See atlas/ATLAS-LICENSE.md. If WebGL is not available on your device, the viewer may not work.
+
+Only download this preview from the successful GitHub Actions run in your own repository. Do not use the inherited original executable.
+
+REHEARSE: Open a saved practice deck, click Present (or Preview next to a slide). Use Student phone to answer from a 390px embedded responsive view, then Reveal results. Demo responses are generated, not real students; Reset slide clears the rehearsal. Use Edit current slide to return to the editor. No rehearsal responses are written to the deck. A physical phone cannot join the loopback-only server; network testing remains disabled.
+
+IMPORT YOUR FULL PRESENTATION: In My presentations choose Import backup or questions, select the supplied .gutmind.json file, then Edit slides or Present. Text slide figures and private speaker notes are supported. Original PowerPoint videos are not embedded in this preview.
+
+LIVE RESULTS: All existing slides default to live response updates on the presenter display. Change Response visibility to Hidden for independent predictions. The Reveal control still closes responses and displays correct answers, scoring or research findings. Live responses are never saved in the presentation.
+
+CANVA: Export all pages as PNG or JPG in Canva. Extract Canva's ZIP and select the image pages with Import Canva slides → Choose slide images. Create a new deck or append to your existing deck, then reorder and add activities. These are faithful raster pages, not individually editable Canva elements; animations are not imported. File limits: 3.1 MB per page, 35 MB artwork per presentation. Local preview only; large artwork decks may exceed the live session transfer limit.
+
+CURVE COMPARISON: In any curve slide, draw a comparison curve or use the illustrative cortisol example. It appears as a thicker dark line only after Reveal results. The source example is not measured cortisol. Yellow lightning marks stressor arrival in the recovery simulation, including for a selected response in group results. The brain answer highlight can be shown through surrounding anatomy (a transparent locator, not a physical section).
+
+PRESENTATION FORMAT: the presenter surface is fixed 16:9. The student phone remains responsive. Text formatting uses **bold**, *italic*, > for an indented bullet and ~ for a smaller muted line. Private exploration simulations have no submissions, no timer and no group results. Presenter and student sliders work independently. Existing submitted-scenario simulation slides keep their original behavior.
+
+SAGITTAL ANATOMY: The Midsagittal teaching map view provides an enlarged clickable section, whole-brain orientation and optional rotatable 3D context. Points are scored against approximate gross regions, and the correct region is shown after submission (or reveal, depending on settings). The separate 3D atlas is retained for precise mesh-based exercises and for anterior pituitary localization. The sagittal illustration cannot distinguish pituitary lobes reliably.
+
+RESULTS VIEWS: research results default to the live response overview. After reveal, select Study findings or Confidence analysis for a full-size view. Long claim sets, matching sets and simulation scenarios have page controls rather than vertical stacks. The slide itself stays 16:9. Private exploration slides are unchanged.

@@ -58,7 +58,7 @@ export default function TrainerFinalResults() {
 
   const totalParticipants = analytics?.totalParticipants || leaderboard.length;
   const avgScore = analytics?.avgScore || 0;
-  const avgAccuracy = analytics?.avgAccuracy || 0;
+  const avgAccuracy = analytics?.avgAccuracy ?? null;
   const maxScore = analytics?.maxScore || 0;
   const minScore = analytics?.minScore || 0;
   const questionAnalytics = analytics?.questionAnalytics || [];
@@ -70,8 +70,8 @@ export default function TrainerFinalResults() {
   const top3 = leaderboard[2];
 
   // Prepare Class Accuracy Data for chart
-  const classAccuracyChartData = questionAnalytics.map((q, idx) => ({
-    question: `Q${idx + 1}`,
+  const classAccuracyChartData = questionAnalytics.filter(q=>q.graded!==false).map(q => ({
+    question: `Q${q.questionIndex + 1}`,
     accuracy: q.accuracyPct || 0,
     category: q.category,
     correctCount: q.correctCount,
@@ -112,7 +112,7 @@ export default function TrainerFinalResults() {
         {/* Action Buttons */}
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
-            onClick={() => exportParticipantsCsv(sessionCode, leaderboard, totalQuestions)}
+            onClick={() => exportParticipantsCsv(sessionCode, leaderboard, analytics?.gradedQuestionCount??totalQuestions)}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-blue-500 text-slate-200 hover:text-white text-xs font-bold transition-all shadow"
           >
             <Download className="w-3.5 h-3.5 text-blue-400" />
@@ -184,7 +184,7 @@ export default function TrainerFinalResults() {
             <Target className="w-4 h-4 text-blue-400" />
           </div>
           <div className="text-2xl sm:text-3xl font-black text-blue-400 font-mono">
-            {avgAccuracy}%
+            {avgAccuracy===null?'—':avgAccuracy+'%'}
           </div>
           <div className="text-[11px] text-slate-400 mt-1">Overall correctness</div>
         </div>
@@ -390,7 +390,7 @@ export default function TrainerFinalResults() {
               Question-by-Question Class Accuracy
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              Visualizes accuracy across all {totalQuestions} questions to highlight where the cohort struggled.
+              Visualizes accuracy across {analytics?.gradedQuestionCount??totalQuestions} graded activities to highlight where the cohort struggled.
             </p>
           </div>
 
@@ -422,7 +422,7 @@ export default function TrainerFinalResults() {
               Questions Ranked by Difficulty (Lowest Accuracy First)
             </h3>
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {[...questionAnalytics].sort((a, b) => a.accuracyPct - b.accuracyPct).map((q, idx) => (
+              {questionAnalytics.filter(q=>q.graded!==false).sort((a, b) => a.accuracyPct - b.accuracyPct).map((q, idx) => (
                 <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs">
                   <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
                     <span className="font-mono font-bold text-blue-400">Q{q.questionIndex + 1}</span>

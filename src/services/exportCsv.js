@@ -24,8 +24,9 @@ export function exportParticipantsCsv(sessionCode, leaderboard = [], questionsCo
   const rows = leaderboard.map((p, idx) => {
     const answersObj = p.answers || {};
     const answersList = Object.values(answersObj);
-    const answeredCount = answersList.length;
-    const correctCount = answersList.filter(a => a.isCorrect).length;
+    const gradedAnswers=answersList.filter(a=>typeof a.isCorrect==='boolean');
+    const answeredCount=gradedAnswers.length;
+    const correctCount=gradedAnswers.filter(a=>a.isCorrect).length;
     const incorrectCount = answeredCount - correctCount;
     const unansweredCount = Math.max(0, questionsCount - answeredCount);
     const accuracy = questionsCount > 0 ? Math.round((correctCount / questionsCount) * 100) : 0;
@@ -101,7 +102,7 @@ export function exportQuestionsCsv(sessionCode, questionAnalytics = []) {
       `"${(q.category || 'General').replace(/"/g, '""')}"`,
       `"${q.difficulty || 'Medium'}"`,
       correctLetter,
-      `${q.accuracyPct || 0}%`,
+      q.graded===false?'Not graded':`${q.accuracyPct ?? 0}%`,
       q.correctCount || 0,
       q.incorrectCount || 0,
       q.notAnsweredCount || 0,

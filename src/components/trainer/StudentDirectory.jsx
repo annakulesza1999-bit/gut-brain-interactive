@@ -10,7 +10,6 @@ import {
   ArrowUpRight, 
   X, 
   Sparkles,
-  FileSpreadsheet,
   Layers
 } from 'lucide-react';
 import StudentProfileModal from '../profile/StudentProfileModal';
@@ -73,15 +72,6 @@ export default function StudentDirectory({ onClose }) {
               </p>
             </div>
 
-            {/* Master Export Button */}
-            <a
-              href="/api/export-master"
-              download
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 transition-all flex-shrink-0"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>Export Master Excel (.xlsx)</span>
-            </a>
           </div>
 
           {/* Search Bar & Stats */}

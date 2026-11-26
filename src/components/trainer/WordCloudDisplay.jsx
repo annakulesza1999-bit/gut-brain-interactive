@@ -1,103 +1,74 @@
-import React, { useMemo } from 'react';
-import { Cloud } from 'lucide-react';
+import React,{useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
+import {openResponses} from '../../activities.js';
+import {wordFrequencies,packCloudWords,cloudPageSize,wordColor} from '../../wordCloudLayout.js';
 
-const COLOR_PALETTE = [
-  '#38bdf8', // sky-400
-  '#818cf8', // indigo-400
-  '#34d399', // emerald-400
-  '#fbbf24', // amber-400
-  '#f472b6', // pink-400
-  '#a78bfa', // purple-400
-  '#fb923c', // orange-400
-  '#2dd4bf', // teal-400
-  '#60a5fa', // blue-400
-];
+const graphicStyle={aspectRatio:'900 / 460',minHeight:240,width:'100%',maxWidth:960,marginInline:'auto',boxSizing:'border-box'};
+const fontFamily='"Source Sans 3", Arial, sans-serif';
 
-export default function WordCloudDisplay({ words = [], totalResponses = 0 }) {
-  // Compute frequency map
-  const wordStats = useMemo(() => {
-    if (!words || words.length === 0) return [];
-
-    const map = {};
-    words.forEach(entry => {
-      const clean = (entry.text || entry || '').trim();
-      if (!clean) return;
-      const lower = clean.toLowerCase();
-      if (!map[lower]) {
-        map[lower] = { text: clean, count: 0 };
-      }
-      map[lower].count += 1;
-    });
-
-    const list = Object.values(map);
-    list.sort((a, b) => b.count - a.count);
-
-    const maxCount = list[0]?.count || 1;
-    const minCount = list[list.length - 1]?.count || 1;
-
-    return list.map((item, index) => {
-      // Scale font size from 18px to 64px based on relative frequency
-      const normalized = maxCount === minCount ? 0.5 : (item.count - minCount) / (maxCount - minCount);
-      const fontSize = Math.round(18 + normalized * 46);
-      const color = COLOR_PALETTE[index % COLOR_PALETTE.length];
-      const rotation = index % 5 === 0 ? -6 : index % 7 === 0 ? 6 : 0;
-
-      return {
-        ...item,
-        fontSize,
-        color,
-        rotation,
-      };
-    });
-  }, [words]);
-
-  return (
-    <div className="w-full bg-slate-900/60 border border-slate-800 rounded-3xl p-6 lg:p-10 shadow-2xl relative overflow-hidden backdrop-blur-md">
-      {/* Background glow decoration */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Header Info */}
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800/80">
-        <div className="flex items-center gap-2 text-blue-400">
-          <Cloud className="w-6 h-6 animate-pulse" />
-          <span className="font-semibold text-sm uppercase tracking-wider">Live Audience Word Cloud</span>
-        </div>
-        <div className="bg-slate-800/80 px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-300 border border-slate-700/60">
-          {totalResponses} {totalResponses === 1 ? 'submission' : 'submissions'} • {wordStats.length} unique words
-        </div>
-      </div>
-
-      {/* Cloud Container */}
-      {wordStats.length === 0 ? (
-        <div className="py-24 text-center text-slate-500 flex flex-col items-center justify-center">
-          <Cloud className="w-16 h-16 mb-4 opacity-30 stroke-1 animate-bounce" />
-          <p className="text-lg font-medium text-slate-400">Waiting for participants to submit words...</p>
-          <p className="text-xs text-slate-500 mt-1">Words will appear here live with dynamic frequency sizing</p>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 min-h-[360px] p-4 select-none">
-          {wordStats.map((item, idx) => (
-            <span
-              key={idx}
-              className="inline-block transition-all duration-300 hover:scale-125 cursor-default font-extrabold tracking-tight drop-shadow-md animate-fade-in"
-              style={{
-                fontSize: `${item.fontSize}px`,
-                color: item.color,
-                transform: `rotate(${item.rotation}deg)`,
-                lineHeight: 1.1,
-              }}
-              title={`${item.text}: ${item.count} ${item.count === 1 ? 'vote' : 'votes'}`}
-            >
-              {item.text}
-              {item.count > 1 && (
-                <sup className="text-xs font-semibold ml-1 opacity-70 bg-slate-800/80 px-1.5 py-0.5 rounded-full">
-                  {item.count}
-                </sup>
-              )}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+export default function WordCloudDisplay(props){
+ return openResponses(props.question)?<OpenResponseDisplay {...props}/>:<FrequencyCloud {...props}/>;
+}
+function OpenResponseDisplay({words=[],hidden=false}){
+ const entries=hidden?[]:words.map(x=>typeof x==='string'?x:x?.text).filter(x=>typeof x==='string'&&x.trim());
+ return <section className="gm-open-response-panel">
+ <div className="gm-open-response-meta"><span>Open-ended responses</span><span>{hidden?'Waiting for reveal':entries.length+' responses'}</span></div>
+ {entries.length?<div className="gm-open-response-scroll" role="region" aria-label="Open-ended responses" tabIndex={0}><ul className="gm-open-response-grid">{entries.map((text,i)=><li data-open-response="true" key={i}>{text}</li>)}</ul></div>:<div className="gm-open-response-empty">{hidden?'Responses are hidden':'Responses will appear here as participants submit them.'}</div>}
+ <p className="gm-open-response-hint">{!hidden&&entries.length?'Scroll within the responses to see more.':' '}</p>
+ </section>;
+}
+function FrequencyCloud({words=[],totalResponses=0,hidden=false}){
+ const stats=useMemo(()=>wordFrequencies(words),[words]);
+ const [page,setPage]=useState(0),[view,setView]=useState('cloud'),[fontVersion,setFontVersion]=useState(0);
+ const graphic=useRef(null),[dimensions,setDimensions]=useState({width:900,height:460});
+ const pageSize=cloudPageSize(dimensions.width),pages=Math.max(1,Math.ceil(stats.length/pageSize)),current=Math.min(page,pages-1);
+ const visible=stats.slice(current*pageSize,(current+1)*pageSize);
+ const hasWords=!hidden&&stats.length>0;
+ useEffect(()=>{
+  let active=true;
+  const refresh=()=>{if(active)setFontVersion(v=>v+1);};
+  if(document.fonts){
+   document.fonts.load('700 48px "Source Sans 3"').then(refresh,refresh);
+   document.fonts.addEventListener('loadingdone',refresh);
+  }
+  return ()=>{active=false;document.fonts?.removeEventListener('loadingdone',refresh);};
+ },[]);
+ useLayoutEffect(()=>{
+  if(!hasWords||!graphic.current)return;
+  const node=graphic.current,update=()=>{
+   const width=node.clientWidth,height=node.clientHeight;
+   if(width&&height)setDimensions(old=>old.width===width&&old.height===height?old:{width,height});
+  };
+  update();const observer=new ResizeObserver(update);observer.observe(node);
+  return ()=>observer.disconnect();
+ },[hasWords,view]);
+ const layout=useMemo(()=>{
+  const ctx=document.createElement('canvas').getContext('2d');
+  return packCloudWords(visible,(word,size)=>{
+   if(!ctx)return word.length*size;
+   ctx.font='700 '+size+'px '+fontFamily;
+   const m=ctx.measureText(word);
+   return Math.max(m.width,(m.actualBoundingBoxLeft||0)+(m.actualBoundingBoxRight||0));
+  },dimensions.width,dimensions.height,stats[0]?.count||1);
+ },[stats,current,pageSize,dimensions,fontVersion]);
+ const control='rounded-md border border-slate-700 px-3 py-1.5 text-xs disabled:opacity-40';
+ return <section className="rounded-2xl border border-slate-800 overflow-hidden" style={{background:'#FFFFFF',color:'#032138'}}>
+ <div className="flex items-center justify-between px-5 pt-4 gap-3 text-xs" style={{color:'#354D60'}}>
+  <span className="tracking-widest uppercase">{hidden?'Hidden responses':'Word cloud'}</span>
+  <span>{hidden?'Waiting for reveal':totalResponses+' submissions · '+stats.length+' unique'}</span>
+ </div>
+ {!hasWords?<div className="min-h-[320px] grid place-items-center text-center px-6"><div><p className="font-serif text-2xl">{hidden?'Responses are hidden':'What comes to mind?'}</p><p className="text-sm mt-2" style={{color:'#354D60'}}>{hidden?'Reveal when everyone is ready.':'Words will appear here as participants submit them.'}</p></div></div>:<>
+ {view==='cloud'?<div ref={graphic} role="img" aria-label="Live frequency word cloud" className="gm-wordcloud-graphic" style={{...graphicStyle,position:'relative',fontFamily,fontWeight:700}}>
+  {layout.map(w=><span key={w.key} data-cloud-word={w.key} data-count={w.count} title={w.count+' '+(w.count===1?'submission':'submissions')} style={{position:'absolute',display:'block',left:w.x,top:w.y,transform:'translate(-50%, -50%)',whiteSpace:'nowrap',fontFamily,fontWeight:700,lineHeight:1.2,textAlign:'center',fontSize:w.size,color:wordColor(w.key)}}>{w.text}</span>)}
+  {!layout.length&&<div className="p-6 text-center">This window is too narrow for the cloud. Choose Response frequencies to see every answer.</div>}
+ </div>:<div ref={graphic} className="gm-wordcloud-graphic" style={{...graphicStyle,padding:'20px 24px',display:'flex',alignItems:'center',justifyContent:'center'}}>
+  <ul aria-label="Response frequencies" style={{display:'grid',width:'100%',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%, 220px),1fr))',gap:'12px 24px',alignContent:'center',fontSize:18}}>
+   {visible.map(w=><li key={w.key} className="flex justify-between gap-3 border-b border-slate-800 pb-2"><span style={{overflowWrap:'anywhere',minWidth:0}}>{w.text}</span><strong>{w.count}</strong></li>)}
+  </ul>
+ </div>}
+ <div className="px-5 pb-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+  <button type="button" className={control} onClick={()=>setView(v=>v==='cloud'?'frequencies':'cloud')}>{view==='cloud'?'Response frequencies':'Back to word cloud'}</button>
+  {pages>1&&<div className="flex items-center gap-2"><button type="button" className={control} disabled={current===0} onClick={()=>setPage(current-1)} aria-label="Previous word cloud page">Previous</button><span>Page {current+1} of {pages}</span><button type="button" className={control} disabled={current===pages-1} onClick={()=>setPage(current+1)} aria-label="Next word cloud page">Next</button></div>}
+ </div>
+ </>}
+ </section>;
 }

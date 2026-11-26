@@ -1,0 +1,73 @@
+name: Gut and Mind preflight
+on:
+  push:
+    branches:
+      - design/academic-minimalism
+  workflow_dispatch:
+concurrency:
+  group: gut-mind-preflight-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked dependencies without lifecycle scripts
+        id: install
+        run: npm ci --ignore-scripts
+      - name: Unit tests
+        run: node --test test_activities.js test_anatomy_activities.js test_presentations.js test_research_activities.js test_simulations.js test_spatial_activities.js test_word_cloud.js
+      - name: Prepare pinned anatomical model
+        run: npm run prepare:atlas
+      - name: Prepare verified offline design fonts
+        run: node scripts/prepare-design-fonts.mjs
+      - name: Build frontend
+        run: npm run build
+      - name: Real 15-client loopback smoke test
+        run: GM_TEST_CLIENTS=15 node --test test_session_smoke.js
+      - name: Real 30-client loopback stress test
+        run: GM_TEST_CLIENTS=30 node --test test_session_smoke.js
+      - name: Dependency audit
+        if: ${{ always() && steps.install.outcome == 'success' }}
+        run: npm audit --audit-level=low
+      - name: Build standalone editor preview
+        run: npm run build:editor-preview
+      - name: Install isolated browser test tools
+        run: |
+          mkdir -p "$RUNNER_TEMP/gm-browser"
+          cd "$RUNNER_TEMP/gm-browser"
+          npm init -y
+          npm install --save-exact --ignore-scripts --no-fund playwright@1.58.2
+          npm audit --audit-level=low
+          node node_modules/playwright/cli.js install --with-deps chromium
+      - name: Browser editor verification
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/gm-browser/node_modules/playwright/index.mjs
+        run: node --test test_editor_preview.mjs
+      - name: Audience results layout verification
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/gm-browser/node_modules/playwright/index.mjs
+        run: node --test test_results_layout.mjs
+      - name: Upload tested local editor preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: gut-mind-editor-preview
+          path: dist-preview/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload browser verification screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: editor-browser-screenshots
+          path: preview-test-output/
+          if-no-files-found: ignore
+          retention-days: 30

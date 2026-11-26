@@ -38,3 +38,15 @@ branch_structure.json
 temp_auto_push.bat
 temp_interactive_push.bat
 config.bat
+
+# Generated, version-pinned anatomy assets
+/public/atlas/brain.glb
+/public/atlas/draco/
+
+# Local-only data (never commit classroom records)
+/server/runtime-db.json
+/server/db.json
+
+/dist-preview/
+
+/src/fonts/

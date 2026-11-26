@@ -1,4 +1,14 @@
-import React, { useState } from 'react';
+import {ReferenceCurveEditor} from '../common/CurveActivity';
+import {BrainEditor} from '../common/BrainActivity';
+import {brainTemplate} from '../../anatomyActivities.js';
+import {ResearchEditor} from '../common/ResearchActivity';
+import {researchTemplate} from '../../researchActivities.js';
+import {SimulationEditor} from '../common/SimulationActivity';
+import {simSpec,defaultResponse} from '../../simulations.js';
+import React, { useState, useEffect, useRef } from 'react';
+import {MapEditor,MatchingEditor} from '../common/SpatialActivity';
+import {defaultPairs} from '../../spatialActivities.js';
+import { hpaStages, safeMedia, safeTextImages, safeSlideArtwork, slideFigureLayout } from '../../activities.js';
 import { 
   Plus, 
   Trash2, 
@@ -21,7 +31,7 @@ export default function QuestionEditorModal({
   isOpen,
   onClose,
   initialQuestions = [],
-  onSaveQuestions
+  onSaveQuestions,onChangeQuestions,saveStatus,saveError,onExportPresentation,onPreview,initialSelectedIndex=0
 }) {
   const [questions, setQuestions] = useState(() => {
     return initialQuestions && initialQuestions.length > 0 ? JSON.parse(JSON.stringify(initialQuestions)) : [
@@ -43,8 +53,12 @@ export default function QuestionEditorModal({
     ];
   });
 
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState(()=>Math.max(0,Math.min(initialSelectedIndex,questions.length-1)));
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saving,setSaving]=useState(false);
+  const lastQuestions=useRef(questions);
+  const onChangeRef=useRef(onChangeQuestions);onChangeRef.current=onChangeQuestions;
+  useEffect(()=>{if(lastQuestions.current!==questions){lastQuestions.current=questions;onChangeRef.current?.(questions);}},[questions]);
 
   if (!isOpen) return null;
 
@@ -88,9 +102,19 @@ export default function QuestionEditorModal({
     });
   };
 
-  const handleAddQuestion = (type = 'mcq') => {
+  const handleAddQuestion = (type = 'mcq', simulationKind='appraisal') => {
     const newId = questions.length > 0 ? Math.max(...questions.map(q => q.id || 0)) + 1 : 1;
-    const newQuestion = type === 'wordcloud' ? {
+    if (type === 'sequence') {
+      const group = hpaStages.map((stage,i)=>({id:newId+i,type:'sequence',sequenceTitle:'HPA axis - What happens next?',sequenceStep:i+1,sequenceTotal:hpaStages.length,category:'Stress physiology',difficulty:'Medium',...stage}));
+      setQuestions(prev=>[...prev,...group]); setSelectedIndex(questions.length); return;
+    }
+    if(type==='brain'){setQuestions(prev=>[...prev,{id:newId,...brainTemplate()}]);setSelectedIndex(questions.length);return;}
+    if(type==='research'){const kind=simulationKind==='evidence'?'evidence':'prediction';setQuestions(prev=>[...prev,{id:newId,...researchTemplate(kind,simulationKind)}]);setSelectedIndex(questions.length);return;}
+    if(type==='simulation'){
+      const kind=simulationKind,spec=simSpec(kind);
+      setQuestions(prev=>[...prev,{id:newId,type,simKind:kind,question:spec.prompt,simTask:spec.task,simInitial:defaultResponse(kind),timerSeconds:90,options:[],correctAnswer:null}]);setSelectedIndex(questions.length);return;
+    }
+    const newQuestion = type==='pointmap'?{id:newId,type,question:'Where do you feel stress?',mapGraded:false,mapRadius:.06,mapPoints:100,options:[],correctAnswer:null}:type==='matching'?{id:newId,type,question:'Match the gut–brain communication pathways',matchPairs:defaultPairs.map(p=>({...p})),matchPoints:100,options:[],correctAnswer:null}:type === 'text' ? {id:newId,type:'text',question:'Key takeaways',body:'First point\nSecond point\nThird point',revealMode:'step',options:[],correctAnswer:null} : type === 'curve' ? {id:newId,type:'curve',question:'Predict the cortisol response after a stressful event.',xLabel:'Time (minutes)',yLabel:'Relative cortisol level',xTicks:'Before,0,15,30,45,60',stressMarker:0.2,category:'Stress physiology',difficulty:'Medium',options:[],correctAnswer:null} : type === 'wordcloud' ? {
       id: newId,
       type: 'wordcloud',
       question: 'In one word, what was the most valuable concept you learned today?',
@@ -143,29 +167,23 @@ export default function QuestionEditorModal({
     setSelectedIndex(targetIdx);
   };
 
-  const handleSaveAndApply = () => {
-    if (onSaveQuestions) {
-      onSaveQuestions(questions);
-    }
-    setSaveSuccess(true);
-    setTimeout(() => {
-      setSaveSuccess(false);
-      onClose();
-    }, 800);
+  const handleSaveAndApply = async () => {
+    if(saving)return;setSaving(true);
+    try{const ok=await onSaveQuestions?.(questions);if(ok===false)return;setSaveSuccess(true);onClose();}
+    finally{setSaving(false);}
   };
-
   const handleExportJSON = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(questions, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `digi_warriors_questions_${Date.now()}.json`);
+    downloadAnchor.setAttribute("download", `gut_mind_questions_${Date.now()}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+    <div role="dialog" aria-modal="true" aria-label="Presentation slide editor" className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-fade-in">
       <div className="w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[90vh]">
         
         {/* Header */}
@@ -176,37 +194,43 @@ export default function QuestionEditorModal({
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                <span>Visual Question Bank & Slide Editor</span>
+                <span>Presentation slide editor</span>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono">
                   {questions.length} Items
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
-                Design Multiple-Choice Questions (MCQs), Polls, and Live Word Clouds.
+                {saveStatus||'Edit your presentation'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {onPreview&&<button type="button" disabled={saving} className="px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold" onClick={async()=>{setSaving(true);try{const ok=await onSaveQuestions?.(questions);if(ok!==false)onPreview(selectedIndex);}finally{setSaving(false);}}}>Present this slide</button>}
             <button
-              onClick={handleExportJSON}
+              type="button"
+              onClick={onExportPresentation||handleExportJSON}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition-colors"
-              title="Download JSON File"
+              title="Download presentation backup"
             >
               <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Export JSON</span>
+              <span className="hidden sm:inline">Backup presentation</span>
             </button>
 
             <button
+              type="button"
+              disabled={saving}
               onClick={handleSaveAndApply}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>{saveSuccess ? 'Saved!' : 'Save & Apply'}</span>
+              <span>{saving?'Saving…':saveSuccess ? 'Saved!' : 'Save & Close'}</span>
             </button>
 
             <button
-              onClick={onClose}
+              type="button"
+              disabled={saving}
+              onClick={handleSaveAndApply}
               className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors ml-1"
             >
               <X className="w-5 h-5" />
@@ -214,8 +238,9 @@ export default function QuestionEditorModal({
           </div>
         </div>
 
+        {saveError&&<p role="alert" className="px-4 py-2 text-xs text-rose-700">{saveError} Download a backup before closing.</p>}
         {/* Main Body: Sidebar Question List + Form Editor */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden" inert={saving?'':undefined} style={saving?{pointerEvents:'none',opacity:.8}:undefined}>
           
           {/* Left Sidebar: Question List */}
           <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-slate-800 bg-slate-950/50 flex flex-col h-48 md:h-auto overflow-hidden flex-shrink-0">
@@ -236,6 +261,18 @@ export default function QuestionEditorModal({
                 <Cloud className="w-3.5 h-3.5" />
                 <span>+ Word Cloud</span>
               </button>
+              <button onClick={()=>handleAddQuestion('sequence')} className="p-2 rounded-xl border border-purple-500/30 bg-purple-500/10 text-purple-700 text-xs font-semibold">+ Sequence (5 stages)</button>
+              <button onClick={()=>handleAddQuestion('curve')} className="p-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 text-xs font-semibold">+ Draw a curve</button>
+              <button onClick={()=>handleAddQuestion('text')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Text slide</button>
+              <button onClick={()=>handleAddQuestion('pointmap')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Point map</button>
+              <button onClick={()=>handleAddQuestion('matching')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Match pairs</button>
+              <button onClick={()=>handleAddQuestion('simulation','appraisal')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Demand &amp; coping</button>
+              <button onClick={()=>handleAddQuestion('simulation','recovery')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Stress &amp; recovery</button>
+              <button onClick={()=>handleAddQuestion('simulation','microbiome')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Microbiome builder</button>
+              <button onClick={()=>handleAddQuestion('research','curve')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Predict a curve</button>
+              <button onClick={()=>handleAddQuestion('research','scatter')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Predict an association</button>
+              <button onClick={()=>handleAddQuestion('research','evidence')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Evidence detective</button>
+              <button onClick={()=>handleAddQuestion('brain')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ 3D brain anatomy</button>
             </div>
 
             {/* List */}
@@ -267,7 +304,7 @@ export default function QuestionEditorModal({
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
                         isWordCloud ? 'bg-sky-500/20 text-sky-300' : 'bg-slate-800 text-slate-400'
                       }`}>
-                        {isWordCloud ? 'Cloud' : 'MCQ'}
+                        {isWordCloud ? 'Cloud' : q.type==='pointmap'?'Map':q.type==='matching'?'Match':q.type==='simulation'?'Simulation':q.type==='research'?'Research':q.type==='brain'?'3D brain':q.type === 'text' ? 'Text' : q.type === 'curve' ? 'Draw' : q.type === 'sequence' ? 'Stage '+q.sequenceStep : 'MCQ'}
                       </span>
                     </div>
                   </div>
@@ -289,12 +326,21 @@ export default function QuestionEditorModal({
                   
                   {/* Question Type Selector */}
                   <select
+                    aria-label="Slide type"
                     value={currentQ.type || 'mcq'}
                     onChange={(e) => handleUpdateCurrentQ('type', e.target.value)}
                     className="px-3 py-1 rounded-lg bg-slate-950 border border-slate-700 text-xs font-semibold text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="mcq">Multiple Choice (MCQ)</option>
                     <option value="wordcloud">Live Word Cloud</option>
+                    <option value="curve">Draw a curve</option>
+                    <option value="text">Text slide</option>
+                    <option value="pointmap">Point map / anatomy quiz</option>
+                    <option value="matching">Match pairs</option>
+                    <option value="simulation">Interactive simulation</option>
+                    <option value="research">Scientific investigation</option>
+                    <option value="brain">3D brain anatomy</option>
+                    <option value="sequence">Interactive sequence stage</option>
                   </select>
                 </div>
 
@@ -326,7 +372,7 @@ export default function QuestionEditorModal({
                     onClick={() => handleDelete(selectedIndex)}
                     disabled={questions.length <= 1}
                     className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-30 text-rose-400 transition-colors"
-                    title="Delete"
+                    title="Delete slide"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -347,8 +393,62 @@ export default function QuestionEditorModal({
                 />
               </div>
 
+              {currentQ.type!=='text'&&<section className="p-4 border border-slate-800 rounded-2xl space-y-2"><label className="block text-sm">Response visibility<select className="block w-full mt-1 p-2 rounded-lg border border-slate-700 bg-slate-950" value={currentQ.resultsMode==='reveal'?'reveal':'live'} onChange={ev=>handleUpdateCurrentQ('resultsMode',ev.target.value)}><option value="live">Live - show responses as they arrive</option><option value="reveal">Hidden - show only after reveal</option></select></label><p className="text-xs text-slate-400">Live displays responses, not the correct answer or score. Use Hidden for independent predictions.</p></section>}
+              {currentQ.type!=='text' && <section className="p-4 border border-slate-800 rounded-2xl space-y-3">
+                <label className="block text-sm font-medium">Countdown</label>
+                <select className="w-full p-2 rounded-lg border border-slate-700 bg-slate-950" aria-label="Countdown mode" value={currentQ.timerSeconds==null?'default':currentQ.timerSeconds===0?'off':'custom'} onChange={ev=>handleUpdateCurrentQ('timerSeconds',ev.target.value==='default'?null:ev.target.value==='off'?0:30)}><option value="default">Use session default</option><option value="off">No countdown</option><option value="custom">Custom duration</option></select>
+                {currentQ.timerSeconds>0&&<label className="block text-sm">Seconds (1–3600)<input type="number" min="1" max="3600" value={currentQ.timerSeconds} onChange={ev=>handleUpdateCurrentQ('timerSeconds',Math.max(1,Math.min(3600,Number(ev.target.value)||1)))} className="block w-full p-2 rounded-lg border border-slate-700 bg-slate-950"/></label>}
+                <p className="text-xs text-slate-400">When time expires, submissions close and results are revealed. Advance when ready.</p>
+              </section>}
+              {currentQ.type==='brain'&&<BrainEditor key={currentQ.id} question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>}
+              {currentQ.type==='research'&&<ResearchEditor key={currentQ.id} question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>}
+              {currentQ.type==='simulation'&&<SimulationEditor question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>}
+              {currentQ.type==='pointmap'&&<MapEditor key={currentQ.id} question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>}
+              {currentQ.type==='matching'&&<MatchingEditor question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>}
+              <section className="p-4 border border-slate-800 rounded-2xl space-y-2">
+                <h3 className="font-semibold">Presenter notes</h3>
+                {currentQ.sourceSlide&&<p className="text-xs text-slate-400">Original slide reference: {currentQ.sourceSlide} · {currentQ.contentOrigin||'Imported slide'}</p>}
+                <label className="block text-sm">Private speaker notes<textarea rows={3} className="block w-full mt-1 p-2 rounded-lg border border-slate-700 bg-slate-950" value={currentQ.sourceNotes||''} onChange={ev=>handleUpdateCurrentQ('sourceNotes',ev.target.value)}/></label>
+                <p className="text-xs text-slate-400">Notes stay in the presentation backup and are not sent to participant screens.</p>
+              </section>
+              <section className="p-4 border border-slate-800 rounded-xl space-y-2"><label className="block text-sm">Slide sources and citations<textarea rows={2} maxLength={2500} className="block w-full mt-1 p-2 rounded-lg border border-slate-700 bg-slate-950" value={currentQ.slideSources||''} onChange={ev=>handleUpdateCurrentQ('slideSources',ev.target.value)}/></label><p className="text-xs text-slate-400">Displayed in a small footer, separate from slide content. Do not enter private notes here.</p></section>
+              {currentQ.type==='text'&&<section className="p-4 border border-slate-800 rounded-2xl space-y-3">
+                <label className="block text-sm">Slide layout<select className="block w-full mt-1 p-2 rounded-lg border border-slate-700 bg-slate-950" value={currentQ.slideLayout==='cover'?'cover':'content'} onChange={ev=>handleUpdateCurrentQ('slideLayout',ev.target.value)}><option value="content">White content slide</option><option value="cover">University blue cover</option></select></label>
+                <label className="block text-sm">Slide content (one revealable point per line)<textarea rows={7} className="block w-full mt-1 p-3 border border-slate-700 bg-slate-950 rounded-lg" value={currentQ.body||''} onChange={ev=>handleUpdateCurrentQ('body',ev.target.value)}/></label>
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={currentQ.revealMode==='step'} onChange={ev=>handleUpdateCurrentQ('revealMode',ev.target.checked?'step':'all')}/> Reveal one line per click</label>
+                {safeSlideArtwork(currentQ.slideArtwork)&&<div className="space-y-2 border border-slate-800 rounded-xl p-3"><h3 className="font-semibold">Imported Canva artwork</h3><img src={currentQ.slideArtwork} alt={currentQ.artworkAlt||currentQ.question} className="w-full max-h-[380px] object-contain"/><label className="block text-sm">Artwork description (accessibility)<textarea rows={2} className="w-full border border-slate-700 p-2 rounded-lg" value={currentQ.artworkAlt||''} onChange={ev=>handleUpdateCurrentQ('artworkAlt',ev.target.value)}/></label><p className="text-xs text-slate-400">The artwork fills the slide during playback. Its text and graphics remain a single image. Edit the source design in Canva and re-import if needed.</p><button className="text-xs underline" type="button" onClick={()=>{if(confirm('Remove the imported artwork from this slide?'))handleUpdateCurrentQ('slideArtwork','');}}>Remove artwork</button></div>}
+                <p className="text-xs text-slate-400">Formatting: **bold**, *italic*, prefix a line with &gt; for indentation or ~ for smaller grey text.</p>
+                <p className="text-xs text-slate-400">Use @ at the start of a line for compact, unbulleted sample information.</p><label className="block text-sm">Figure layout<select className="block w-full mt-1 p-2 rounded-lg border border-slate-700" value={slideFigureLayout(currentQ)} onChange={ev=>handleUpdateCurrentQ('figureLayout',ev.target.value)}><option value="normal">Balanced text and figures</option><option value="large">Larger figure</option><option value="wide">Wide figure below text (one figure + optional QR)</option></select></label>
+                <div className="space-y-3 border-t border-slate-800 pt-3">
+                  <h3 className="font-semibold">Slide figures</h3>
+                  <p className="text-xs text-slate-400">Up to four images or GIFs, visible throughout the slide. Images and alt text are saved in your backup.</p>
+                  {safeTextImages(currentQ.textImages).map((image,i)=><div key={i} className="space-y-2 border border-slate-800 rounded-xl p-3"><img src={image.media} alt={image.alt||'Slide figure '+(i+1)} className="max-h-44 max-w-full object-contain bg-white rounded-lg"/><label className="block text-xs">Figure description<input className="block w-full mt-1 p-2 border border-slate-700 bg-slate-950 rounded-lg" value={image.alt} onChange={ev=>handleUpdateCurrentQ('textImages',safeTextImages(currentQ.textImages).map((x,j)=>j===i?{...x,alt:ev.target.value}:x))}/></label><label className="flex gap-2 text-xs"><input type="checkbox" checked={image.role==='qr'} onChange={ev=>handleUpdateCurrentQ('textImages',safeTextImages(currentQ.textImages).map((x,j)=>j===i?{...x,role:ev.target.checked?'qr':undefined}:x))}/> Small QR code</label><button type="button" className="text-xs underline" onClick={()=>handleUpdateCurrentQ('textImages',safeTextImages(currentQ.textImages).filter((_,j)=>i!==j))}>Remove figure {i+1}</button></div>)}
+                  {safeTextImages(currentQ.textImages).length<4&&<label className="block text-xs font-medium">Add slide figure<input type="file" aria-label="Add slide figure" accept="image/png,image/jpeg,image/gif,image/webp" className="block w-full mt-1" onChange={ev=>{const file=ev.target.files?.[0];ev.target.value='';if(!file)return;if(file.size>350000){alert('Choose an image under 350 KB.');return;}const id=currentQ.id,reader=new FileReader();reader.onload=()=>{const media=safeMedia(reader.result);if(!media){alert('Unsupported image.');return;}setQuestions(prev=>prev.map(q=>q.id===id?{...q,textImages:[...safeTextImages(q.textImages),{media,alt:file.name}].slice(0,4)}:q));};reader.readAsDataURL(file);}}/></label>}
+                </div>
+                <p className="text-xs text-slate-400">The title stays visible. Click Reveal next line or press Space/Right Arrow. Student screens follow the presenter.</p>
+              </section>}
+              {currentQ.type === 'curve' && <section className="p-4 border border-slate-800 rounded-2xl space-y-3">
+                <h3 className="font-semibold">Graph settings</h3>
+                { [['xLabel','Horizontal axis label','Time (minutes)'],['yLabel','Vertical axis label','Relative cortisol level'],['xTicks','Horizontal tick labels (comma-separated)','Before,0,15,30,45,60']].map(([key,label,placeholder])=><label key={key} className="block text-sm">{label}<input className="block w-full p-2 rounded-lg border border-slate-700 bg-slate-950 mt-1" value={currentQ[key]??''} placeholder={placeholder} onChange={ev=>handleUpdateCurrentQ(key,ev.target.value)}/></label>)}
+                <label className="block text-sm">Event marker position (0–100%; empty to hide)<input type="number" min="0" max="100" className="block p-2 rounded-lg border border-slate-700 bg-slate-950 mt-1" value={currentQ.stressMarker == null ? '' : currentQ.stressMarker*100} onChange={ev=>handleUpdateCurrentQ('stressMarker',ev.target.value===''?null:Math.min(1,Math.max(0,Number(ev.target.value)/100)))}/></label>
+                <label className="block text-sm">Sampling time explanation<textarea rows={2} maxLength={400} className="block w-full border rounded-lg p-2" value={currentQ.axisExplanation||''} onChange={ev=>handleUpdateCurrentQ('axisExplanation',ev.target.value)}/></label><ReferenceCurveEditor key={currentQ.id} question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>
+                <p className="text-xs text-slate-400">Each student gets a consistent color and curve number. No correct answer; optional countdown reveals curves together.</p>
+              </section>}
+              {currentQ.type === 'sequence' && <section className="p-4 border border-slate-800 rounded-2xl space-y-3">
+                <h3 className="font-semibold">Sequence stage settings</h3>
+                <label className="block text-sm">Sequence title<input className="block w-full p-2 border border-slate-700 bg-slate-950 rounded-lg" value={currentQ.sequenceTitle||''} onChange={ev=>handleUpdateCurrentQ('sequenceTitle',ev.target.value)}/></label>
+                <div className="flex gap-3">{[['sequenceStep','Stage number'],['sequenceTotal','Total stages']].map(([k,l])=><label key={k} className="text-sm">{l}<input type="number" min="1" max="99" className="block w-24 p-2 border border-slate-700 bg-slate-950 rounded-lg" value={currentQ[k]||1} onChange={ev=>handleUpdateCurrentQ(k,Number(ev.target.value))}/></label>)}</div>
+                {['before','after'].map(phase=><div key={phase} className="space-y-2 border-t border-slate-800 pt-3">
+                  <label className="block text-sm font-medium">{phase==='before'?'Animation before prediction':'Animation after correct answer'}</label>
+                  <select className="w-full p-2 border border-slate-700 bg-slate-950 rounded-lg" value={currentQ[phase+'Preset']||''} onChange={ev=>handleUpdateCurrentQ(phase+'Preset',ev.target.value)}><option value="">No built-in animation</option>{['threat','sympathetic','hypothalamus','crh','acth','cortisol','feedback'].map(p=><option key={p} value={p}>{p}</option>)}</select>
+                  <input aria-label={phase+' animation upload'} type="file" accept="image/gif,image/png,image/jpeg,image/webp" onChange={ev=>{const file=ev.target.files?.[0];if(!file)return;if(file.size>350000){alert('Choose an image or GIF under 350 KB.');return;}const id=currentQ.id;const reader=new FileReader();reader.onload=()=>{const media=safeMedia(reader.result);if(!media){alert('Unsupported image.');return;}setQuestions(prev=>prev.map(q=>q.id===id?{...q,[phase+'Media']:media}:q));};reader.readAsDataURL(file);}}/>
+                  {currentQ[phase+'Media'] && <div><img className="max-h-32 object-contain" src={currentQ[phase+'Media']} alt={phase+' animation preview'}/><button type="button" className="text-xs underline" onClick={()=>handleUpdateCurrentQ(phase+'Media','')}>Remove uploaded image</button></div>}
+                </div>)}
+                <p className="text-xs text-slate-400">The five starter stages are editable and can be reordered, duplicated or removed. Update their stage numbers when changing the sequence length. Countdown can reveal the answer automatically; presenter advances manually.</p>
+              </section>}
+
               {/* MCQ Options List (If MCQ) */}
-              {currentQ.type !== 'wordcloud' && (
+              {!['wordcloud','curve','text','pointmap','matching','simulation','research','brain'].includes(currentQ.type) && (
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-300">
@@ -424,8 +524,8 @@ export default function QuestionEditorModal({
                 <div className="p-4 rounded-2xl bg-sky-950/30 border border-sky-500/30 text-xs text-sky-200 flex items-start gap-3">
                   <Cloud className="w-5 h-5 text-sky-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-white block mb-1">Live Word Cloud Mode</strong>
-                    Participants will see an input field on their phone to submit 1-3 words. The presenter screen dynamically animates the crowd submissions into a live word cloud with font sizes scaled to frequency.
+                    <label className="block text-sm">Response display<select aria-label="Response display" className="block w-full mt-2 p-2 rounded-lg border border-slate-700 bg-slate-950" value={currentQ.wordcloudMode==='open'?'open':'cloud'} onChange={e=>handleUpdateCurrentQ('wordcloudMode',e.target.value)}><option value="cloud">Word cloud</option><option value="open">Open-ended responses</option></select></label>
+                    <p className="mt-2">{currentQ.wordcloudMode==='open'?'Individual responses appear in scrollable cards, without combining duplicates.':'Words are sized by frequency in a live word cloud.'}</p>
                   </div>
                 </div>
               )}
