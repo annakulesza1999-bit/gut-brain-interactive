@@ -66,7 +66,7 @@ export default function TrainerLogin({ onBack }) {
         }
         // Basic schema check
         const first = parsed[0];
-        if (!first.question || !Array.isArray(first.options) || first.correctAnswer === undefined) {
+        if (parsed.some(q=>!q.question || (!['wordcloud','curve'].includes(q.type) && (!Array.isArray(q.options) || !Number.isInteger(q.correctAnswer) || q.correctAnswer < 0 || q.correctAnswer >= q.options.length)))) {
           throw new Error('Invalid question format. Each item must have question, options[], and correctAnswer.');
         }
 

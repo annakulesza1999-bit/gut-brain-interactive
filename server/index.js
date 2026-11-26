@@ -8,6 +8,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { db } from './db.js';
 import * as XLSX from 'xlsx';
+import { curveIdentity, normalizeCurve, publicActivity, safeMedia } from '../src/activities.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,6 +16,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
+  maxHttpBufferSize: 8 * 1024 * 1024,
   cors: {
     origin: "*",
     methods: ["GET", "POST", "PUT"]
@@ -87,14 +89,14 @@ function calculateSessionAnalytics(session) {
   const questionAnalytics = session.questions.map((q, qIndex) => {
     let answeredCount = 0;
     let correctCount = 0;
-    const optionCounts = [0, 0, 0, 0];
+    const optionCounts = Array.from({length: Math.max(4, q.options?.length || 0)}, () => 0);
     let totalResponseTime = 0;
 
     session.participants.forEach(p => {
       const ans = p.answers[qIndex];
       if (ans && ans.selectedOption !== null && ans.selectedOption !== undefined) {
         answeredCount++;
-        if (ans.selectedOption >= 0 && ans.selectedOption < 4) {
+        if (ans.selectedOption >= 0 && ans.selectedOption < optionCounts.length) {
           optionCounts[ans.selectedOption]++;
         }
         if (ans.isCorrect) correctCount++;
@@ -102,6 +104,7 @@ function calculateSessionAnalytics(session) {
       }
     });
 
+    if (q.type === 'curve') answeredCount = (session.curveSubmissions?.[qIndex] || []).length;
     const notAnsweredCount = totalParticipants - answeredCount;
     const accuracyPct = totalParticipants > 0 ? Math.round((correctCount / totalParticipants) * 100) : 0;
     const avgResponseTimeMs = answeredCount > 0 ? Math.round(totalResponseTime / answeredCount) : 0;
@@ -123,7 +126,8 @@ function calculateSessionAnalytics(session) {
       answeredCount,
       notAnsweredCount,
       correctCount,
-      incorrectCount: answeredCount - correctCount,
+      incorrectCount: q.type === 'curve' ? 0 : answeredCount - correctCount,
+      type: q.type || 'mcq',
       accuracyPct,
       avgResponseTimeMs,
       optionCounts,
@@ -369,7 +373,7 @@ io.on('connection', (socket) => {
   socket.on('create_session', ({ trainerName, sessionCode, timerDuration = 30, speedBonusEnabled = true, showTopic = false, customQuestions = null }, callback) => {
     try {
       const code = (sessionCode || `DW-${Math.floor(1000 + Math.random() * 9000)}`).toUpperCase();
-      const questionSet = (customQuestions && customQuestions.length > 0) ? customQuestions : defaultQuestions;
+      const questionSet = ((customQuestions && customQuestions.length > 0) ? customQuestions : defaultQuestions).map(q => ({...q, beforeMedia: safeMedia(q.beforeMedia), afterMedia: safeMedia(q.afterMedia)}));
 
       const newSession = {
         code,
@@ -388,7 +392,8 @@ io.on('connection', (socket) => {
         participants: [],
         completedQuestions: [],
         qaQuestions: [],
-        wordCloudSubmissions: {}
+        wordCloudSubmissions: {},
+        curveSubmissions: {}
       };
 
       sessions.set(code, newSession);
@@ -446,7 +451,7 @@ io.on('connection', (socket) => {
 
       let answeredCount = 0;
       session.participants.forEach(p => {
-        if (p.answers[session.currentQuestionIndex] !== undefined) answeredCount++;
+        if (p.answers[session.currentQuestionIndex] !== undefined || (session.curveSubmissions?.[session.currentQuestionIndex] || []).some(c=>c.participantId===p.id)) answeredCount++;
       });
 
       const participantList = session.participants.map(p => ({
@@ -571,7 +576,8 @@ io.on('connection', (socket) => {
           question: q.question,
           options: q.options,
           difficulty: q.difficulty,
-          category: q.category
+          category: q.category,
+          ...publicActivity(q)
         } : null;
 
         const myAns = existing.answers[session.currentQuestionIndex];
@@ -592,7 +598,7 @@ io.on('connection', (socket) => {
           totalQuestions: session.questions.length,
           participants: session.participants.map(p => ({ id: p.id, name: p.name, phone: p.phone, score: p.score, rank: p.currentRank, connected: p.connected })),
           selectedOption: myAns ? myAns.selectedOption : null,
-          isAnswerSubmitted: Boolean(myAns)
+          isAnswerSubmitted: Boolean(myAns) || (session.curveSubmissions?.[session.currentQuestionIndex] || []).some(c=>c.participantId===existing.id)
         });
       }
 
@@ -630,6 +636,7 @@ io.on('connection', (socket) => {
           sessionCode: code,
           student,
           participant: newParticipant,
+          currentQuestion: session.status === 'ready' ? null : (() => { const q = session.questions[session.currentQuestionIndex]; return {index:session.currentQuestionIndex,total:session.questions.length,id:q.id,question:q.question,options:q.options,category:q.category,difficulty:q.difficulty,...publicActivity(q)}; })(),
           sessionStatus: session.status,
           currentQuestionIndex: session.currentQuestionIndex,
           questionState: session.questionState,
@@ -666,7 +673,8 @@ io.on('connection', (socket) => {
       question: q.question,
       options: q.options,
       difficulty: q.difficulty,
-      category: q.category
+      category: q.category,
+          ...publicActivity(q)
     };
 
     const trainerQuestion = {
@@ -684,13 +692,13 @@ io.on('connection', (socket) => {
     });
 
     socket.emit('trainer_question', trainerQuestion);
-    socket.to(session.code).emit('participant_question', participantQuestion);
+    io.to(session.code).except(session.trainerSocketId).emit('participant_question', participantQuestion);
   });
 
   // Timer runner
   function startTimer(session) {
     if (session.timerInterval) clearInterval(session.timerInterval);
-    if (session.timerDuration <= 0) return;
+    if (['curve','sequence'].includes(session.questions[session.currentQuestionIndex]?.type) || session.timerDuration <= 0) return;
 
     session.timeRemaining = session.timerDuration;
 
@@ -721,6 +729,9 @@ io.on('connection', (socket) => {
       correctAnswer: q.correctAnswer,
       explanation: q.explanation,
       optionDist: currQA.optionDist,
+      curves: q.type === 'curve' ? (session.curveSubmissions?.[session.currentQuestionIndex] || []).map(({participantId,...curve})=>curve) : undefined,
+      afterMedia: q.type === 'sequence' ? q.afterMedia : undefined,
+      afterPreset: q.type === 'sequence' ? q.afterPreset : undefined,
       answeredCount: currQA.answeredCount,
       notAnsweredCount: currQA.notAnsweredCount,
       correctCount: currQA.correctCount,
@@ -749,12 +760,13 @@ io.on('connection', (socket) => {
     }
 
     const q = session.questions[questionIndex];
+    if (questionIndex !== session.currentQuestionIndex || !q || q.type === 'curve' || !Number.isInteger(selectedOption) || selectedOption < 0 || selectedOption >= (q.options?.length || 0)) return callback && callback({success:false,error:'Invalid or inactive question.'});
     const isCorrect = (selectedOption === q.correctAnswer);
 
     let basePoints = isCorrect ? 100 : 0;
     let speedBonus = 0;
 
-    if (isCorrect && session.speedBonusEnabled && session.timerDuration > 0) {
+    if (isCorrect && q.type !== 'sequence' && session.speedBonusEnabled && session.timerDuration > 0) {
       const timeUsedSec = Math.min(session.timerDuration, (responseTimeMs || 0) / 1000);
       const remainingRatio = Math.max(0, (session.timerDuration - timeUsedSec) / session.timerDuration);
       speedBonus = Math.round(remainingRatio * 50);
@@ -799,6 +811,23 @@ io.on('connection', (socket) => {
     if (answeredCount === session.participants.length && session.participants.length > 0) {
       io.to(session.code).emit('all_participants_answered', { questionIndex });
     }
+  });
+
+  // Curves remain server-side until the presenter reveals the activity.
+  socket.on('submit_curve', ({sessionCode, questionIndex, points} = {}, callback) => {
+    const reply = typeof callback === 'function' ? callback : () => {};
+    const session = sessions.get(sessionCode);
+    if (!session || session.status !== 'running' || session.questionState !== 'active' || questionIndex !== session.currentQuestionIndex || session.questions[questionIndex]?.type !== 'curve') return reply({success:false,error:'This drawing activity is not open.'});
+    const index = session.participants.findIndex(p => p.socketId === socket.id && p.connected);
+    if (index < 0) return reply({success:false,error:'Please join the session first.'});
+    const normalized = normalizeCurve(points);
+    if (!normalized) return reply({success:false,error:'Draw a curve from left to right.'});
+    const participantId = session.participants[index].id;
+    const entries = (session.curveSubmissions ||= {})[questionIndex] ||= [];
+    if (entries.some(c=>c.participantId===participantId)) return reply({success:false,error:'Prediction already submitted.'});
+    entries.push({participantId,...curveIdentity(index),points:normalized});
+    reply({success:true});
+    io.to(session.code).emit('live_answer_count',{questionIndex,answeredCount:entries.length,totalParticipants:session.participants.length});
   });
 
   // Trainer manually reveals the answer
@@ -872,7 +901,8 @@ io.on('connection', (socket) => {
         question: q.question,
         options: q.options,
         difficulty: q.difficulty,
-        category: q.category
+        category: q.category,
+          ...publicActivity(q)
       };
 
       const trainerQuestion = {
@@ -887,7 +917,7 @@ io.on('connection', (socket) => {
       });
 
       io.to(session.trainerSocketId).emit('trainer_question', trainerQuestion);
-      socket.to(session.code).emit('participant_question', participantQuestion);
+      io.to(session.code).except(session.trainerSocketId).emit('participant_question', participantQuestion);
     }
   });
 
@@ -912,7 +942,8 @@ io.on('connection', (socket) => {
       question: q.question,
       options: q.options,
       difficulty: q.difficulty,
-      category: q.category
+      category: q.category,
+          ...publicActivity(q)
     };
 
     const trainerQuestion = {
@@ -927,7 +958,7 @@ io.on('connection', (socket) => {
     });
 
     io.to(session.trainerSocketId).emit('trainer_question', trainerQuestion);
-    socket.to(session.code).emit('participant_question', participantQuestion);
+    io.to(session.code).except(session.trainerSocketId).emit('participant_question', participantQuestion);
   });
 
   // Pause quiz
@@ -959,6 +990,7 @@ io.on('connection', (socket) => {
     session.currentQuestionIndex = 0;
     session.questionState = 'active';
     session.completedQuestions = [];
+    session.curveSubmissions = {};
 
     session.participants.forEach(p => {
       p.score = 0;
@@ -1151,7 +1183,7 @@ io.on('connection', (socket) => {
 
     let answeredCount = 0;
     session.participants.forEach(p => {
-      if (p.answers[session.currentQuestionIndex] !== undefined) answeredCount++;
+      if (p.answers[session.currentQuestionIndex] !== undefined || (session.curveSubmissions?.[session.currentQuestionIndex] || []).some(c=>c.participantId===p.id)) answeredCount++;
     });
 
     const payload = {
@@ -1190,13 +1222,15 @@ io.on('connection', (socket) => {
           question: currQ.question,
           options: currQ.options,
           difficulty: currQ.difficulty,
-          category: currQ.category
+          category: currQ.category,
+          ...publicActivity(currQ)
         };
       }
     }
 
     if (participantObj) {
       payload.participant = participantObj;
+      if (currQ?.type === 'curve') payload.isAnswerSubmitted = (session.curveSubmissions?.[session.currentQuestionIndex] || []).some(c=>c.participantId===participantObj.id);
       const ans = participantObj.answers[session.currentQuestionIndex];
       if (ans) {
         payload.selectedOption = ans.selectedOption;
@@ -1210,6 +1244,9 @@ io.on('connection', (socket) => {
       payload.revealData = {
         questionIndex: session.currentQuestionIndex,
         correctAnswer: currQ.correctAnswer,
+        curves: currQ.type === 'curve' ? (session.curveSubmissions?.[session.currentQuestionIndex] || []).map(({participantId,...curve})=>curve) : undefined,
+        afterMedia: currQ.type === 'sequence' ? currQ.afterMedia : undefined,
+        afterPreset: currQ.type === 'sequence' ? currQ.afterPreset : undefined,
         explanation: currQ.explanation,
         optionDist: currQA.optionDist,
         answeredCount: currQA.answeredCount,

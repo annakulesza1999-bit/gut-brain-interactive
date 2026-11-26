@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import {CurveResults} from '../common/CurveActivity';
+import SequenceMedia, {SequenceHeading} from '../common/SequenceMedia';
 import { useQuiz } from '../../context/QuizContext';
 import ProgressBar from '../common/ProgressBar';
 import TimerDisplay from '../common/TimerDisplay';
@@ -79,7 +81,7 @@ export default function TrainerLiveQuestion() {
     );
   }
 
-  const optionLetters = ['A', 'B', 'C', 'D'];
+  const optionLetters = ['A', 'B', 'C', 'D','E','F'];
   const optionColors = [
     { border: 'border-blue-500/40', bg: 'bg-blue-600', badge: 'bg-blue-600', text: 'text-blue-100' },
     { border: 'border-emerald-500/40', bg: 'bg-emerald-600', badge: 'bg-emerald-600', text: 'text-emerald-100' },
@@ -102,7 +104,7 @@ export default function TrainerLiveQuestion() {
 
       if (e.key === ' ' || e.key === 'ArrowRight') {
         e.preventDefault();
-        nextQuestion();
+        if (['curve','sequence'].includes(currentQuestion.type) && !isRevealed) revealAnswer(); else nextQuestion();
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
         if (!isRevealed) revealAnswer();
@@ -129,7 +131,7 @@ export default function TrainerLiveQuestion() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isRevealed, sessionStatus, totalQuestions, nextQuestion, revealAnswer, pauseQuiz, resumeQuiz, jumpToQuestion]);
+  }, [currentQuestion?.type, isRevealed, sessionStatus, totalQuestions, nextQuestion, revealAnswer, pauseQuiz, resumeQuiz, jumpToQuestion]);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 sm:py-8 animate-fade-in">
@@ -208,7 +210,7 @@ export default function TrainerLiveQuestion() {
 
           {/* Countdown Timer */}
           {!isRevealed && (
-            <TimerDisplay timeRemaining={timeRemaining} totalDuration={timerDuration} />
+            {!['curve','sequence'].includes(currentQuestion.type) && <TimerDisplay timeRemaining={timeRemaining} totalDuration={timerDuration} />}
           )}
 
           {/* Pause / Resume Button */}
@@ -240,7 +242,7 @@ export default function TrainerLiveQuestion() {
           leaderboard={leaderboard}
           onClose={() => setViewMode('question')}
         />
-      ) : currentQuestion.type === 'wordcloud' ? (
+      ) : currentQuestion.type === 'curve' ? <CurveResults key={currentQuestionIndex} question={currentQuestion} curves={revealData?.curves||[]} revealed={isRevealed} count={answeredCount}/> : currentQuestion.type === 'wordcloud' ? (
         <WordCloudDisplay
           words={wordCloudWords}
           totalResponses={wordCloudWords.length}
@@ -248,6 +250,7 @@ export default function TrainerLiveQuestion() {
       ) : (
         <div className="space-y-6">
           
+          {currentQuestion.type === 'sequence' && <div className="space-y-2"><SequenceHeading question={currentQuestion}/><SequenceMedia key={currentQuestionIndex+'-'+isRevealed} media={isRevealed?currentQuestion.afterMedia:currentQuestion.beforeMedia} preset={isRevealed?currentQuestion.afterPreset:currentQuestion.beforePreset} phase={isRevealed?'after':'before'}/></div>}
           {/* Large Question Card */}
           <div className="p-6 sm:p-10 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl">
             <h1 className="text-xl sm:text-3xl lg:text-4xl font-black text-white leading-tight tracking-tight">
@@ -338,13 +341,14 @@ export default function TrainerLiveQuestion() {
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all"
             >
               <Eye className="w-4 h-4" />
-              <span>Reveal Answer</span>
+              <span>{currentQuestion.type==='curve'?'Reveal predictions':currentQuestion.type==='sequence'?'Reveal & animate':'Reveal Answer'}</span>
             </button>
           )}
 
           {/* Next Question / Finish */}
           <button
             onClick={nextQuestion}
+            disabled={['curve','sequence'].includes(currentQuestion.type) && !isRevealed}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-lg shadow-blue-500/25 transition-all transform hover:scale-105"
           >
             <span>{currentQuestionIndex + 1 >= totalQuestions ? 'Finish Quiz & Results' : 'Next Question'}</span>

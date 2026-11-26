@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import {CurveInput} from '../common/CurveActivity';
+import SequenceMedia, {SequenceHeading} from '../common/SequenceMedia';
 import { useQuiz } from '../../context/QuizContext';
 import ProgressBar from '../common/ProgressBar';
 import TimerDisplay from '../common/TimerDisplay';
@@ -34,7 +36,7 @@ export default function ParticipantQuestionScreen() {
     );
   }
 
-  const optionLetters = ['A', 'B', 'C', 'D'];
+  const optionLetters = ['A', 'B', 'C', 'D','E','F'];
   const optionThemes = [
     {
       card: 'border-blue-500/40 bg-blue-950/30 hover:border-blue-500 active:bg-blue-900/50',
@@ -100,7 +102,7 @@ export default function ParticipantQuestionScreen() {
             )}
           </div>
           
-          <TimerDisplay timeRemaining={timeRemaining} totalDuration={timerDuration} />
+          {!['curve','sequence'].includes(currentQuestion.type) && <TimerDisplay timeRemaining={timeRemaining} totalDuration={timerDuration} />}
         </div>
 
         {/* Paused Overlay Notice */}
@@ -111,10 +113,11 @@ export default function ParticipantQuestionScreen() {
           </div>
         )}
 
-        {currentQuestion.type === 'wordcloud' ? (
+        {currentQuestion.type === 'curve' ? <CurveInput key={currentQuestionIndex} question={currentQuestion}/> : currentQuestion.type === 'wordcloud' ? (
           <WordCloudInput question={currentQuestion} />
         ) : (
           <>
+            {currentQuestion.type === 'sequence' && <div className="space-y-2 mb-4"><SequenceHeading question={currentQuestion}/><SequenceMedia media={currentQuestion.beforeMedia} preset={currentQuestion.beforePreset}/></div>}
             {/* Large Readable Question Card */}
             <div className="p-5 sm:p-7 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl mb-4 sm:mb-6">
               <h2 className="text-base sm:text-xl md:text-2xl font-black text-white leading-snug tracking-tight">
@@ -173,7 +176,7 @@ export default function ParticipantQuestionScreen() {
       </div>
 
       {/* Answer Submitted Sticky Feedback */}
-      {isAnswerSubmitted && currentQuestion.type !== 'wordcloud' && (
+      {isAnswerSubmitted && !['wordcloud','curve'].includes(currentQuestion.type) && (
         <div className="mt-6 mb-16 p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-200 flex items-center justify-center gap-2.5 animate-slide-up shadow-xl">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
           <span className="font-extrabold text-xs sm:text-sm">

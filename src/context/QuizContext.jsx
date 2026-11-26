@@ -123,6 +123,7 @@ export function QuizProvider({ children }) {
           setIsAnswerSubmitted(true);
         }
 
+        if (typeof res.isAnswerSubmitted === 'boolean') setIsAnswerSubmitted(res.isAnswerSubmitted);
         if (res.lastAnswerResult) {
           setLastAnswerResult(res.lastAnswerResult);
         }
@@ -165,6 +166,7 @@ export function QuizProvider({ children }) {
       setLastAnswerResult(null);
       setRevealData(null);
       setQuestionStartTime(Date.now());
+      setLiveAnswerCount({answeredCount:0,totalParticipants:0});
       if (data.question) {
         setCurrentQuestion(data.question);
       }
@@ -201,6 +203,7 @@ export function QuizProvider({ children }) {
       setIsAnswerSubmitted(false);
       setLastAnswerResult(null);
       setRevealData(null);
+      setLiveAnswerCount({answeredCount:0,totalParticipants:0});
       setWordCloudWords([]);
     };
 
@@ -415,6 +418,7 @@ export function QuizProvider({ children }) {
         setQuestionState(res.questionState || 'active');
         if (res.participants) setParticipants(res.participants);
         if (res.currentQuestion) setCurrentQuestion(res.currentQuestion);
+        if (typeof res.isAnswerSubmitted === 'boolean') setIsAnswerSubmitted(res.isAnswerSubmitted);
         if (res.selectedOption !== undefined && res.selectedOption !== null) {
           setSelectedOption(res.selectedOption);
           setIsAnswerSubmitted(true);
@@ -565,6 +569,15 @@ export function QuizProvider({ children }) {
     });
   }, [sessionCode, currentQuestionIndex, participantPhone]);
 
+  const submitCurve = useCallback((points) => new Promise(resolve => {
+    if (isAnswerSubmitted || questionState !== 'active' || !sessionCode || !socket.connected) return resolve({success:false,error:'Activity unavailable.'});
+    socket.timeout(8000).emit('submit_curve',{sessionCode,questionIndex:currentQuestionIndex,points},(err,res)=>{
+      if (err) return resolve({success:false,error:'Connection timed out. Check your connection.'});
+      if (res?.success) setIsAnswerSubmitted(true);
+      resolve(res || {success:false,error:'Submission failed.'});
+    });
+  }),[isAnswerSubmitted,questionState,sessionCode,currentQuestionIndex]);
+
   const clearDatabase = useCallback(async () => {
     try {
       await fetch('/api/reset', { method: 'POST' });
@@ -627,6 +640,7 @@ export function QuizProvider({ children }) {
       upvoteQAQuestion,
       toggleQAAnswered,
       submitWordCloud,
+      submitCurve,
       resetToHome,
       clearDatabase
     }}>
