@@ -35,7 +35,9 @@ test('audience layout regression with fourteen demo responses, live and revealed
    function image(w,h){const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const c=canvas.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,w,h);c.strokeStyle='#0063A6';c.lineWidth=3;c.strokeRect(4,4,w-8,h-8);c.fillStyle='#032138';c.font='24px sans-serif';c.fillText('Synthetic geometry fixture',20,35);for(let x=30;x<w-30;x+=80){c.beginPath();c.moveTo(x,55);c.lineTo(x,h-25);c.stroke();}return canvas.toDataURL('image/png');}
    return {wide:image(1057,375),timeline:image(1302,432),portrait:image(1127,1750),qr:image(90,90)};
   });
-  questions[1].sequenceArtwork={body:media.portrait,brain:media.wide};
+  questions[1].sequenceArtwork={body:media.portrait,brain:media.wide,layout:'vascular-v2'};
+  questions.push({...questions[1],id:questions.length+1,question:'Synthetic complete HPA loop',beforePreset:'cortisol',afterPreset:'feedback',sequenceStep:5});
+  questions.push({type:'text',id:questions.length+1,question:'Social appraisal fixture',body:'**Two interpretations:**\n~ *Same audience behavior, different appraisals.*',revealMode:'all',options:[],correctAnswer:null,timerSeconds:0,slideSources:'Synthetic fixture'});
   const fixtures=[
    {question:'Wide findings: compare three original-sized panels',body:'**Main association:** a fictional finding, not measured data.\n~ Group A: n = 35 | Group B: n = 39',figureLayout:'wide',revealMode:'all',textImages:[{media:media.wide,alt:'Wide geometry fixture'}]},
    {question:'Study design and sample: wide timeline and compact QR',body:'@ **Sample:** fictional participants, 18-35 years; initial N = 80\n@ **Groups:** A n = 35 | B n = 39\n**Sampling:** salivary and microbiome measurements\n**Behavioral data:** subjective ratings and a representative questionnaire\n**Microbiome:** composition and hypothetical functional measures',figureLayout:'wide',revealMode:'all',textImages:[{media:media.timeline,alt:'Timeline geometry fixture'},{media:media.qr,alt:'QR geometry fixture',role:'qr'}]},
@@ -73,6 +75,14 @@ test('audience layout regression with fourteen demo responses, live and revealed
   for(let i=0;i<questions.length;i++){
    const q=questions[i],name=(i+1)+'-'+q.type+(q.simKind?'-'+q.simKind:'')+(q.researchKind?'-'+q.researchKind:'');
    await nav.locator('button').nth(i).click();
+   if(q.type==='text'&&!q.textImages?.length){
+    const muted=stage.locator('.gm-muted-line');
+    await muted.waitFor();
+    await fit(name+' muted line');
+    const m=await muted.evaluate(el=>({display:getComputedStyle(el).display,width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,line:getComputedStyle(el).lineHeight,scale:el.closest('.gm-slide-canvas').getBoundingClientRect().width/1280}));
+    assert.equal(m.display,'block');assert.ok(m.height/m.scale<=parseFloat(m.line)*1.15,name+' muted text wraps '+JSON.stringify(m));
+    continue;
+   }
    if(q.type==='text'){
     // The full-size canvas should fit almost entirely without global shrinking.
     const phoneToggle=page.getByRole('button',{name:'Student phone',exact:true});
@@ -105,7 +115,7 @@ test('audience layout regression with fourteen demo responses, live and revealed
       return {logicalWidth,footerBottom:footer.bottom-a.bottom,figureFooterGap:(footer.top-figBottom)/scale,qrWidth:qr?qr.getBoundingClientRect().width/scale:0};
      });
      assert.ok(metrics.footerBottom<=2,name+' source footer clipped '+JSON.stringify(metrics));
-     if(q.textImages[0].pointers){const annotated=stage.locator('.gm-annotated-figure');assert.equal(await annotated.locator('[data-pointer-index]').count(),q.body.split('\n').length);assert.ok(await annotated.evaluate(svg=>svg.getBoundingClientRect().width>0&&svg.querySelector('image').getBBox().width>0));}
+     if(q.textImages[0].pointers){const annotated=stage.locator('.gm-annotated-figure');assert.equal(await annotated.locator('[data-pointer-index]').count(),q.body.split('\n').length);assert.equal(await annotated.locator('[data-pointer-marker][r="27"]').count(),q.body.split('\n').length);assert.ok(await annotated.evaluate(svg=>svg.getBoundingClientRect().width>0&&svg.querySelector('image').getBBox().width>0));}
      assert.ok(metrics.figureFooterGap>=-1,name+' figure/caption overlaps footer '+JSON.stringify(metrics));
      if(q.figureLayout==='wide')assert.ok(metrics.logicalWidth>=850,name+' wide figure too small '+JSON.stringify(metrics));
      if(q.figureLayout==='large')assert.ok(metrics.logicalWidth>=280,name+' portrait figure too small '+JSON.stringify(metrics));
@@ -145,9 +155,9 @@ test('audience layout regression with fourteen demo responses, live and revealed
    }
    await page.getByRole('button',{name:'Full screen',exact:true}).click();await page.waitForFunction(()=>!!document.fullscreenElement);
    await fit(name+' live');
-   if(q.type==='sequence'){assert.equal(await stage.locator('[data-hpa-art]').count(),2);assert.equal(await stage.locator('[data-hpa-signal]').count(),0);}
+   if(q.type==='sequence'){assert.equal(await stage.locator('[data-hpa-art]').count(),2);assert.equal(await stage.locator('[data-vessel="artery"]').count(),6);assert.equal(await stage.locator('[data-vessel="vein"]').count(),6);assert.equal(await stage.locator('[data-hpa-pituitary]').count(),1);if(q.beforePreset==='threat')assert.equal(await stage.locator('[data-hpa-signal]').count(),0);}
    if(q.type==='wordcloud')await cloudFit(name+' full screen live',15);
-   if(q.simMode!=='explore'){await page.locator('.gm-fullscreen-controls').getByRole('button',{name:'Reveal results'}).click();await fit(name+' revealed');if(q.type==='sequence'){assert.equal(await stage.locator('[data-hpa-art]').count(),2);assert.ok(await stage.locator('[data-hpa-signal] animateMotion').count()>0);}}
+   if(q.simMode!=='explore'){await page.locator('.gm-fullscreen-controls').getByRole('button',{name:'Reveal results'}).click();await fit(name+' revealed');if(q.type==='sequence'){assert.equal(await stage.locator('[data-hpa-art]').count(),2);assert.ok(await stage.locator('[data-hpa-signal] animateMotion').count()>0);if(q.afterPreset==='feedback'){for(const kind of ['crh','acth','cortisol','feedback'])assert.ok(await stage.locator('[data-hpa-signal="'+kind+'"] animateMotion').count()>0,kind+' missing');assert.equal(await stage.locator('[data-hpa-inhibition] circle').count(),2);await page.screenshot({path:out+'/hpa-complete-loop.png'});}}}
    if(q.type==='wordcloud'){
     await cloudFit(name+' revealed',15);
     await page.screenshot({path:out+'/word-cloud-stress-page1.png'});

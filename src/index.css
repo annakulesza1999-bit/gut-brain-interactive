@@ -176,3 +176,6 @@ button:is(.bg-emerald-600,.bg-emerald-700,.bg-blue-600,.bg-blue-700):hover:not(:
 .gm-pointer-number{display:inline-grid;place-items:center;width:1.1em;height:1.1em;border-radius:50%;background:#0063A6;color:white;font-size:.88em;font-weight:700;line-height:1}
 .gm-annotated-figure{display:block;width:100%;height:auto;max-height:52vh}
 .gm-hpa-artwork svg{background:white}
+
+/* Unbulleted muted lines span the whole text column, rather than the former bullet grid cell. */
+.gm-text-slide .gm-slide-bullets li.gm-muted-line,.gm-text-slide .gm-slide-bullets li.gm-subheading{display:block;min-width:0}

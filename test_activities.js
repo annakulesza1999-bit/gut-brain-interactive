@@ -78,3 +78,5 @@ test('approved sequence artwork and staged pointer coordinates are bounded publi
  const q={type:'text',body:'First point\nSecond point',revealMode:'step',textImages:[{media,pointers}]};
  assert.equal(publicActivity(q,1).visibleLines.length,1);assert.equal(publicActivity(q,1).textImages[0].pointers.groups.length,2);
 });
+
+test('new circulation artwork variant round trips without changing legacy artwork',()=>{const media='data:image/png;base64,YQ==',art={body:media,brain:media,layout:'vascular-v2'};assert.deepEqual(safeSequenceArtwork(art),art);assert.deepEqual(publicActivity({type:'sequence',sequenceArtwork:art}).sequenceArtwork,art);assert.deepEqual(safeSequenceArtwork({...art,layout:'unknown'}),{body:media,brain:media});});

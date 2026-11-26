@@ -73,7 +73,7 @@ export function reactionSummary(votes={}) {
 /** Restrict figures to bounded local image data; speaker notes never enter the participant payload. */
 export function safeSequenceArtwork(value){
  const body=safeMedia(value?.body),brain=safeMedia(value?.brain);
- return body&&brain?{body,brain}:undefined;
+ return body&&brain?{body,brain,...(value.layout==='vascular-v2'?{layout:'vascular-v2'}:{})}:undefined;
 }
 export function safeFigurePointers(value){
  if(!value||!Number.isFinite(value.aspect)||value.aspect<.25||value.aspect>4||!Array.isArray(value.groups))return undefined;
