@@ -1,3 +1,4 @@
+import {simpleScoring} from '../../scoring.js';
 import {BrainResults} from '../common/BrainActivity';
 import {ResearchResults} from '../common/ResearchActivity';
 import {SimulationResults} from '../common/SimulationActivity';
@@ -33,9 +34,9 @@ export default function ParticipantResultScreen() {
   const myLeaderboardEntry = leaderboard.find(p => p.name.toLowerCase() === participantName.toLowerCase());
   const myRank = myLeaderboardEntry?.currentRank || 1;
   const myDelta = myLeaderboardEntry?.rankDelta || 0;
-  const myScore = myLeaderboardEntry?.score || (lastAnswerResult?.currentScore || 0);
+  const myScore = myLeaderboardEntry?.score ?? (lastAnswerResult?.currentScore || 0);
 
-  const basePoints = lastAnswerResult?.basePoints ?? (isCorrect ? 100 : 0);
+  const basePoints = lastAnswerResult?.basePoints ?? (isCorrect ? (simpleScoring(currentQuestion)?1:100) : 0);
   const speedBonus = lastAnswerResult?.speedBonus ?? 0;
   const pointsEarned = lastAnswerResult?.pointsEarned ?? (basePoints + speedBonus);
 
@@ -45,7 +46,7 @@ export default function ParticipantResultScreen() {
   if(['pointmap','matching'].includes(currentQuestion?.type))return <div className="pb-24"><SpatialResults question={currentQuestion} result={revealData} revealed participant/><ReactionActionBar/></div>;
   if(currentQuestion?.type==='curve') return <div className="pb-24"><CurveResults question={currentQuestion} curves={revealData?.curves||[]} reference={revealData?.referenceCurve} revealed={true} participant/><ReactionActionBar/></div>;
   if(currentQuestion?.type==='sequence') return <div className="max-w-xl mx-auto space-y-4"><SequenceHeading question={currentQuestion}/><SequenceMedia artwork={currentQuestion.sequenceArtwork} media={revealData?.afterMedia} preset={revealData?.afterPreset} phase="after"/><h2 className="text-xl">{currentQuestion.options?.[correctAnswer]}</h2><p className="text-sm">{explanation}</p><p className="text-sm text-slate-400">Waiting for the next stage.</p><ReactionActionBar/></div>;
-  if(currentQuestion?.type==='wordcloud')return <div className="p-6 pb-24"><h2>{currentQuestion.wordcloudMode==='open'?'Open-ended activity complete':'Word cloud complete'}</h2><p>Waiting for the next activity.</p><ReactionActionBar/></div>;
+  if(currentQuestion?.type==='wordcloud')return <div className="p-6 pb-24"><h2>{currentQuestion.wordcloudMode==='open'?'Open-ended activity complete':'Word cloud complete'}</h2>{simpleScoring(currentQuestion)&&<p>{lastAnswerResult?.pointsEarned||0} points earned on this activity.</p>}<p>Waiting for the next activity.</p><ReactionActionBar/></div>;
   return (
     <div className="max-w-xl mx-auto px-3 sm:px-4 py-4 sm:py-8 animate-fade-in space-y-4 sm:space-y-5">
       

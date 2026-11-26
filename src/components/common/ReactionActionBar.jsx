@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import {simpleScoring} from '../../scoring.js';
 import { useQuiz } from '../../context/QuizContext';
 import { MessageSquare, Volume2, VolumeX } from 'lucide-react';
 import { soundFX } from '../../services/soundEffects';
@@ -6,7 +7,9 @@ import { soundFX } from '../../services/soundEffects';
 const EMOJIS = ['👍', '👎', '❤️', '👏', '💡', '🎉'];
 
 export default function ReactionActionBar({ onOpenQA, qaCount = 0 }) {
-  const { sendReaction } = useQuiz();
+  const { sendReaction,currentQuestion,participants=[],scoreParticipants,participantName,scorecard=[] } = useQuiz();
+  const scoring=simpleScoring(currentQuestion),roster=scoreParticipants||participants,mine=roster.find(p=>p.name===participantName),rank=mine?.currentRank??mine?.rank??1;
+  const [sheet,setSheet]=useState(false);
   const [clickedEmoji, setClickedEmoji] = useState(null);
   const [isMuted, setIsMuted] = useState(() => soundFX.isMuted());
 
@@ -24,7 +27,8 @@ export default function ReactionActionBar({ onOpenQA, qaCount = 0 }) {
   };
 
   return (
-    <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 max-w-md w-[92%] sm:w-auto">
+    <div className={'fixed bottom-3 left-1/2 -translate-x-1/2 z-40 max-w-md w-[92%] '+(scoring?'gm-score-dock':'sm:w-auto')}>
+      {scoring&&<><button type="button" className="gm-score-strip" aria-label="Open personal scorecard" aria-expanded={sheet} onClick={()=>setSheet(s=>!s)}><span className="gm-score-name">{participantName}</span><strong>{mine?.score??0} {(mine?.score??0)===1?'point':'points'}</strong><span>Rank {rank}/{Math.max(1,roster.length)}{roster.filter(p=>(p.currentRank??p.rank)===rank).length>1?' (tie)':''}</span></button>{sheet&&<section className="gm-score-sheet" role="region" aria-label="Your scorecard"><div className="flex justify-between items-center"><strong>Your scorecard</strong><button type="button" className="underline" onClick={()=>setSheet(false)}>Close</button></div>{scorecard.length?<ul>{scorecard.map(r=><li key={r.slide}><span>{r.slide}. {r.title}</span><strong>+{r.points}</strong></li>)}</ul>:<p>No scored responses yet.</p>}</section>}</>}
       <div className="flex items-center justify-between gap-1 sm:gap-2 px-3 py-2 bg-slate-900/90 backdrop-blur-md border border-slate-700/60 rounded-full shadow-2xl">
         {/* Emoji Reactions */}
         <div className="flex items-center gap-1 sm:gap-1.5">

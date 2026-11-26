@@ -1,4 +1,5 @@
 import {isExploreSimulation} from '../src/simulations.js';
+import {simpleScoring,simpleSession,scoreWithPolicy,sharedRanks,cleanNickname,scoringRule} from '../src/scoring.js';
 import {curveReference} from '../src/activities.js';
 import {personalBrainFeedback} from '../src/anatomyActivities.js';
 import {randomBytes} from 'node:crypto';
@@ -121,6 +122,7 @@ function resetActivityUI(session){session.textVisible=initialTextCount(session.q
 
 // Helper to calculate scores, rankings and deltas
 function updateSessionRankings(session) {
+  if(simpleSession(session.questions)){for(const ranked of sharedRanks(session.participants)){const p=session.participants.find(x=>x.id===ranked.id);p.previousRank=p.currentRank;p.currentRank=ranked.currentRank;p.rankDelta=p.previousRank-p.currentRank;}return;}
   const sorted = [...session.participants].sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
     const aTimes = Object.values(a.answers).map(ans => ans.responseTimeMs || 30000);
@@ -138,6 +140,14 @@ function updateSessionRankings(session) {
   });
 }
 
+function scorecardFor(session,p){
+ return Object.entries(p.answers).filter(([i,a])=>!a.pending&&simpleScoring(session.questions[i])&&scoringRule(session.questions[i])).map(([i,a])=>({slide:Number(i)+1,title:session.questions[i].question,rule:scoringRule(session.questions[i]),points:a.pointsEarned||0})).sort((a,b)=>a.slide-b.slide);
+}
+function publishStandings(session){
+ updateSessionRankings(session);
+ io.to(session.code).emit('participants_updated',{participants:session.participants.map(publicParticipant),count:session.participants.length});
+ if(simpleSession(session.questions))for(const p of session.participants)if(p.connected)io.to(p.socketId).emit('scorecard_updated',scorecardFor(session,p));
+}
 // Helper to compute session analytics
 function calculateSessionAnalytics(session) {
   const totalQuestions = session.questions.length;
@@ -388,7 +398,7 @@ io.on('connection', (socket) => {
         trainerToken:token(),
         status: 'ready',
         timerDuration: timerSeconds(timerDuration),
-        speedBonusEnabled: Boolean(speedBonusEnabled),
+        speedBonusEnabled: !simpleSession(questionSet)&&Boolean(speedBonusEnabled),
         showTopic: Boolean(showTopic),
         currentQuestionIndex: 0,
         questionState: 'active',
@@ -527,7 +537,7 @@ io.on('connection', (socket) => {
   });
 
   // Anonymous per-session identities. No student accounts, real names or phone numbers.
-  socket.on('join_session', ({sessionCode,participantToken}={},callback)=>{
+  socket.on('join_session', ({sessionCode,participantToken,nickname}={},callback)=>{
     const reply=typeof callback==='function'?callback:()=>{};
     if(typeof sessionCode!=='string')return reply({success:false,error:'Enter a session code.'});
     const code=sessionCode.toUpperCase().trim(),session=sessions.get(code);
@@ -539,7 +549,12 @@ io.on('connection', (socket) => {
     if(!p){
       if(session.participants.length>=30)return reply({success:false,error:'Session is full.'});
       const number=session.participants.length+1;
-      p={id:'p-'+randomBytes(12).toString('hex'),token:token(),name:'Participant '+number,phone:'',score:0,previousRank:number,currentRank:number,rankDelta:0,connected:true,socketId:socket.id,answers:{}};
+      let name=cleanNickname(nickname);
+      if(nickname!==undefined&&!name)return reply({success:false,error:'Choose a nickname of 1–24 characters.'});
+      const taken=n=>session.participants.some(x=>x.name.toLowerCase()===n.toLowerCase());
+      if(name&&taken(name))return reply({success:false,error:'That nickname is already taken. Choose another.'});
+      if(!name){let suffix=number;do{name='Participant '+suffix++;}while(taken(name));}
+      p={id:'p-'+randomBytes(12).toString('hex'),token:token(),name,phone:'',score:0,previousRank:number,currentRank:number,rankDelta:0,connected:true,socketId:socket.id,answers:{}};
       session.participants.push(p);
     }
     attachSocket(session,p,socket);
@@ -548,7 +563,7 @@ io.on('connection', (socket) => {
     io.to(code).emit('participants_updated',{participants:participantList,count:participantList.length});
     const q=session.questions[session.currentQuestionIndex],ans=p.answers[session.currentQuestionIndex];
     const submitted=!!ans||['curveSubmissions','spatialSubmissions'].some(k=>(session[k]?.[session.currentQuestionIndex]||[]).some(e=>e.participantId===p.id));
-    reply({success:true,resumed,sessionCode:code,participantToken:p.token,participant:publicParticipant(p),sessionStatus:session.status,currentQuestionIndex:session.currentQuestionIndex,currentQuestion:session.status==='ready'?null:{index:session.currentQuestionIndex,total:session.questions.length,id:q.id,question:q.question,options:q.options,category:q.category,difficulty:q.difficulty,...publicActivity(q,session.textVisible)},questionState:session.questionState,timeRemaining:session.timeRemaining,timerDuration:session.timerDuration,activeDuration:activityDuration(q,session.timerDuration),activityUI:{textVisible:session.textVisible||0,thumbs:thumbsState(session)},speedBonusEnabled:session.speedBonusEnabled,totalQuestions:session.questions.length,participants:participantList,selectedOption:ans?.selectedOption??null,isAnswerSubmitted:submitted});
+    reply({success:true,resumed,sessionCode:code,participantToken:p.token,participant:publicParticipant(p),scorecard:scorecardFor(session,p),sessionStatus:session.status,currentQuestionIndex:session.currentQuestionIndex,currentQuestion:session.status==='ready'?null:{index:session.currentQuestionIndex,total:session.questions.length,id:q.id,question:q.question,options:q.options,category:q.category,difficulty:q.difficulty,...publicActivity(q,session.textVisible)},questionState:session.questionState,timeRemaining:session.timeRemaining,timerDuration:session.timerDuration,activeDuration:activityDuration(q,session.timerDuration),activityUI:{textVisible:session.textVisible||0,thumbs:thumbsState(session)},speedBonusEnabled:session.speedBonusEnabled,totalQuestions:session.questions.length,participants:participantList,selectedOption:ans?.selectedOption??null,isAnswerSubmitted:submitted});
   });
 
   // Trainer starts the quiz
@@ -620,14 +635,15 @@ io.on('connection', (socket) => {
     if(session.questionState==='revealed')return;
     session.questionState = 'revealed';
     const index=session.currentQuestionIndex,q0=session.questions[index];
-    if(['pointmap','matching','research','brain'].includes(q0?.type))for(const entry of session.spatialSubmissions?.[index]||[]){const p=session.participants.find(p=>p.id===entry.participantId);if(!p||p.answers[index])continue;const result=q0.type==='pointmap'?scoreMap(q0,entry.point):q0.type==='research'?scoreResearch(q0,entry.response):q0.type==='brain'?scoreBrain(q0,entry.response):scoreMatch(q0,entry.selection);Object.assign(entry,result);p.score+=result.pointsEarned;p.answers[index]={...result,selectedOption:null,spatial:true,responseTimeMs:entry.responseTimeMs};}
+    if(['pointmap','matching','research','brain'].includes(q0?.type))for(const entry of session.spatialSubmissions?.[index]||[]){const p=session.participants.find(p=>p.id===entry.participantId);if(!p||p.answers[index])continue;const result=scoreWithPolicy(q0,q0.type==='pointmap'?scoreMap(q0,entry.point):q0.type==='research'?scoreResearch(q0,entry.response):q0.type==='brain'?scoreBrain(q0,entry.response):scoreMatch(q0,entry.selection));Object.assign(entry,result);p.score+=result.pointsEarned;p.answers[index]={...result,selectedOption:null,spatial:true,responseTimeMs:entry.responseTimeMs};}
     if(['mcq','sequence'].includes(q0?.type||'mcq'))for(const p of session.participants){
       const ans=p.answers[index];if(!ans?.pending)continue;
-      const isCorrect=ans.selectedOption===q0.correctAnswer,duration=activityDuration(q0,session.timerDuration),basePoints=isCorrect?100:0;
+      const isCorrect=ans.selectedOption===q0.correctAnswer,duration=activityDuration(q0,session.timerDuration),basePoints=isCorrect?(simpleScoring(q0)?1:100):0;
       const speedBonus=isCorrect&&q0.type!=='sequence'&&session.speedBonusEnabled&&duration>0?Math.round(Math.max(0,1-ans.responseTimeMs/(duration*1000))*50):0;
       Object.assign(ans,{pending:false,isCorrect,basePoints,speedBonus,pointsEarned:basePoints+speedBonus});p.score+=ans.pointsEarned;
     }
-    updateSessionRankings(session);
+    if(simpleScoring(q0)&&q0.type==='curve')for(const entry of session.curveSubmissions?.[index]||[]){const p=session.participants.find(p=>p.id===entry.participantId);if(p&&!p.answers[index])p.answers[index]={isCorrect:null,pointsEarned:0,selectedOption:null};}
+    publishStandings(session);
     for(const p of session.participants){const ans=p.answers[index];if(ans&&p.connected)io.to(p.socketId).emit('private_answer_result',{questionIndex:index,...ans,currentScore:p.score});}
     const analytics = calculateSessionAnalytics(session);
     const currQA = analytics.questionAnalytics[session.currentQuestionIndex];
@@ -1044,6 +1060,7 @@ io.on('connection', (socket) => {
       timestamp: Date.now()
     });
 
+    if(simpleScoring(session.questions[qIdx])){const count=session.wordCloudSubmissions[qIdx].filter(e=>e.participantId===participant.id).length;participant.answers[qIdx]={...scoreWithPolicy(session.questions[qIdx],{isCorrect:null},count),selectedOption:null};participant.score+=1;publishStandings(session);}
     const currentWords = session.wordCloudSubmissions[qIdx].map(({text,timestamp})=>({text,timestamp}));
     io.to(session.code).emit('live_answer_count',completionPayload(session));
 
@@ -1133,7 +1150,7 @@ io.on('connection', (socket) => {
     }
 
     if (participantObj) {
-      payload.participant = publicParticipant(participantObj);
+      payload.participant = publicParticipant(participantObj);payload.scorecard=scorecardFor(session,participantObj);
       if(currQ?.type==='brain'){const own=(session.spatialSubmissions?.[session.currentQuestionIndex]||[]).find(e=>e.participantId===participantObj.id);if(own)payload.brainFeedback=personalBrainFeedback(currQ,own.response);}
       payload.isAnswerSubmitted=false;
       if (['pointmap','matching','simulation','research','brain'].includes(currQ?.type)) payload.isAnswerSubmitted=(session.spatialSubmissions?.[session.currentQuestionIndex]||[]).some(c=>c.participantId===participantObj.id);

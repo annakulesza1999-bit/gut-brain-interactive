@@ -2,6 +2,7 @@ import React,{useEffect,useReducer,useState,useRef,useMemo} from 'react';
 import {ArrowLeft,ArrowRight,Maximize2,Smartphone,Play,Pause,Eye,RotateCcw} from 'lucide-react';
 import {RehearsalProvider} from '../../context/QuizContext';
 import {startSlide,previewReducer,previewData} from '../../previewSession.js';
+import {simpleSession} from '../../scoring.js';
 import {isExploreSimulation} from '../../simulations.js';
 import {textLines,liveResultsEnabled,slideSources} from '../../activities.js';
 import ParticipantQuestionScreen from '../participant/ParticipantQuestionScreen';
@@ -36,7 +37,7 @@ export default function Rehearsal({content,startIndex=0,onExit,onEdit}){
  const [phone,setPhone]=useState(true),[frameReady,setFrameReady]=useState(0),[fullscreen,setFullscreen]=useState(false),[error,setError]=useState('');
  const frame=useRef(null),stage=useRef(null),latest=useRef(null);
  const q=content.questions[state.index],data=useMemo(()=>previewData(content,state),[content,state]),hidden=q.type==='text'&&state.visible<textLines(q).length,explore=isExploreSimulation(q);
- const context={role:'participant',currentQuestion:data.question,currentQuestionIndex:state.index,totalQuestions:content.questions.length,selectedOption:Number.isInteger(state.response)?state.response:null,isAnswerSubmitted:data.own,timeRemaining:state.remaining,timerDuration:state.duration,activeDuration:state.duration,sessionStatus:state.paused?'paused':'running',questionState:state.revealed?'revealed':'active',speedBonusEnabled:false,showTopic:false,qaQuestions:state.qa,participants:data.participants,participantName:'Participant 1',participantPhone:'',leaderboard:data.participants.map((p,i)=>({...p,score:i===0?data.ownScore?.pointsEarned||0:0})),revealData:data.reveal,lastAnswerResult:data.ownScore,brainFeedback:data.brainFeedback};
+ const context={role:'participant',currentQuestion:data.question,currentQuestionIndex:state.index,totalQuestions:content.questions.length,selectedOption:Number.isInteger(state.response)?state.response:null,isAnswerSubmitted:data.own,timeRemaining:state.remaining,timerDuration:state.duration,activeDuration:state.duration,sessionStatus:state.paused?'paused':'running',questionState:state.revealed?'revealed':'active',speedBonusEnabled:false,showTopic:false,qaQuestions:state.qa,participants:data.participants,participantName:data.nickname,nicknameChosen:!!state.nickname,scoringEnabled:simpleSession(content.questions),scoreParticipants:data.scoreParticipants,scorecard:data.scorecard,participantPhone:'',leaderboard:simpleSession(content.questions)?data.scoreParticipants:data.participants.map((p,i)=>({...p,score:i===0?data.ownScore?.pointsEarned||0:0})),revealData:data.reveal,lastAnswerResult:data.ownScore,brainFeedback:data.brainFeedback};
  latest.current={state,context};
  useEffect(()=>{const id=setInterval(()=>dispatch({type:'tick'}),1000);return()=>clearInterval(id);},[]);
  useEffect(()=>{if(phone&&frameReady)frame.current?.contentWindow?.postMessage({channel:CHANNEL,type:'state',visit:state.visit,context},location.origin);},[phone,frameReady,state,content]);
@@ -46,7 +47,7 @@ export default function Rehearsal({content,startIndex=0,onExit,onEdit}){
    if(e.data.type==='ready'){setFrameReady(x=>x+1);return;}
    if(e.data.type!=='action')return;
    const a=e.data.action,old=latest.current.state;
-   if(!a||!['answer','word','reaction','qa','upvote'].includes(a.type)||a.visit!==old.visit)return;
+   if(!a||!['answer','word','reaction','qa','upvote','nickname'].includes(a.type)||a.visit!==old.visit)return;
    const next=previewReducer(content,old,a),success=next!==old;
    if(success){latest.current.state=next;dispatch(a);}
    e.source.postMessage({channel:CHANNEL,type:'ack',id:e.data.id,success},location.origin);
@@ -67,7 +68,7 @@ export default function Rehearsal({content,startIndex=0,onExit,onEdit}){
  {phone&&<aside className="min-w-0"><div className="flex items-center justify-between mb-2"><h2 className="font-medium">Student phone preview</h2><span className="text-xs text-slate-400">390 px</span></div><iframe ref={frame} title="Student phone preview" src="/editor-preview.html?participant-preview=1" className="w-full max-w-[402px] h-[720px] border-[6px] border-slate-700 rounded-[28px] bg-slate-950 mx-auto block"/><p className="mt-2 text-xs text-slate-400">Interactive local simulation. No QR code, real phone connection or saved student results.</p></aside>}</div></main></div></RehearsalProvider>;
 }
 export function PhoneRehearsal(){
- const [payload,setPayload]=useState(null),pending=useRef(new Map()),serial=useRef(0);
+ const [payload,setPayload]=useState(null),pending=useRef(new Map()),serial=useRef(0),[nickname,setNickname]=useState(''),[joinError,setJoinError]=useState('');
  useEffect(()=>{
   if(window.parent===window)return;
   const receive=e=>{if(e.origin!==location.origin||e.source!==window.parent||e.data?.channel!==CHANNEL)return;if(e.data.type==='state')setPayload(e.data);if(e.data.type==='ack'){const done=pending.current.get(e.data.id);if(done){pending.current.delete(e.data.id);done({success:e.data.success,error:e.data.success?'':'Submission unavailable. Try resetting the slide.'});}}};
@@ -80,6 +81,7 @@ export function PhoneRehearsal(){
   return new Promise(resolve=>{const timeout=setTimeout(()=>{pending.current.delete(id);resolve({success:false,error:'Preview did not respond'});},3000);pending.current.set(id,r=>{clearTimeout(timeout);resolve(r);});window.parent.postMessage({channel:CHANNEL,type:'action',id,action:{type,visit:payload.visit,...extra}},location.origin);});
  }
  if(!payload)return <div className="p-5 text-sm">Open Student phone from the presenter preview.</div>;
+ if(payload.context.scoringEnabled&&!payload.context.nicknameChosen)return <section className="p-6 space-y-4"><h1 className="text-2xl">Join Gut &amp; Mind</h1><p>Choose a nickname for this practice session. No real name is needed.</p><form className="space-y-3" onSubmit={async e=>{e.preventDefault();const result=await send('nickname',{nickname});if(!result.success)setJoinError('Choose a nickname of 1–24 characters.');}}><label className="block">Nickname<input className="block w-full border rounded-lg p-3" required maxLength={24} value={nickname} onChange={e=>setNickname(e.target.value)}/></label><button className={primary} disabled={!nickname.trim()}>Join practice</button>{joinError&&<p role="alert">{joinError}</p>}</form></section>;
  const value={...payload.context,submitAnswer:response=>send('answer',{response}),submitCurve:response=>send('answer',{response}),submitSpatial:response=>send('answer',{response}),submitWordCloud:async word=>(await send('word',{word})).success,sendReaction:emoji=>send('reaction',{emoji,id:Date.now()+':'+serial.current}),submitQAQuestion:text=>send('qa',{text,id:Date.now()+':'+serial.current,timestamp:Date.now()}),upvoteQAQuestion:id=>send('upvote',{id}),toggleQAAnswered:()=>{}};
- return <RehearsalProvider value={value}><div className="min-h-screen bg-slate-950"><header className="px-4 py-3 bg-slate-900 border-b border-slate-800 flex justify-between"><strong className="font-serif">Gut &amp; Mind</strong><span className="text-xs text-slate-400">Participant 1 · Preview</span></header><main className="pb-20 gm-participant-content" key={payload.visit+':'+value.questionState}>{value.questionState==='revealed'&&value.currentQuestion.type!=='text'?<ParticipantResultScreen/>:<ParticipantQuestionScreen/>}</main></div></RehearsalProvider>;
+ return <RehearsalProvider value={value}><div className="min-h-screen bg-slate-950"><header className="px-4 py-3 bg-slate-900 border-b border-slate-800 flex justify-between"><strong className="font-serif">Gut &amp; Mind</strong><span className="text-xs text-slate-400">{value.participantName} · Preview</span></header><main className="pb-20 gm-participant-content" key={payload.visit+':'+value.questionState}>{value.questionState==='revealed'&&value.currentQuestion.type!=='text'?<ParticipantResultScreen/>:<ParticipantQuestionScreen/>}</main></div></RehearsalProvider>;
 }

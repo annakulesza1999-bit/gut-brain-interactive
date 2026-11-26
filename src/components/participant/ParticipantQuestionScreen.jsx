@@ -1,3 +1,4 @@
+import {scoringRule} from '../../scoring.js';
 import {BrainInput} from '../common/BrainActivity';
 import {ResearchInput} from '../common/ResearchActivity';
 import {isExploreSimulation} from '../../simulations.js';
@@ -111,6 +112,7 @@ export default function ParticipantQuestionScreen() {
           {currentQuestion.type!=='text' && !isExploreSimulation(currentQuestion) && <TimerDisplay timeRemaining={timeRemaining} totalDuration={activeDuration} />}
         </div>
 
+        {scoringRule(currentQuestion)&&<p className="gm-point-rule">{scoringRule(currentQuestion)}</p>}
         {/* Paused Overlay Notice */}
         {sessionStatus === 'paused' && (
           <div className="mb-4 p-3.5 rounded-2xl bg-purple-950/60 border border-purple-500/40 text-purple-200 flex items-center gap-2.5 animate-pulse text-xs sm:text-sm font-semibold">

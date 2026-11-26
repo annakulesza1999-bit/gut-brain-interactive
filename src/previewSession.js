@@ -1,4 +1,5 @@
 // Rehearsal state is ephemeral, never written into the saved presentation.
+import {simpleScoring,simpleSession,scoreWithPolicy,sharedRanks,cleanNickname,scoringRule} from './scoring.js';
 import {activityDuration,initialTextCount,textLines,publicActivity,curveIdentity,normalizeCurve,reactionSummary,curveReference,openResponses,wordResponseLimit} from './activities.js';
 import {normalizePoint,normalizeMatch,scoreMap,scoreMatch,matchKey} from './spatialActivities.js';
 import {normalizeSimulation,defaultResponse,isExploreSimulation} from './simulations.js';
@@ -7,7 +8,7 @@ import {SAGITTAL_VIEW,sagittalHit} from './sagittalRegions.js';
 import {normalizeBrainHit,scoreBrain,brainReveal,personalBrainFeedback} from './anatomyActivities.js';
 export function startSlide(deck,index=0,visit=1){
  const q=deck.questions[index],duration=activityDuration(q,deck.settings?.timerDuration??30);
- return {index,visit,duration,remaining:duration,paused:false,revealed:false,visible:initialTextCount(q),response:null,words:[],samples:[],thumb:'',reactions:[],qa:[]};
+ return {index,visit,nickname:'',scoreLedger:{},duration,remaining:duration,paused:false,revealed:false,visible:initialTextCount(q),response:null,words:[],samples:[],thumb:'',reactions:[],qa:[]};
 }
 export function normalizePreviewResponse(q,response){
  switch(q.type){
@@ -22,13 +23,24 @@ export function normalizePreviewResponse(q,response){
  }
 }
 export function participantEntry(i){return {id:'preview-'+i,name:'Participant '+(i+1),phone:'',connected:true,score:0,currentRank:i+1};}
-function score(q,response){
+function rawScore(q,response){
  if(q.type==='pointmap')return scoreMap(q,response);
  if(q.type==='matching')return scoreMatch(q,response);
  if(q.type==='research')return scoreResearch(q,response);
  if(q.type==='brain')return scoreBrain(q,response);
  if(['curve','wordcloud','simulation','text'].includes(q.type))return {pointsEarned:0,isCorrect:null};
  const isCorrect=response===q.correctAnswer;return {isCorrect,pointsEarned:isCorrect?100:0,basePoints:isCorrect?100:0,speedBonus:0};
+}
+function score(q,response,count=1){return scoreWithPolicy(q,rawScore(q,response),count);}
+function ledgerFor(deck,state){
+ const q=deck.questions[state.index],own=q.type==='wordcloud'?state.words.length>0:state.response!==null;
+ const rows=[...(own?[{i:0,response:q.type==='wordcloud'?state.words[0]:state.response}]:[]),...state.samples];
+ const ledger={...state.scoreLedger};
+ if(simpleScoring(q)&&rows.length&&(q.type==='wordcloud'||state.revealed)){
+  const rule=scoringRule(q);
+  if(rule)ledger[q.id]={slide:state.index+1,title:q.question,rule,entries:rows.map(r=>({i:r.i,points:score(q,r.response,r.i===0&&q.type==='wordcloud'?state.words.length:1).pointsEarned}))};
+ }
+ return ledger;
 }
 export function sampleResponses(q){
  // Brain coordinates must be picked on the actual mesh; do not fabricate them.
@@ -51,12 +63,13 @@ export function sampleResponses(q){
 export function previewReducer(deck,state,action){
  const q=deck.questions[state.index];
  switch(action.type){
- case 'goto':return Number.isInteger(action.index)&&action.index>=0&&action.index<deck.questions.length?startSlide(deck,action.index,state.visit+1):state;
+ case 'nickname':{const nickname=cleanNickname(action.nickname);return nickname&&!state.nickname?{...state,nickname}:state;}
+ case 'goto':return Number.isInteger(action.index)&&action.index>=0&&action.index<deck.questions.length?{...startSlide(deck,action.index,state.visit+1),nickname:state.nickname,scoreLedger:ledgerFor(deck,state)}:state;
  case 'next':if(q.type==='text'&&state.visible<textLines(q).length)return {...state,visible:state.visible+1};if(q.type!=='text'&&!isExploreSimulation(q)&&!state.revealed)return {...state,revealed:true,paused:false};return previewReducer(deck,state,{type:'goto',index:state.index+1});
  case 'reveal':if(isExploreSimulation(q))return state;return q.type==='text'?{...state,visible:Math.min(textLines(q).length,state.visible+1)}:{...state,revealed:true,paused:false};
  case 'pause':return {...state,paused:!state.paused};
  case 'tick':if(state.paused||state.revealed||state.duration===0)return state;return {...state,remaining:Math.max(0,state.remaining-1),revealed:state.remaining<=1};
- case 'reset':return startSlide(deck,state.index,state.visit+1);
+ case 'reset':{const scoreLedger={...state.scoreLedger};delete scoreLedger[q.id];return {...startSlide(deck,state.index,state.visit+1),nickname:state.nickname,scoreLedger};}
  case 'samples':if(isExploreSimulation(q))return state;return {...state,samples:state.samples.length?[]:sampleResponses(q)};
  case 'answer':{if(isExploreSimulation(q)||action.visit!==state.visit||state.paused||state.revealed||state.response!==null)return state;const response=normalizePreviewResponse(q,action.response);return response===null?state:{...state,response};}
  case 'word':return action.visit===state.visit&&q.type==='wordcloud'&&!state.paused&&!state.revealed&&typeof action.word==='string'&&action.word.trim()&&state.words.length<10?{...state,words:[...state.words,action.word.trim().slice(0,wordResponseLimit(q))]}:state;
@@ -88,7 +101,12 @@ export function previewData(deck,state){
  if(q.type==='simulation')live.simulationResults=publicEntries;
  if(q.type==='research')live.researchResults=publicEntries;
  if(q.type==='brain')live.brainResults=publicEntries;
- const ownScore=own&&state.revealed&&q.type!=='wordcloud'?score(q,state.response):null;
+ const ownScore=own&&state.revealed&&(q.type!=='wordcloud'||simpleScoring(q))?score(q,q.type==='wordcloud'?state.words[0]:state.response,state.words.length):null;
+ const ledger=ledgerFor(deck,state),records=Object.values(ledger),roster=new Set([0,...state.samples.map(x=>x.i),...records.flatMap(r=>r.entries.map(e=>e.i))]);
+ const nickname=state.nickname||'Participant 1';
+ const scoreParticipants=sharedRanks([...roster].map(i=>({...participantEntry(i),...(i===0?{name:nickname}:{}),score:records.reduce((n,r)=>n+(r.entries.find(e=>e.i===i)?.points||0),0)})));
+ const scorecard=records.filter(r=>r.entries.some(e=>e.i===0)).map(r=>({slide:r.slide,title:r.title,rule:r.rule,points:r.entries.find(e=>e.i===0).points})).sort((a,b)=>a.slide-b.slide);
+ if(simpleSession(deck.questions)){for(const p of participants){const standing=scoreParticipants.find(s=>s.id===p.id);if(standing)Object.assign(p,standing);}}
  const question={id:q.id,question:q.question,options:q.options||[],category:q.category,difficulty:q.difficulty,...publicActivity(q,state.visible)};
- return {question,participants,words,completed:rows.length,own,live,reveal:state.revealed?reveal:null,ownScore,brainFeedback:q.type==='brain'&&own?personalBrainFeedback(q,state.response):null,thumbs:reactionSummary(state.thumb?{preview:state.thumb}:{})};
+ return {question,participants,scoreParticipants,scorecard,nickname,words,completed:rows.length,own,live,reveal:state.revealed?reveal:null,ownScore,brainFeedback:q.type==='brain'&&own?personalBrainFeedback(q,state.response):null,thumbs:reactionSummary(state.thumb?{preview:state.thumb}:{})};
 }

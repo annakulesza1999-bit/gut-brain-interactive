@@ -34,6 +34,7 @@ export function QuizProvider({ children }) {
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
+  const [scorecard,setScorecard]=useState([]);
   const [analytics, setAnalytics] = useState(null);
   
   // Real-time Mentimeter-inspired interaction state
@@ -97,7 +98,7 @@ export function QuizProvider({ children }) {
 
     socket.emit('get_session_state', { sessionCode, trainerToken:role==='trainer'?readToken('trainer',sessionCode):'',participantToken:role==='participant'?readToken('participant',sessionCode):'' }, (res) => {
       if (res && res.success) {
-        if(res.participant?.name)setParticipantName(res.participant.name);
+        if(res.participant?.name)setParticipantName(res.participant.name);if(Array.isArray(res.scorecard))setScorecard(res.scorecard);
         setSessionStatus(res.status);
         setCurrentQuestionIndex(res.currentQuestionIndex);
         setQuestionState(res.questionState);
@@ -237,6 +238,7 @@ export function QuizProvider({ children }) {
     };
 
     const handlePrivateAnswer=data=>{setLastAnswerResult(data);};
+    const handleScorecard=data=>{if(Array.isArray(data))setScorecard(data);};
     const handleAnswerRevealed = (data) => {
       setQuestionState('revealed');
       setRevealData(data);
@@ -276,7 +278,7 @@ export function QuizProvider({ children }) {
       setLastAnswerResult(null);
       setRevealData(null);setBrainFeedback(null);setLiveResults(null);
       setAnalytics(null);
-      setLeaderboard([]);
+      setLeaderboard([]);setScorecard([]);
       setWordCloudWords([]);
       if (data.participants) {
         setParticipants(data.participants);
@@ -319,6 +321,7 @@ export function QuizProvider({ children }) {
     socket.on('live_results',handleLiveResults);
     socket.on('answer_revealed', handleAnswerRevealed);
     socket.on('private_answer_result',handlePrivateAnswer);
+    socket.on('scorecard_updated',handleScorecard);
     socket.on('display_leaderboard', handleDisplayLeaderboard);
     socket.on('quiz_paused', handleQuizPaused);
     socket.on('quiz_resumed', handleQuizResumed);
@@ -349,6 +352,7 @@ export function QuizProvider({ children }) {
       socket.off('live_results',handleLiveResults);
       socket.off('answer_revealed', handleAnswerRevealed);
       socket.off('private_answer_result',handlePrivateAnswer);
+      socket.off('scorecard_updated',handleScorecard);
       socket.off('display_leaderboard', handleDisplayLeaderboard);
       socket.off('quiz_paused', handleQuizPaused);
       socket.off('quiz_resumed', handleQuizResumed);
@@ -443,12 +447,13 @@ export function QuizProvider({ children }) {
 
     socket.emit('join_session', {
       sessionCode: cleanCode,
+      nickname:cleanName||undefined,
       participantToken:readToken('participant',cleanCode)
     }, (res) => {
       if (res && res.success) {
         setSessionCode(cleanCode);
         saveToken('participant',cleanCode,res.participantToken);
-        setParticipantName(res.participant?.name||'Participant');
+        setParticipantName(res.participant?.name||'Participant');setScorecard(res.scorecard||[]);
         setParticipantPhone('');
         setRole('participant');
         setSessionStatus(res.sessionStatus || 'ready');
@@ -542,7 +547,7 @@ export function QuizProvider({ children }) {
     setSessionStatus('ready');
     setCurrentQuestion(null);
     setParticipants([]);
-    setLeaderboard([]);
+    setLeaderboard([]);setScorecard([]);
     setAnalytics(null);
     setSelectedOption(null);
     setIsAnswerSubmitted(false);
@@ -658,6 +663,7 @@ export function QuizProvider({ children }) {
       currentQuestion,
       participants,
       leaderboard,
+      scorecard,
       analytics,
       reactions,
       qaQuestions,

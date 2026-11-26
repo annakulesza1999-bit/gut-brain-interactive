@@ -1,5 +1,6 @@
 import React,{useState,useRef,useId} from 'react';
 import {useQuiz} from '../../context/QuizContext';
+import {simpleScoring} from '../../scoring.js';
 import {curveIdentity,normalizeCurve,averageCurves,curveReference,exampleCortisolReference} from '../../activities.js';
 const X=50,Y=20,W=310,H=185;
 const line=points=>points.map(([x,y],i)=>(i?'L':'M')+(X+x*W)+' '+(Y+(1-y)*H)).join(' ');
@@ -25,7 +26,7 @@ export function CurveInput({question}){
  const disabled=pending||isAnswerSubmitted||sessionStatus!=='running';
  const stop=e=>{if(pointer.current===e.pointerId)pointer.current=null;};
  const update=p=>{working.current=p;setPoints(p);};
- return <section className="space-y-4"><h2 className="text-xl">{question.question}</h2>{question.axisExplanation&&<p className="text-sm text-slate-400">{question.axisExplanation}</p>}<p className="text-sm">Draw from left to right with your finger or mouse. Your color stays the same on the shared display.</p>
+ return <section className="space-y-4"><h2 className="text-xl">{question.question}</h2>{question.axisExplanation&&<p className="text-sm text-slate-400">{question.axisExplanation}</p>}<p className="text-sm">Draw from left to right with your finger or mouse. Your color stays the same on the shared display. {simpleScoring(question)?'This drawing is not graded.':''}</p>
  <div className="flex items-center gap-2 text-sm"><span style={{background:identity.color}} className="w-4 h-4 rounded-full"/>{identity.label} · Your color</div>
  <Graph question={question} svgRef={svg} onPointerDown={e=>{if(disabled||pointer.current!==null)return;e.preventDefault();pointer.current=e.pointerId;svg.current.setPointerCapture(e.pointerId);update([point(e)]);setError('');}} onPointerMove={e=>{if(pointer.current!==e.pointerId||disabled)return;const p=point(e),prev=working.current,last=prev[prev.length-1];if(p[0]<last[0]||prev.length>=1000)return;update([...prev,p]);}} onPointerUp={stop} onPointerCancel={stop} onLostPointerCapture={stop}>
  <path d={line(points)} stroke={identity.color} strokeWidth="1.5" vectorEffect="non-scaling-stroke" opacity=".9" fill="none" strokeLinecap="round" strokeLinejoin="round"/>

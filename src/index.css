@@ -188,3 +188,12 @@ button:is(.bg-emerald-600,.bg-emerald-700,.bg-blue-600,.bg-blue-700):hover:not(:
 .gm-open-response-empty{display:grid;place-items:center;min-height:240px;text-align:center;color:#354D60}
 .gm-open-response-hint{margin-top:8px;color:#666;font-size:14px}
 @media(max-width:600px){.gm-open-response-grid{grid-template-columns:minmax(0,1fr)}.gm-open-response-grid li{font-size:17px;min-height:64px}}
+
+.gm-score-dock{display:flex;flex-direction:column;gap:6px}
+.gm-score-strip{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;text-align:left;background:#fff;border:1px solid #C5D3DE;border-radius:12px;padding:8px 12px;color:#032138;font-size:13px;box-shadow:0 2px 6px #0321380D}
+.gm-score-strip strong{color:#005C99;font-size:15px}.gm-score-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gm-score-sheet{order:-1;background:white;color:#032138;border:1px solid #C5D3DE;border-radius:12px;padding:12px;max-height:42dvh;overflow-y:auto;font-size:14px}
+.gm-score-sheet ul{list-style:none;padding:0;margin:6px 0}.gm-score-sheet li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #E5EDF2}
+.gm-point-rule{font-size:13px;color:#005C99;margin:0 0 10px;font-weight:600}
+body:has(.gm-score-dock) .gm-participant-content{padding-bottom:132px}
+body:has(.gm-score-dock) .gm-participant-content>div{padding-bottom:112px}
