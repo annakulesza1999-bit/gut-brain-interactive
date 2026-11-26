@@ -1,3 +1,4 @@
+import {ResearchResults} from '../common/ResearchActivity';
 import {SimulationResults} from '../common/SimulationActivity';
 import React, { useState } from 'react';
 import {SpatialResults} from '../common/SpatialActivity';
@@ -99,7 +100,7 @@ export default function TrainerLiveQuestion() {
 
       if (e.key === ' ' || e.key === 'ArrowRight') {
         e.preventDefault();
-        if (hasHiddenText) revealTextLine(); else if (['curve','sequence','pointmap','matching','simulation'].includes(currentQuestion?.type) && !isRevealed) revealAnswer(); else nextQuestion();
+        if (hasHiddenText) revealTextLine(); else if (['curve','sequence','pointmap','matching','simulation','research'].includes(currentQuestion?.type) && !isRevealed) revealAnswer(); else nextQuestion();
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
         if (hasHiddenText) revealTextLine(); else if (!isRevealed && currentQuestion?.type!=='text') revealAnswer();
@@ -245,7 +246,7 @@ export default function TrainerLiveQuestion() {
           leaderboard={leaderboard}
           onClose={() => setViewMode('question')}
         />
-      ) : currentQuestion.type==='simulation'? <SimulationResults key={currentQuestionIndex} question={currentQuestion} result={revealData} revealed={isRevealed} count={answeredCount}/> : ['pointmap','matching'].includes(currentQuestion.type) ? <SpatialResults key={currentQuestionIndex} question={currentQuestion} result={revealData} revealed={isRevealed} count={answeredCount}/> : currentQuestion.type === 'text' ? <TextSlide question={currentQuestion} visible={textVisible} presenter/> : currentQuestion.type === 'curve' ? <CurveResults key={currentQuestionIndex} question={currentQuestion} curves={revealData?.curves||[]} revealed={isRevealed} count={answeredCount}/> : currentQuestion.type === 'wordcloud' ? (
+      ) : currentQuestion.type==='research'?<ResearchResults key={currentQuestionIndex} question={currentQuestion} result={revealData} revealed={isRevealed} count={answeredCount}/> : currentQuestion.type==='simulation'? <SimulationResults key={currentQuestionIndex} question={currentQuestion} result={revealData} revealed={isRevealed} count={answeredCount}/> : ['pointmap','matching'].includes(currentQuestion.type) ? <SpatialResults key={currentQuestionIndex} question={currentQuestion} result={revealData} revealed={isRevealed} count={answeredCount}/> : currentQuestion.type === 'text' ? <TextSlide question={currentQuestion} visible={textVisible} presenter/> : currentQuestion.type === 'curve' ? <CurveResults key={currentQuestionIndex} question={currentQuestion} curves={revealData?.curves||[]} revealed={isRevealed} count={answeredCount}/> : currentQuestion.type === 'wordcloud' ? (
         <WordCloudDisplay
           words={wordCloudWords}
           totalResponses={wordCloudWords.length}
@@ -344,14 +345,14 @@ export default function TrainerLiveQuestion() {
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all"
             >
               <Eye className="w-4 h-4" />
-              <span>{currentQuestion.type==='simulation'?'Reveal simulations':currentQuestion.type==='curve'?'Reveal predictions':currentQuestion.type==='sequence'?'Reveal & animate':'Reveal Answer'}</span>
+              <span>{currentQuestion.type==='research'?'Reveal findings':currentQuestion.type==='simulation'?'Reveal simulations':currentQuestion.type==='curve'?'Reveal predictions':currentQuestion.type==='sequence'?'Reveal & animate':'Reveal Answer'}</span>
             </button>
           )}
 
           {/* Next Question / Finish */}
           <button
             onClick={hasHiddenText?revealTextLine:nextQuestion}
-            disabled={['curve','sequence','pointmap','matching','simulation'].includes(currentQuestion.type) && !isRevealed}
+            disabled={['curve','sequence','pointmap','matching','simulation','research'].includes(currentQuestion.type) && !isRevealed}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-lg shadow-blue-500/25 transition-all transform hover:scale-105"
           >
             <span>{hasHiddenText?'Reveal next line':currentQuestionIndex + 1 >= totalQuestions ? 'Finish Quiz & Results' : 'Next Question'}</span>

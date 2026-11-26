@@ -1,3 +1,5 @@
+import {ResearchEditor} from '../common/ResearchActivity';
+import {researchTemplate} from '../../researchActivities.js';
 import {SimulationEditor} from '../common/SimulationActivity';
 import {simSpec,defaultResponse} from '../../simulations.js';
 import React, { useState, useEffect, useRef } from 'react';
@@ -103,6 +105,7 @@ export default function QuestionEditorModal({
       const group = hpaStages.map((stage,i)=>({id:newId+i,type:'sequence',sequenceTitle:'HPA axis — What happens next?',sequenceStep:i+1,sequenceTotal:hpaStages.length,category:'Stress physiology',difficulty:'Medium',...stage}));
       setQuestions(prev=>[...prev,...group]); setSelectedIndex(questions.length); return;
     }
+    if(type==='research'){const kind=simulationKind==='evidence'?'evidence':'prediction';setQuestions(prev=>[...prev,{id:newId,...researchTemplate(kind,simulationKind)}]);setSelectedIndex(questions.length);return;}
     if(type==='simulation'){
       const kind=simulationKind,spec=simSpec(kind);
       setQuestions(prev=>[...prev,{id:newId,type,simKind:kind,question:spec.prompt,simTask:spec.task,simInitial:defaultResponse(kind),timerSeconds:90,options:[],correctAnswer:null}]);setSelectedIndex(questions.length);return;
@@ -261,6 +264,9 @@ export default function QuestionEditorModal({
               <button onClick={()=>handleAddQuestion('simulation','appraisal')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Demand &amp; coping</button>
               <button onClick={()=>handleAddQuestion('simulation','recovery')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Stress &amp; recovery</button>
               <button onClick={()=>handleAddQuestion('simulation','microbiome')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Microbiome builder</button>
+              <button onClick={()=>handleAddQuestion('research','curve')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Predict a curve</button>
+              <button onClick={()=>handleAddQuestion('research','scatter')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Predict an association</button>
+              <button onClick={()=>handleAddQuestion('research','evidence')} className="p-2 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold">+ Evidence detective</button>
             </div>
 
             {/* List */}
@@ -292,7 +298,7 @@ export default function QuestionEditorModal({
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
                         isWordCloud ? 'bg-sky-500/20 text-sky-300' : 'bg-slate-800 text-slate-400'
                       }`}>
-                        {isWordCloud ? 'Cloud' : q.type==='pointmap'?'Map':q.type==='matching'?'Match':q.type==='simulation'?'Simulation':q.type === 'text' ? 'Text' : q.type === 'curve' ? 'Draw' : q.type === 'sequence' ? 'Stage '+q.sequenceStep : 'MCQ'}
+                        {isWordCloud ? 'Cloud' : q.type==='pointmap'?'Map':q.type==='matching'?'Match':q.type==='simulation'?'Simulation':q.type==='research'?'Research':q.type === 'text' ? 'Text' : q.type === 'curve' ? 'Draw' : q.type === 'sequence' ? 'Stage '+q.sequenceStep : 'MCQ'}
                       </span>
                     </div>
                   </div>
@@ -325,6 +331,7 @@ export default function QuestionEditorModal({
                     <option value="pointmap">Point map / anatomy quiz</option>
                     <option value="matching">Match pairs</option>
                     <option value="simulation">Interactive simulation</option>
+                    <option value="research">Scientific investigation</option>
                     <option value="sequence">Interactive sequence stage</option>
                   </select>
                 </div>
@@ -384,6 +391,7 @@ export default function QuestionEditorModal({
                 {currentQ.timerSeconds>0&&<label className="block text-sm">Seconds (1–3600)<input type="number" min="1" max="3600" value={currentQ.timerSeconds} onChange={ev=>handleUpdateCurrentQ('timerSeconds',Math.max(1,Math.min(3600,Number(ev.target.value)||1)))} className="block w-full p-2 rounded-lg border border-slate-700 bg-slate-950"/></label>}
                 <p className="text-xs text-slate-400">When time expires, submissions close and results are revealed. Advance when ready.</p>
               </section>}
+              {currentQ.type==='research'&&<ResearchEditor key={currentQ.id} question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>}
               {currentQ.type==='simulation'&&<SimulationEditor question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>}
               {currentQ.type==='pointmap'&&<MapEditor key={currentQ.id} question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>}
               {currentQ.type==='matching'&&<MatchingEditor question={currentQ} update={patch=>setQuestions(prev=>prev.map(q=>q.id===currentQ.id?{...q,...patch}:q))}/>}
@@ -412,7 +420,7 @@ export default function QuestionEditorModal({
               </section>}
 
               {/* MCQ Options List (If MCQ) */}
-              {!['wordcloud','curve','text','pointmap','matching','simulation'].includes(currentQ.type) && (
+              {!['wordcloud','curve','text','pointmap','matching','simulation','research'].includes(currentQ.type) && (
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-300">

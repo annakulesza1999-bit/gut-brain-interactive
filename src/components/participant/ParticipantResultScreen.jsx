@@ -1,3 +1,4 @@
+import {ResearchResults} from '../common/ResearchActivity';
 import {SimulationResults} from '../common/SimulationActivity';
 import {SpatialResults} from '../common/SpatialActivity';
 import React, { useState } from 'react';
@@ -37,6 +38,7 @@ export default function ParticipantResultScreen() {
   const speedBonus = lastAnswerResult?.speedBonus ?? 0;
   const pointsEarned = lastAnswerResult?.pointsEarned ?? (basePoints + speedBonus);
 
+  if(currentQuestion?.type==='research')return <div className="pb-24"><ResearchResults question={currentQuestion} result={revealData} revealed participant/><ReactionActionBar/></div>;
   if(currentQuestion?.type==='simulation')return <div className="pb-24"><SimulationResults question={currentQuestion} result={revealData} revealed participant/><ReactionActionBar/></div>;
   if(['pointmap','matching'].includes(currentQuestion?.type))return <div className="pb-24"><SpatialResults question={currentQuestion} result={revealData} revealed participant/><ReactionActionBar/></div>;
   if(currentQuestion?.type==='curve') return <div className="pb-24"><CurveResults question={currentQuestion} curves={revealData?.curves||[]} revealed={true} participant/><ReactionActionBar/></div>;
