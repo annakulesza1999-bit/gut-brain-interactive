@@ -139,7 +139,7 @@ h3 { letter-spacing: -0.015em; }
 button, input, select, textarea { font-family: inherit; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid #42634F; outline-offset: 3px; }
 .shadow-2xl, .shadow-xl, .shadow-lg, .shadow-md, .shadow { box-shadow: 0 4px 18px rgba(52,71,62,.07), 0 1px 2px rgba(52,71,62,.05); }
-.fixed.inset-0.bg-slate-950\\/80, .fixed.inset-0.bg-slate-950\\/90 { background-color: rgba(38,59,50,.48); }
+.fixed.inset-0[class~="bg-slate-950/80"], .fixed.inset-0[class~="bg-slate-950/90"] { background-color: rgba(38,59,50,.48); }
 .gm-hero-title { font-size: clamp(2.3rem, 5vw, 4.2rem); line-height: 1.04; }
 .gm-kicker { color: #526F5D; font-size: .73rem; font-weight: 600; text-transform: uppercase; letter-spacing: .16em; }
 .gm-brand { font-family: Georgia, Cambria, serif; font-weight: 500; letter-spacing: -.035em; }

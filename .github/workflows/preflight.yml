@@ -18,6 +18,7 @@ jobs:
         with:
           node-version: '22'
       - name: Install locked dependencies without lifecycle scripts
+        id: install
         run: npm ci --ignore-scripts
       - name: Unit tests
         run: node --test test_activities.js test_anatomy_activities.js test_presentations.js test_research_activities.js test_simulations.js test_spatial_activities.js
@@ -28,4 +29,5 @@ jobs:
       - name: Real 15-client loopback smoke test
         run: node --test test_session_smoke.js
       - name: Dependency audit
+        if: ${{ always() && steps.install.outcome == 'success' }}
         run: npm audit --omit=dev --audit-level=high
