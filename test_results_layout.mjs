@@ -66,6 +66,10 @@ test('audience layout regression with fourteen demo responses, live and revealed
    return {box:box.toJSON(),words,scroll:node.scrollHeight-node.clientHeight};
   });
   assert.equal(metrics.words.length,expected,name+' word count');
+  const first=metrics.words[0],box=metrics.box;
+  assert.ok(Math.abs((first.b.left+first.b.right)/2-(box.left+box.right)/2)<=2,name+' most frequent word is not centred');
+  assert.ok(Math.abs((first.b.top+first.b.bottom)/2-(box.top+box.bottom)/2)<=2,name+' most frequent word is not centred vertically');
+  if(expected>3)assert.ok(new Set(metrics.words.map(w=>Math.round((w.b.top+w.b.bottom)/2))).size>2,name+' cloud is arranged in rows');
   assert.ok(metrics.scroll<=1,name+' scroll');
   for(const [i,w] of metrics.words.entries()){
    assert.ok(w.b.left>=metrics.box.left-1&&w.b.right<=metrics.box.right+1&&w.b.top>=metrics.box.top-1&&w.b.bottom<=metrics.box.bottom+1,name+' clipped '+w.word);

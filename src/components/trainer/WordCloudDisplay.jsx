@@ -1,6 +1,6 @@
 import React,{useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {openResponses} from '../../activities.js';
-import {wordFrequencies,fitCloudWords,cloudPageSize,wordColor} from '../../wordCloudLayout.js';
+import {wordFrequencies,packCloudWords,cloudPageSize,wordColor} from '../../wordCloudLayout.js';
 
 const graphicStyle={aspectRatio:'900 / 460',minHeight:240,width:'100%',maxWidth:960,marginInline:'auto',boxSizing:'border-box'};
 const fontFamily='"Source Sans 3", Arial, sans-serif';
@@ -43,7 +43,7 @@ function FrequencyCloud({words=[],totalResponses=0,hidden=false}){
  },[hasWords,view]);
  const layout=useMemo(()=>{
   const ctx=document.createElement('canvas').getContext('2d');
-  return fitCloudWords(visible,(word,size)=>{
+  return packCloudWords(visible,(word,size)=>{
    if(!ctx)return word.length*size;
    ctx.font='700 '+size+'px '+fontFamily;
    const m=ctx.measureText(word);
@@ -57,8 +57,9 @@ function FrequencyCloud({words=[],totalResponses=0,hidden=false}){
   <span>{hidden?'Waiting for reveal':totalResponses+' submissions · '+stats.length+' unique'}</span>
  </div>
  {!hasWords?<div className="min-h-[320px] grid place-items-center text-center px-6"><div><p className="font-serif text-2xl">{hidden?'Responses are hidden':'What comes to mind?'}</p><p className="text-sm mt-2" style={{color:'#354D60'}}>{hidden?'Reveal when everyone is ready.':'Words will appear here as participants submit them.'}</p></div></div>:<>
- {view==='cloud'?<div ref={graphic} role="img" aria-label="Live frequency word cloud" className="gm-wordcloud-graphic" style={{...graphicStyle,display:'flex',flexWrap:'wrap',alignContent:'center',alignItems:'center',justifyContent:'center',columnGap:20,rowGap:12,padding:'20px 24px',fontFamily,fontWeight:700}}>
-  {layout.words.map(w=><span key={w.key} data-cloud-word={w.key} data-count={w.count} title={w.count+' '+(w.count===1?'submission':'submissions')} style={{display:'block',flex:'0 0 auto',maxWidth:'100%',overflowWrap:'anywhere',lineHeight:1.2,textAlign:'center',fontSize:w.size,color:wordColor(w.key)}}>{w.text}</span>)}
+ {view==='cloud'?<div ref={graphic} role="img" aria-label="Live frequency word cloud" className="gm-wordcloud-graphic" style={{...graphicStyle,position:'relative',fontFamily,fontWeight:700}}>
+  {layout.map(w=><span key={w.key} data-cloud-word={w.key} data-count={w.count} title={w.count+' '+(w.count===1?'submission':'submissions')} style={{position:'absolute',display:'block',left:w.x,top:w.y,transform:'translate(-50%, -50%)',whiteSpace:'nowrap',fontFamily,fontWeight:700,lineHeight:1.2,textAlign:'center',fontSize:w.size,color:wordColor(w.key)}}>{w.text}</span>)}
+  {!layout.length&&<div className="p-6 text-center">This window is too narrow for the cloud. Choose Response frequencies to see every answer.</div>}
  </div>:<div ref={graphic} className="gm-wordcloud-graphic" style={{...graphicStyle,padding:'20px 24px',display:'flex',alignItems:'center',justifyContent:'center'}}>
   <ul aria-label="Response frequencies" style={{display:'grid',width:'100%',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%, 220px),1fr))',gap:'12px 24px',alignContent:'center',fontSize:18}}>
    {visible.map(w=><li key={w.key} className="flex justify-between gap-3 border-b border-slate-800 pb-2"><span style={{overflowWrap:'anywhere',minWidth:0}}>{w.text}</span><strong>{w.count}</strong></li>)}

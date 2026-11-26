@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {wordFrequencies,layoutWords,fitCloudWords,cloudPageSize} from './src/wordCloudLayout.js';
+import {wordFrequencies,layoutWords,fitCloudWords,cloudPageSize,packCloudWords} from './src/wordCloudLayout.js';
 import {liveResultsEnabled} from './src/activities.js';
 test('frequency counts normalize case and spacing, including prototype property names',()=>{const stats=wordFrequencies([' Stress ','stress','RECOVERY','__proto__','constructor',{text:'recovery'}]);assert.equal(stats.length,4);assert.equal(stats.find(x=>x.key==='stress').count,2);assert.equal(stats.find(x=>x.key==='recovery').count,2);});
 test('packed word layout is deterministic, in bounds and non-overlapping',()=>{const stats=wordFrequencies(['stress','stress','stress','coping','coping','appraisal','sleep','support','recovery','exercise','perceived control','gut–brain axis','preparation','cortisol','microbiome']);const measure=(text,size)=>text.length*size*.57;const a=layoutWords(stats,measure);assert.equal(a.length,stats.length);assert.deepEqual(a,layoutWords(stats,measure));assert.ok(a[0].size>a.at(-1).size);for(let i=0;i<a.length;i++){const x=a[i];assert.ok(x.x-x.w/2>=12&&x.x+x.w/2<=888&&x.y-x.h/2>=12&&x.y+x.h/2<=448);for(const y of a.slice(i+1))assert.ok(Math.abs(x.x-y.x)>=(x.w+y.w)/2+5||Math.abs(x.y-y.y)>=(x.h+y.h)/2+5);}});
@@ -29,4 +29,23 @@ test('open-ended responses retain sentences, repeat answers and public format',(
  const deck={questions:[q]},sentence='Maybe they are sharing a joke unrelated to the presentation.';
  let state=startSlide(deck);for(let i=0;i<2;i++)state=previewReducer(deck,state,{type:'word',visit:state.visit,word:sentence});
  assert.deepEqual(state.words,[sentence,sentence]);const closed=previewReducer(deck,state,{type:'reveal'});assert.equal(previewReducer(deck,closed,{type:'word',visit:closed.visit,word:sentence}),closed);
+});
+
+test('centre-out cloud fits dense words and moves the most frequent response to the centre',()=>{
+ const measure=(word,size)=>[...word].reduce((n,ch)=>n+size*(ch==='W'||ch==='界'?1:.58),0);
+ for(const width of [320,390,900,1200]){
+  const height=width<600?240:460;
+  const stats=wordFrequencies(Array.from({length:cloudPageSize(width)},(_,i)=>'W'.repeat(32)+i).concat(['W'.repeat(32)+'0','W'.repeat(32)+'0']));
+  const packed=packCloudWords(stats,measure,width,height);
+  assert.equal(packed.length,stats.length);assert.equal(packed[0].x,width/2);assert.equal(packed[0].y,height/2);
+  assert.deepEqual(packed,packCloudWords(stats,measure,width,height));
+  for(const [i,p] of packed.entries()){
+   assert.ok(p.x-p.w/2>=12&&p.x+p.w/2<=width-12&&p.y-p.h/2>=12&&p.y+p.h/2<=height-12);
+   for(const v of packed.slice(i+1))assert.ok(Math.abs(p.x-v.x)>=(p.w+v.w)/2+4||Math.abs(p.y-v.y)>=(p.h+v.h)/2+4);
+  }
+  assert.ok(new Set(packed.map(p=>p.y)).size>1);
+ }
+ const first=packCloudWords(wordFrequencies(['stress','stress','recovery']),measure,900,460);
+ const next=packCloudWords(wordFrequencies(['stress','stress','recovery','recovery','recovery']),measure,900,460);
+ assert.equal(first[0].key,'stress');assert.equal(next[0].key,'recovery');assert.equal(next[0].x,450);assert.equal(next[0].y,230);assert.ok(next[0].size>next[1].size);
 });

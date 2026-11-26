@@ -42,3 +42,31 @@ export function fitCloudWords(stats,measure,width,height,maxCount=stats[0]?.coun
  }
  return {words:stats.map(w=>({...w,size:8})),rows:0,height:0,fits:false};
 }
+
+// Frequency-first, centre-out packing for positioned HTML text (not SVG text).
+export function packCloudWords(stats,measure,width=900,height=460,maxCount=stats[0]?.count||1){
+ const cx=width/2,cy=height/2,ratio=Math.min(1.75,Math.max(1,width/height)),margin=12,step=5;
+ const points=[];
+ for(let iy=-Math.floor((cy-margin)/step);iy<=Math.floor((cy-margin)/step);iy++){
+  for(let ix=-Math.floor((cx-margin)/step);ix<=Math.floor((cx-margin)/step);ix++){
+   const dx=ix*step,dy=iy*step;
+   points.push({x:cx+dx,y:cy+dy,d:(dx/ratio)**2+dy**2,angle:Math.atan2(dy,dx)});
+  }
+ }
+ points.sort((a,b)=>a.d-b.d||a.angle-b.angle);
+ const base=Math.min(106,width*.16,height*.32)*Math.min(1,Math.sqrt(9/Math.max(1,stats.length)));
+ for(let scale=1;scale>=.055;scale*=.87){
+  const packed=[];
+  for(const item of stats){
+   const size=Math.max(width<400?7:8,Math.floor(base*(.24+.76*Math.sqrt(item.count/maxCount))*scale));
+   const measured=measure(item.text,size);
+   // Reserve space for actual glyph overhang, fallback metrics and line height.
+   const w=Math.ceil((Number.isFinite(measured)&&measured>0?measured:item.text.length*size)*1.12)+10,h=Math.ceil(size*1.25)+6;
+   const point=points.find(p=>p.x-w/2>=margin&&p.x+w/2<=width-margin&&p.y-h/2>=margin&&p.y+h/2<=height-margin&&!packed.some(o=>Math.abs(p.x-o.x)<(w+o.w)/2+4&&Math.abs(p.y-o.y)<(h+o.h)/2+4));
+   if(!point)break;
+   packed.push({...item,size,x:point.x,y:point.y,w,h});
+  }
+  if(packed.length===stats.length)return packed;
+ }
+ return [];
+}
