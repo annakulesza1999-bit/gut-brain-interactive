@@ -26,7 +26,8 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_error(404)
             return
         target = Path(self.translate_path(path)).resolve()
-        if ROOT not in target.parents or not target.is_file():
+        allowed = target == ROOT / "editor-preview.html" or any((ROOT / folder) in target.parents for folder in ("assets", "atlas"))
+        if not allowed or not target.is_file():
             self.send_error(404)
             return
         super().do_GET()

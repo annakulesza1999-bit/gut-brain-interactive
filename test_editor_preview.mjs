@@ -33,8 +33,8 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   await page.screenshot({path:out+'/02-curve-editor.png'});
   await page.getByRole('button',{name:'+ Point map',exact:true}).click();
   await prompt.fill('Test anatomy image');
-  // A small 1x1 PNG is sufficient to check upload and round-trip persistence.
-  await page.locator('input[type=file][accept="image/png,image/jpeg,image/gif,image/webp"]').setInputFiles({name:'test.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jR9sAAAAASUVORK5CYII=','base64')});
+  // A small 16x16 PNG is sufficient to check upload and round-trip persistence.
+  await page.locator('input[type=file][accept="image/png,image/jpeg,image/gif,image/webp"]').setInputFiles({name:'test.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGMs7KlmIAUwkaR6VMOohiGlAQCw0gGYqw/vQAAAAABJRU5ErkJggg==','base64')});
   await page.getByRole('button',{name:'Use body silhouette'}).waitFor();
   await page.getByRole('button',{name:'Save & Close'}).click();
   await page.getByRole('heading',{name:'Presentation slide editor'}).waitFor({state:'hidden'});
@@ -44,8 +44,8 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   assert.equal(await page.getByLabel('Presentation title').inputValue(),'Preflight saved deck');
   await page.getByRole('button',{name:'Edit slides'}).click();
   assert.equal(await prompt.inputValue(),'Preflight example: gut and mind');
-  await page.getByText('Draw a test curve',{exact:true}).first().click();assert.equal(await page.getByLabel('Seconds (1–3600)').inputValue(),'45');
-  await page.getByText('Test anatomy image',{exact:true}).first().click();await page.getByRole('button',{name:'Use body silhouette'}).waitFor();
+  await page.getByRole('dialog').getByText('Draw a test curve',{exact:true}).click();assert.equal(await page.getByLabel('Seconds (1–3600)').inputValue(),'45');
+  await page.getByRole('dialog').getByText('Test anatomy image',{exact:true}).click();await page.getByRole('button',{name:'Use body silhouette'}).waitFor();
   await page.getByRole('button',{name:'Save & Close'}).click();await page.getByRole('heading',{name:'Presentation slide editor'}).waitFor({state:'hidden'});
   const downloaded=page.waitForEvent('download');await page.getByRole('button',{name:'Backup',exact:true}).click();const download=await downloaded;
   const file=out+'/synthetic.gutmind.json';await download.saveAs(file);
@@ -63,6 +63,7 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   await page.getByRole('button',{name:'Version history'}).click();await page.getByRole('button',{name:'Restore',exact:true}).last().waitFor();
   page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Restore',exact:true}).last().click();
   await page.getByRole('status').filter({hasText:'Saved on this device'}).waitFor();
+  await page.waitForFunction(()=>document.querySelector('input[maxlength="160"]')?.value==='Gut & brain — practice deck');
   await page.screenshot({path:out+'/04-saved-library.png'});
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);assert.deepEqual(sessionRequests,[]);
  }catch(e){await page.screenshot({path:out+'/failure.png'}).catch(()=>{});throw e;}
