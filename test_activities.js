@@ -54,3 +54,6 @@ test('text figures are bounded and notes remain private',()=>{const good='data:i
 
 import {curveReference,exampleCortisolReference} from './src/activities.js';
 test('reference curve is validated and never included in pre-reveal question payload',()=>{const q={type:'curve',referenceCurve:exampleCortisolReference,referenceLabel:'Illustrative reference',referenceNote:'Not measurements'};assert.equal(curveReference(q).points.length,27);assert.equal(publicActivity(q).referenceCurve,undefined);assert.equal(curveReference({...q,referenceCurve:[[0,0],[1,1],[.5,.4]]}),null);});
+
+import {slideSources,slideLayout} from './src/activities.js';
+test('slide source footer is separate from revealable bullets, bounded and public',()=>{const q={type:'text',body:'One idea\nAnother idea',slideSources:'A study (2020)',slideLayout:'cover',sourceNotes:'private'};assert.deepEqual(textLines(q),['One idea','Another idea']);assert.equal(slideSources(q),'A study (2020)');assert.equal(publicActivity(q).slideSources,'A study (2020)');assert.equal(publicActivity(q).sourceNotes,undefined);assert.equal(slideLayout(q),'cover');assert.equal(slideSources({slideSources:'x'.repeat(3000)}).length,2500);});

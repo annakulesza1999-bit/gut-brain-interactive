@@ -153,3 +153,5 @@ button:is(.bg-emerald-600,.bg-emerald-700,.bg-blue-600,.bg-blue-700):hover:not(:
 @media(min-width:950px){.gm-slide-body.gm-with-figures{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 @media(max-width:600px){.gm-text-slide{padding:18px;gap:20px;min-height:280px}.gm-text-slide .gm-slide-title{font-size:1.8rem}.gm-text-slide .gm-slide-bullets{font-size:1.12rem}.gm-cover-slide{min-height:360px}.gm-stage-content>section{padding:14px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+.gm-stage-content>.gm-cover-slide{background:var(--gm-blue);color:white;border:0;padding:clamp(28px,6vw,90px)}.gm-stage-content>.gm-text-slide:not(.gm-cover-slide){border-top:4px solid var(--gm-blue);border-radius:0}.gm-stage-content .gm-cover-slide .gm-slide-title{color:white}

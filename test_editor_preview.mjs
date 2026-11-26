@@ -29,6 +29,7 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   await prompt.waitFor();await prompt.fill('Preflight example: gut and mind');
   await page.getByLabel('Slide content (one revealable point per line)').fill('First example line\nSecond example line');
   await page.getByLabel('Private speaker notes').fill('Synthetic private note');
+  await page.getByLabel('Slide sources and citations').fill('Example study (2020)');
   await page.getByLabel('Add slide figure').setInputFiles({name:'source-figure.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGMs7KlmIAUwkaR6VMOohiGlAQCw0gGYqw/vQAAAAABJRU5ErkJggg==','base64')});
   await page.getByRole('button',{name:'Remove figure 1',exact:true}).waitFor();
   await page.getByRole('button',{name:'+ Draw a curve',exact:true}).click();
@@ -53,7 +54,7 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   const downloaded=page.waitForEvent('download');await page.getByRole('button',{name:'Backup',exact:true}).click();const download=await downloaded;
   const file=out+'/synthetic.gutmind.json';await download.saveAs(file);
   const backup=JSON.parse(await readFile(file,'utf8'));assert.equal(backup.content.title,'Preflight saved deck');assert.equal(backup.content.questions.length,5);
-  assert.equal(backup.content.questions[0].sourceNotes,'Synthetic private note');assert.match(backup.content.questions[0].textImages[0].media,/^data:image\/png;base64,/);
+  assert.equal(backup.content.questions[0].sourceNotes,'Synthetic private note');assert.equal(backup.content.questions[0].slideSources,'Example study (2020)');assert.match(backup.content.questions[0].textImages[0].media,/^data:image\/png;base64,/);
   assert.equal(backup.content.questions[3].timerSeconds,45);assert.match(backup.content.questions[4].mapImage,/^data:image\/png;base64,/);
   await page.getByRole('button',{name:'Duplicate',exact:true}).click();await page.getByLabel('Presentation title').evaluate(el=>el.value);await page.waitForFunction(()=>document.querySelector('input[maxlength="160"]')?.value==='Preflight saved deck — copy');
   await page.locator('input[type=file][accept=".json,application/json"]').setInputFiles(file);
@@ -70,6 +71,7 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   await page.waitForFunction(()=>document.querySelector('input[maxlength="160"]')?.value==='Gut & brain — practice deck');
   await page.screenshot({path:out+'/04-saved-library.png'});
   await page.getByRole('button',{name:'Present',exact:true}).click();
+  await page.locator('.gm-slide-title').waitFor();await page.evaluate(()=>document.fonts.ready);assert.equal(await page.locator('.gm-slide-title').evaluate(el=>getComputedStyle(el).color),'rgb(0, 99, 166)');assert.ok(await page.evaluate(()=>document.fonts.check('600 20px "Source Sans 3"')));
   const phone=page.frameLocator('iframe[title="Student phone preview"]');
   await phone.getByText('Participant 1 · Preview').waitFor();
   await page.getByRole('button',{name:'Reveal next line'}).click();
@@ -132,6 +134,7 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   await page.getByRole('button',{name:'Present this slide'}).click();
   const check=phone.getByRole('button',{name:'Check location',exact:true});await check.waitFor();
   await enabled(phone.getByRole('button',{name:'Rotate left',exact:true}));
+  await phone.getByRole('button',{name:'Sagittal reference',exact:true}).click();await phone.getByRole('img',{name:/Midsagittal illustration/}).waitFor();await page.screenshot({path:out+'/10-sagittal-reference.png'});await phone.getByRole('button',{name:'3D model',exact:true}).click();
   const canvas=phone.locator('canvas');await canvas.scrollIntoViewIfNeeded();
   const brainBox=await canvas.boundingBox();assert.ok(brainBox);
   for(const [x,y] of [[.5,.5],[.4,.4],[.6,.4],[.5,.3],[.4,.6],[.6,.6],[.5,.65]]){await page.mouse.click(brainBox.x+brainBox.width*x,brainBox.y+brainBox.height*y);if(await check.isEnabled())break;}
