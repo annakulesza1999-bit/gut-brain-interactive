@@ -74,15 +74,15 @@ export default function Header() {
           {/* Brand & Course Title */}
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20 flex-shrink-0">
-              <span className="text-white font-black text-xs sm:text-sm tracking-wider">DW</span>
+              <span className="text-white font-black text-xs sm:text-sm tracking-wider">Gm</span>
             </div>
             <div>
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="font-extrabold text-slate-100 text-xs sm:text-base tracking-tight">
-                  Digi Warriors
+                <span className="gm-brand text-slate-100 text-sm sm:text-xl">
+                  Gut &amp; Mind
                 </span>
                 <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
-                  Portal
+                  Studio
                 </span>
               </div>
             </div>

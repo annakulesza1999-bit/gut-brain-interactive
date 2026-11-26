@@ -38,13 +38,13 @@ export default function TrainerDashboard() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-3">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Session Ready to Launch</span>
+              <span>Ready to present</span>
             </div>
             <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-              Digi Warriors — Course 1 Day 1
+              Your live learning session
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              Host: <span className="text-slate-200 font-semibold">{trainerName || 'Trainer'}</span> &bull; Local-first examination mode
+              Host: <span className="text-slate-200 font-semibold">{trainerName || 'Trainer'}</span> &bull; Interactive learning studio
             </p>
           </div>
 
@@ -96,7 +96,7 @@ export default function TrainerDashboard() {
             {totalQuestions}
           </div>
           <div className="text-[11px] text-slate-400 mt-1">
-            4-Option MCQs
+            Activities loaded
           </div>
         </div>
 
@@ -206,7 +206,7 @@ export default function TrainerDashboard() {
 
             <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 mb-6 space-y-2 text-xs">
               <div className="flex justify-between text-slate-400">
-                <span>Total Assessment Pool:</span>
+                <span>Activity count:</span>
                 <span className="text-white font-mono font-bold">{totalQuestions} Questions</span>
               </div>
               <div className="flex justify-between text-slate-400">
@@ -222,7 +222,7 @@ export default function TrainerDashboard() {
             className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-black text-base shadow-xl shadow-emerald-500/20 transition-all duration-200 transform hover:scale-[1.02]"
           >
             <Play className="w-5 h-5 fill-current" />
-            <span>START QUIZ</span>
+            <span>Start session</span>
           </button>
         </div>
 

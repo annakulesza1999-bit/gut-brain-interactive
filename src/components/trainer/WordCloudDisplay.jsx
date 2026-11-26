@@ -1,17 +1,7 @@
 import React, { useMemo } from 'react';
 import { Cloud } from 'lucide-react';
 
-const COLOR_PALETTE = [
-  '#38bdf8', // sky-400
-  '#818cf8', // indigo-400
-  '#34d399', // emerald-400
-  '#fbbf24', // amber-400
-  '#f472b6', // pink-400
-  '#a78bfa', // purple-400
-  '#fb923c', // orange-400
-  '#2dd4bf', // teal-400
-  '#60a5fa', // blue-400
-];
+const COLOR_PALETTE = ['#42634F', '#79648D', '#805726', '#3E6471', '#8B4949', '#665177', '#557B62', '#855132'];
 
 export default function WordCloudDisplay({ words = [], totalResponses = 0 }) {
   // Compute frequency map
@@ -40,7 +30,7 @@ export default function WordCloudDisplay({ words = [], totalResponses = 0 }) {
       const normalized = maxCount === minCount ? 0.5 : (item.count - minCount) / (maxCount - minCount);
       const fontSize = Math.round(18 + normalized * 46);
       const color = COLOR_PALETTE[index % COLOR_PALETTE.length];
-      const rotation = index % 5 === 0 ? -6 : index % 7 === 0 ? 6 : 0;
+      const rotation = 0;
 
       return {
         ...item,
@@ -60,7 +50,7 @@ export default function WordCloudDisplay({ words = [], totalResponses = 0 }) {
       <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800/80">
         <div className="flex items-center gap-2 text-blue-400">
           <Cloud className="w-6 h-6 animate-pulse" />
-          <span className="font-semibold text-sm uppercase tracking-wider">Live Audience Word Cloud</span>
+          <span className="font-semibold text-sm uppercase tracking-wider">Live word cloud</span>
         </div>
         <div className="bg-slate-800/80 px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-300 border border-slate-700/60">
           {totalResponses} {totalResponses === 1 ? 'submission' : 'submissions'} • {wordStats.length} unique words
@@ -70,7 +60,7 @@ export default function WordCloudDisplay({ words = [], totalResponses = 0 }) {
       {/* Cloud Container */}
       {wordStats.length === 0 ? (
         <div className="py-24 text-center text-slate-500 flex flex-col items-center justify-center">
-          <Cloud className="w-16 h-16 mb-4 opacity-30 stroke-1 animate-bounce" />
+          <Cloud className="w-16 h-16 mb-4 opacity-30 stroke-1 " />
           <p className="text-lg font-medium text-slate-400">Waiting for participants to submit words...</p>
           <p className="text-xs text-slate-500 mt-1">Words will appear here live with dynamic frequency sizing</p>
         </div>
@@ -79,7 +69,7 @@ export default function WordCloudDisplay({ words = [], totalResponses = 0 }) {
           {wordStats.map((item, idx) => (
             <span
               key={idx}
-              className="inline-block transition-all duration-300 hover:scale-125 cursor-default font-extrabold tracking-tight drop-shadow-md animate-fade-in"
+              className="inline-block transition-all duration-300 hover:scale-125 cursor-default font-semibold tracking-tight animate-fade-in"
               style={{
                 fontSize: `${item.fontSize}px`,
                 color: item.color,

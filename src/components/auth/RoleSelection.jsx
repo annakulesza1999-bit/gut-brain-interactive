@@ -67,44 +67,30 @@ export default function RoleSelection({ onSelectRole }) {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 sm:py-14 animate-fade-in select-none">
       
-      {/* Hero Header */}
-      <div className="text-center mb-10 sm:mb-12 relative">
-        {/* Glow backdrop */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 sm:w-96 h-72 sm:h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold mb-4 shadow-lg backdrop-blur-md animate-scale-in">
-          <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-          <span>Local-First • Zero Cloud • Sub-Millisecond Sync</span>
+      <section className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center mb-10 sm:mb-14 border-b border-slate-800 pb-10">
+        <div className="md:col-span-8">
+          <p className="gm-kicker mb-4">Interactive learning studio</p>
+          <h1 className="gm-hero-title text-slate-100 mb-5">Learning through<br /> curiosity.</h1>
+          <p className="text-base sm:text-lg text-slate-400 max-w-xl leading-relaxed">A shared space for live questions, thoughtful discussion and collaborative discovery. Join a session or lead your own.</p>
+          <div className="flex flex-wrap gap-2 mt-6 text-xs text-slate-400">
+            <span className="border border-slate-700 rounded-full px-3 py-1.5">Live polls</span>
+            <span className="border border-slate-700 rounded-full px-3 py-1.5">Word clouds</span>
+            <span className="border border-slate-700 rounded-full px-3 py-1.5">Audience Q&amp;A</span>
+          </div>
         </div>
-
-        <h1 className="text-3xl sm:text-6xl font-black text-white tracking-tight leading-tight">
-          Live Interactive Assessments <br />
-          <span className="bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent">
-            Built for Real-Time Classrooms
-          </span>
-        </h1>
-
-        <p className="text-sm sm:text-base text-slate-400 mt-3 max-w-xl mx-auto leading-relaxed">
-          The 100% offline, local Wi-Fi alternative to Mentimeter & Kahoot. Host speed-bonus quizzes, dynamic word clouds, live Q&A, and emoji reaction streams.
-        </p>
-
-        {/* Feature Pills */}
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 mt-5 max-w-2xl mx-auto text-[11px] sm:text-xs">
-          <span className="px-3 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-slate-300 flex items-center gap-1.5">
-            <Wifi className="w-3.5 h-3.5 text-emerald-400" /> Hotspot / LAN Sync
-          </span>
-          <span className="px-3 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-slate-300 flex items-center gap-1.5">
-            <Flame className="w-3.5 h-3.5 text-amber-400" /> Live Reactions
-          </span>
-          <span className="px-3 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-slate-300 flex items-center gap-1.5">
-            <Cloud className="w-3.5 h-3.5 text-sky-400" /> Word Clouds
-          </span>
-          <span className="px-3 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-slate-300 flex items-center gap-1.5">
-            <Smartphone className="w-3.5 h-3.5 text-purple-400" /> Phone Remote
-          </span>
+        <div className="hidden md:flex md:col-span-4 items-center justify-center">
+          <svg viewBox="0 0 250 230" className="w-full max-w-xs" aria-hidden="true">
+            <circle cx="125" cy="115" r="106" fill="#E7EBE1" />
+            <circle cx="125" cy="115" r="87" fill="none" stroke="#B6C6B3" strokeWidth="1" strokeDasharray="3 5" />
+            <path d="M111 46 C84 28 62 55 75 78 C53 94 70 118 93 113 C100 135 122 124 125 110 C128 124 150 135 157 113 C180 118 197 94 175 78 C188 55 166 28 139 46 Q125 30 111 46Z" fill="#D9CDDF" stroke="#806A94" strokeWidth="2" strokeLinejoin="round"/>
+            <path d="M125 43 V109 M92 58 Q116 60 109 79 M78 89 Q101 83 105 102 M158 58 Q134 60 141 79 M172 89 Q149 83 145 102" stroke="#806A94" fill="none" strokeWidth="1.8" strokeLinecap="round" />
+            <path d="M125 120 C126 133 149 129 153 143 M125 120 C124 133 101 129 97 143" stroke="#718C7B" strokeWidth="2" fill="none" strokeDasharray="3 4"/>
+            <path d="M88 148 Q88 138 99 138 H151 Q162 138 162 148 V181 Q162 192 151 192 H137 V171 H144 V153 H106 V166 H128 V179 H99 Q88 179 88 168Z" stroke="#567662" strokeWidth="2.3" fill="#C7D8C8" strokeLinejoin="round"/>
+            <circle cx="58" cy="134" r="5" fill="#B58C6B" /><circle cx="193" cy="133" r="5" fill="#9B88AA" /><circle cx="125" cy="208" r="4" fill="#718C7B"/>
+          </svg>
         </div>
-      </div>
-
+      </section>
+      
       {/* Main Interactive Bento / Join Box */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         
@@ -139,7 +125,7 @@ export default function RoleSelection({ onSelectRole }) {
             <form onSubmit={handleQuickJoin} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                  6-Digit Session PIN
+                  Session code
                 </label>
                 <input
                   type="text"
@@ -147,7 +133,7 @@ export default function RoleSelection({ onSelectRole }) {
                   onChange={(e) => setQuickCode(e.target.value.toUpperCase())}
                   placeholder="e.g. DW-7764"
                   maxLength={10}
-                  className="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-3 text-emerald-400 font-mono text-lg font-black placeholder-slate-600 outline-none uppercase tracking-wider"
+                  className="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-3 text-emerald-700 font-mono text-lg font-semibold placeholder-slate-600 outline-none uppercase tracking-wider"
                   required
                 />
               </div>
@@ -189,7 +175,7 @@ export default function RoleSelection({ onSelectRole }) {
                 disabled={isJoining}
                 className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-extrabold rounded-2xl text-base shadow-xl shadow-emerald-600/30 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer"
               >
-                <span>{isJoining ? 'Connecting to LAN...' : 'ENTER LIVE QUIZ'}</span>
+                <span>{isJoining ? 'Connecting...' : 'Join session'}</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
             </form>
@@ -197,7 +183,7 @@ export default function RoleSelection({ onSelectRole }) {
 
           {/* Quick micro-interaction tester */}
           <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-            <span>Try live reaction audio:</span>
+            <span>Try a reaction:</span>
             <div className="flex items-center gap-1.5">
               {['❤️', '🔥', '🎉', '💡'].map((em) => (
                 <button
@@ -213,8 +199,8 @@ export default function RoleSelection({ onSelectRole }) {
           </div>
         </div>
 
-        {/* Right 5 Cols: Trainer Host Command Hub */}
-        <div className="lg:col-span-5 bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col justify-between relative overflow-hidden">
+        {/* Right 5 Cols: Presenter studio */}
+        <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col justify-between relative overflow-hidden">
           <div className="absolute -top-12 -left-12 w-36 h-36 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
 
           <div>
@@ -224,8 +210,8 @@ export default function RoleSelection({ onSelectRole }) {
                   <Presentation className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg sm:text-xl font-bold text-white">Trainer Portal</h2>
-                  <p className="text-xs text-slate-400">Host & manage assessment session</p>
+                  <h2 className="text-lg sm:text-xl font-bold text-white">Presenter studio</h2>
+                  <p className="text-xs text-slate-400">Create and lead a live session</p>
                 </div>
               </div>
               <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 text-xs font-bold border border-blue-500/20">
@@ -234,7 +220,7 @@ export default function RoleSelection({ onSelectRole }) {
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed mb-6">
-              Launch real-time synced question broadcasts, reveal interactive bar charts, dynamic word clouds, and track student growth timelines across days.
+              Create questions, invite your audience, and guide a live discussion with instant responses.
             </p>
 
             <div className="space-y-3 mb-6">
@@ -245,7 +231,7 @@ export default function RoleSelection({ onSelectRole }) {
 
               <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 flex items-center justify-between text-xs">
                 <span className="text-slate-400">Phone Remote Support:</span>
-                <span className="text-blue-400 font-bold">Mentimote Enabled</span>
+                <span className="text-blue-400 font-bold">Available</span>
               </div>
             </div>
           </div>
@@ -256,7 +242,7 @@ export default function RoleSelection({ onSelectRole }) {
             className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-2xl text-sm shadow-xl shadow-blue-600/30 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer"
           >
             <Presentation className="w-4 h-4" />
-            <span>LAUNCH TRAINER DASHBOARD</span>
+            <span>Open presenter studio</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
