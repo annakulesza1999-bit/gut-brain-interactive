@@ -31,3 +31,32 @@ jobs:
       - name: Dependency audit
         if: ${{ always() && steps.install.outcome == 'success' }}
         run: npm audit --audit-level=low
+      - name: Build standalone editor preview
+        run: npm run build:editor-preview
+      - name: Install isolated browser test tools
+        run: |
+          mkdir -p "$RUNNER_TEMP/gm-browser"
+          cd "$RUNNER_TEMP/gm-browser"
+          npm init -y
+          npm install --save-exact --ignore-scripts --no-fund playwright@1.58.2
+          npm audit --audit-level=low
+          node node_modules/playwright/cli.js install --with-deps chromium
+      - name: Browser editor verification
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/gm-browser/node_modules/playwright/index.mjs
+        run: node --test test_editor_preview.mjs
+      - name: Upload tested local editor preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: gut-mind-editor-preview
+          path: dist-preview/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload browser verification screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: editor-browser-screenshots
+          path: preview-test-output/
+          if-no-files-found: ignore
+          retention-days: 30
