@@ -1,7 +1,7 @@
 // Rehearsal state is ephemeral, never written into the saved presentation.
 import {activityDuration,initialTextCount,textLines,publicActivity,curveIdentity,normalizeCurve,reactionSummary,curveReference} from './activities.js';
 import {normalizePoint,normalizeMatch,scoreMap,scoreMatch,matchKey} from './spatialActivities.js';
-import {normalizeSimulation,defaultResponse} from './simulations.js';
+import {normalizeSimulation,defaultResponse,isExploreSimulation} from './simulations.js';
 import {normalizeResearchResponse,normalizeResearch,scoreResearch,revealResearch} from './researchActivities.js';
 import {normalizeBrainHit,scoreBrain,brainReveal,personalBrainFeedback} from './anatomyActivities.js';
 export function startSlide(deck,index=0,visit=1){
@@ -50,13 +50,13 @@ export function previewReducer(deck,state,action){
  const q=deck.questions[state.index];
  switch(action.type){
  case 'goto':return Number.isInteger(action.index)&&action.index>=0&&action.index<deck.questions.length?startSlide(deck,action.index,state.visit+1):state;
- case 'next':if(q.type==='text'&&state.visible<textLines(q).length)return {...state,visible:state.visible+1};if(q.type!=='text'&&!state.revealed)return {...state,revealed:true,paused:false};return previewReducer(deck,state,{type:'goto',index:state.index+1});
- case 'reveal':return q.type==='text'?{...state,visible:Math.min(textLines(q).length,state.visible+1)}:{...state,revealed:true,paused:false};
+ case 'next':if(q.type==='text'&&state.visible<textLines(q).length)return {...state,visible:state.visible+1};if(q.type!=='text'&&!isExploreSimulation(q)&&!state.revealed)return {...state,revealed:true,paused:false};return previewReducer(deck,state,{type:'goto',index:state.index+1});
+ case 'reveal':if(isExploreSimulation(q))return state;return q.type==='text'?{...state,visible:Math.min(textLines(q).length,state.visible+1)}:{...state,revealed:true,paused:false};
  case 'pause':return {...state,paused:!state.paused};
  case 'tick':if(state.paused||state.revealed||state.duration===0)return state;return {...state,remaining:Math.max(0,state.remaining-1),revealed:state.remaining<=1};
  case 'reset':return startSlide(deck,state.index,state.visit+1);
- case 'samples':return {...state,samples:state.samples.length?[]:sampleResponses(q)};
- case 'answer':{if(action.visit!==state.visit||state.paused||state.revealed||state.response!==null)return state;const response=normalizePreviewResponse(q,action.response);return response===null?state:{...state,response};}
+ case 'samples':if(isExploreSimulation(q))return state;return {...state,samples:state.samples.length?[]:sampleResponses(q)};
+ case 'answer':{if(isExploreSimulation(q)||action.visit!==state.visit||state.paused||state.revealed||state.response!==null)return state;const response=normalizePreviewResponse(q,action.response);return response===null?state:{...state,response};}
  case 'word':return action.visit===state.visit&&q.type==='wordcloud'&&!state.paused&&!state.revealed&&typeof action.word==='string'&&action.word.trim()&&state.words.length<10?{...state,words:[...state.words,action.word.trim().slice(0,35)]}:state;
  case 'reaction':return action.visit===state.visit&&['👍','👎','❤️','👏','💡','🎉'].includes(action.emoji)?{...state,thumb:['👍','👎'].includes(action.emoji)?action.emoji:state.thumb,reactions:[...state.reactions.slice(-5),{id:action.id,emoji:action.emoji}]}:state;
  case 'resetThumbs':return {...state,thumb:'',reactions:[]};

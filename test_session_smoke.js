@@ -47,7 +47,8 @@ test('loopback session: 15 participants, all activity families, auth and private
  {id:7,...brainTemplate(),timerSeconds:0},
  {id:8,type:'wordcloud',question:'Word',options:[],correctAnswer:null,timerSeconds:0},
  {id:9,type:'sequence',question:'Next event?',options:['A','B'],correctAnswer:1,beforePreset:'crh',afterPreset:'acth',timerSeconds:0},
- {id:10,type:'mcq',question:'Question',options:['A','B','C','D','E','F'],correctAnswer:5,timerSeconds:0}
+ {id:10,type:'mcq',question:'Question',options:['A','B','C','D','E','F'],correctAnswer:5,timerSeconds:0},
+ {id:11,type:'simulation',simKind:'recovery',simMode:'explore',question:'Private exploration',options:[],correctAnswer:null,timerSeconds:90}
  ];
  const created=await ack(presenter,'create_session',{trainerName:'Synthetic presenter',customQuestions:questions,timerDuration:0,speedBonusEnabled:false});
  assert.ok(created.success,created.error);const sessionCode=created.sessionCode;
@@ -90,6 +91,7 @@ test('loopback session: 15 participants, all activity families, auth and private
  await answer(9,5);
  const restored=await connect();const rr=await ack(restored,'get_session_state',{sessionCode,participantToken:joined[0].participantToken});assert.equal(rr.participant.id,joined[0].participant.id);assert.equal(rr.isAnswerSubmitted,true);assert.equal(rr.lastAnswerResult,undefined);
  const privateResult=event(restored,'private_answer_result',r=>r.questionIndex===9);await reveal(9);assert.equal((await privateResult).pointsEarned,100);
+ await advance(10);const privateState=await ack(students[0],'get_session_state',{sessionCode});assert.equal(privateState.currentQuestion.simMode,'explore');assert.equal(privateState.activeDuration,0);assert.equal((await ack(students[0],'submit_spatial',{sessionCode,questionIndex:10,response:defaultResponse('recovery')})).success,false);
  const finalTrainer=event(presenter,'quiz_finished'),finalStudent=event(students[1],'quiz_finished');presenter.emit('next_question',{sessionCode});
  const result=await finalTrainer,student=await finalStudent;assert.equal(result.analytics.gradedQuestionCount,5);assert.equal(result.analytics.avgAccuracy,99);assert.equal(student.leaderboard.filter(r=>r.answers).length,1);assert.equal(student.analytics.questionAnalytics,undefined);
  assert.deepEqual(participantLeaks,[]);

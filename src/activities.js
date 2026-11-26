@@ -54,7 +54,7 @@ export function timerSeconds(value, fallback=30) {
  return Number.isFinite(n)?Math.min(3600,Math.max(0,Math.round(n))):30;
 }
 export function activityDuration(q, fallback=30) {
- return q?.type==='text'?0:timerSeconds(q?.timerSeconds,fallback);
+ return q?.type==='text'||(q?.type==='simulation'&&q.simMode==='explore')?0:timerSeconds(q?.timerSeconds,fallback);
 }
 export function textLines(q) {
  return (typeof q?.body==='string'?q.body:'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,100);

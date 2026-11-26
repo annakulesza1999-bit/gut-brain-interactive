@@ -1,5 +1,6 @@
 import {BrainInput} from '../common/BrainActivity';
 import {ResearchInput} from '../common/ResearchActivity';
+import {isExploreSimulation} from '../../simulations.js';
 import {SimulationInput} from '../common/SimulationActivity';
 import React, { useState } from 'react';
 import {SpatialInput} from '../common/SpatialActivity';
@@ -107,7 +108,7 @@ export default function ParticipantQuestionScreen() {
             )}
           </div>
           
-          {currentQuestion.type!=='text' && <TimerDisplay timeRemaining={timeRemaining} totalDuration={activeDuration} />}
+          {currentQuestion.type!=='text' && !isExploreSimulation(currentQuestion) && <TimerDisplay timeRemaining={timeRemaining} totalDuration={activeDuration} />}
         </div>
 
         {/* Paused Overlay Notice */}

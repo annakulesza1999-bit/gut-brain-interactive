@@ -5,7 +5,7 @@ import {SIM_KINDS,MICROBE_COLORS,simSpec,defaultResponse,normalizeSimulation,sim
 const field='w-full p-2 rounded-lg border border-slate-700 bg-slate-950';
 const panel='rounded-2xl bg-slate-900 border border-slate-800 p-4 space-y-3';
 const button='px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-xs disabled:opacity-40';
-const fmt=(n,d=2)=>Number.isFinite(n)?n.toFixed(d):'—';
+const fmt=(n,d=2)=>Number.isFinite(n)?n.toFixed(d):'-';
 function useIdentity(){const {participants,participantName,participantPhone}=useQuiz();return curveIdentity(participants.findIndex(p=>(participantPhone&&p.phone===participantPhone)||p.name===participantName));}
 function Control({label,value,min,max,onChange,disabled}){
  return <label className="block space-y-1"><span className="flex justify-between gap-2 text-sm"><span>{label}</span><strong className="font-mono">{value}</strong></span><input aria-label={label} type="range" className="w-full accent-[#005C99]" min={min} max={max} step="1" value={value} disabled={disabled} onChange={e=>onChange(+e.target.value)}/></label>;
@@ -27,10 +27,10 @@ function AppraisalView({value}){
  <p className="text-sm font-medium">{gap>2?'Demands exceed the illustrated resources.':gap< -2?'Illustrated resources exceed demands.':'Demands and illustrated resources are relatively balanced.'}</p>
  </div>;
 }
-function RecoveryGraph({series,selected,events=[]}){
+function RecoveryGraph({series,selected,events=[],fixedScale=false}){
  const eventTimes=events.length?events:(series.length===1?series[0].stressors||[]:series.find(s=>s.label===selected)?.stressors||[]);
  const W=318,H=154,X=37,Y=20;
- const top=Math.max(6,Math.ceil(Math.max(.8,...series.flatMap(s=>s.values.map(p=>p[1])))/2)*2);
+ const top=Math.max(6,Math.ceil(Math.max(.8,...(fixedScale?recoverySeries({frequency:12,recovery:0}).values.map(p=>p[1]):[]),...series.flatMap(s=>s.values.map(p=>p[1])))/2)*2);
  const path=values=>values.map(([t,v],i)=>(i?'L':'M')+(X+t/7*W)+' '+(Y+H-v/top*H)).join(' ');
  return <svg viewBox="0 0 370 204" className="w-full" role="img" aria-label="Illustrative activation over seven days"><rect x={X} y={Y} width={W} height={H} fill="#FFFFFF" rx="3"/>
  {[0,.25,.5,.75,1].map(n=><g key={n}><line x1={X} x2={X+W} y1={Y+H-n*H} y2={Y+H-n*H} stroke="#DCE5EC" strokeWidth=".7"/><text x={X-5} y={Y+H-n*H+3} textAnchor="end" fontSize="8" fill="#354D60">{fmt(top*n,1)}</text></g>)}
@@ -51,28 +51,35 @@ function MicrobeView({value,onChange,disabled=false,compact=false}){
  <div className="grid grid-cols-3 gap-2"><Metric label="Richness" value={d.richness}/><Metric label="Shannon H′" value={fmt(d.shannon)}/><Metric label="Evenness" value={fmt(d.evenness)}/></div>
  {onChange&&<div className="flex gap-2 flex-wrap"><button type="button" disabled={disabled} className={button} onClick={()=>onChange(defaultResponse('microbiome'))}>Even community</button><button type="button" disabled={disabled} className={button} onClick={()=>onChange({microbes:[0,0,0,0,0,0,0,1,2,3,4,5]})}>Uneven community</button></div>}</div>;
 }
-function Model({kind,value,onChange,disabled}){
+function Model({kind,value,onChange,disabled,explore=false}){
  const spec=simSpec(kind);
- return <div className="space-y-4">{kind!=='microbiome'&&spec.fields.map(([id,label,min,max])=><Control key={id} label={label} min={min} max={max} value={value[id]} disabled={disabled||!onChange} onChange={v=>onChange?.({...value,[id]:v})}/>)}
- {kind==='appraisal'?<AppraisalView value={value}/>:kind==='recovery'?<><RecoveryGraph series={[recoverySeries(value)]} events={recoverySeries(value).stressors}/><p className="text-xs text-slate-400"><span className="inline-block text-[#8A6813] font-bold mr-1">⚡</span> Yellow marker = a stressor occurs</p><Metric label="Illustrative activation above baseline (area × days)" value={fmt(recoverySeries(value).exposure,1)}/></>:<MicrobeView value={value} onChange={onChange} disabled={disabled}/>}</div>;
+ return <div className={'space-y-4 '+(explore?'gm-explore-model':'')}>{kind!=='microbiome'&&<div className="space-y-4 gm-model-controls">{spec.fields.map(([id,label,min,max])=><Control key={id} label={label} min={min} max={max} value={value[id]} disabled={disabled||!onChange} onChange={v=>onChange?.({...value,[id]:v})}/>)}</div>}
+ <div className="gm-model-visual space-y-3">{kind==='appraisal'?<AppraisalView value={value}/>:kind==='recovery'?<><RecoveryGraph series={[recoverySeries(value)]} events={recoverySeries(value).stressors} fixedScale={explore}/><p className="text-xs text-slate-400"><span className="inline-block text-[#8A6813] font-bold mr-1">⚡</span> Yellow marker = a stressor occurs</p><Metric label="Illustrative activation above baseline (area × days)" value={fmt(recoverySeries(value).exposure,1)}/></>:<MicrobeView value={value} onChange={onChange} disabled={disabled}/>}</div></div>;
 }
 export function SimulationEditor({question,update}){
  const cfg=simulationConfig(question),spec=simSpec(cfg.simKind);
  return <section className={panel}><h3 className="font-semibold">Simulation settings</h3><label className="block text-sm">Model<select className={field} value={cfg.simKind} onChange={e=>{const kind=e.target.value;update({simKind:kind,simInitial:defaultResponse(kind),simTask:simSpec(kind).task});}}>{SIM_KINDS.map(kind=><option key={kind} value={kind}>{simSpec(kind).title}</option>)}</select></label>
+ <label className="block text-sm">Participation mode<select className={field} value={cfg.simMode} onChange={e=>update({simMode:e.target.value,...(e.target.value==='explore'?{timerSeconds:0}:{})})}><option value="submit">Submit a scenario to the group</option><option value="explore">Explore privately - no submissions or timer</option></select></label>
  <label className="block text-sm">Student task<textarea rows="3" className={field} value={cfg.simTask} onChange={e=>update({simTask:e.target.value})}/></label><p className="text-xs text-slate-400">Adjust the starting conditions below; every student starts with these values. The model equations and ranges are fixed teaching examples.</p><Model kind={cfg.simKind} value={cfg.simInitial} onChange={simInitial=>update({simInitial})}/><p className="text-xs text-slate-400">{spec.note}</p></section>;
 }
-export function SimulationInput({question}){
+export function SimulationExplorer({question,presenter=false}){
+ const cfg=simulationConfig(question),spec=simSpec(cfg.simKind),[value,setValue]=useState(cfg.simInitial);
+ return <section className="gm-simulation-explorer space-y-4 p-4"><h2 className="text-2xl">{question.question}</h2><p className="text-sm">{cfg.simTask}</p><p className="text-xs text-slate-400">{presenter?'Presenter demonstration - change these sliders to illustrate the model.':'Explore at your own pace. Nothing is submitted.'}</p><Model kind={cfg.simKind} value={value} onChange={setValue} explore/><div className="flex gap-3 items-center"><button type="button" className={button} onClick={()=>setValue(cfg.simInitial)}>Reset sliders</button><span className="text-xs text-slate-400">{spec.note}</span></div></section>;
+}
+export function SimulationInput({question}){return question.simMode==='explore'?<SimulationExplorer key={question.id} question={question}/>:<SimulationSubmission question={question}/>;}
+function SimulationSubmission({question}){
  const cfg=simulationConfig(question),spec=simSpec(cfg.simKind),me=useIdentity(),{submitSpatial,isAnswerSubmitted,sessionStatus,questionState}=useQuiz();
  const [value,setValue]=useState(cfg.simInitial),[pending,setPending]=useState(false),[error,setError]=useState('');
  const disabled=pending||isAnswerSubmitted||sessionStatus!=='running'||questionState!=='active';
  return <section className="space-y-4 pb-8"><h2 className="text-xl">{question.question}</h2><p className="text-sm">{cfg.simTask}</p><div className="flex gap-2 items-center text-xs"><span style={{background:me.color}} className="w-4 h-4 rounded-full"/>Your participant color · #{me.label.split(' ')[1]}</div>
  <div className={panel}><Model kind={cfg.simKind} value={value} onChange={setValue} disabled={disabled}/></div>
- <p className="text-xs text-slate-400">{spec.note}</p>{isAnswerSubmitted?<p className="font-medium">Submitted — waiting for reveal.</p>:<div className="flex gap-2"><button type="button" className={button} disabled={disabled} onClick={()=>setValue(cfg.simInitial)}>Reset</button><button type="button" className="flex-1 rounded-xl p-3 bg-emerald-600 text-white disabled:opacity-40" disabled={disabled} onClick={async()=>{setPending(true);setError('');try{const r=await submitSpatial(value);if(!r.success)setError(r.error);}finally{setPending(false);}}}>{pending?'Submitting…':'Submit my scenario'}</button></div>}{error&&<p role="alert" className="text-rose-700">{error}</p>}</section>;
+ <p className="text-xs text-slate-400">{spec.note}</p>{isAnswerSubmitted?<p className="font-medium">Submitted - waiting for reveal.</p>:<div className="flex gap-2"><button type="button" className={button} disabled={disabled} onClick={()=>setValue(cfg.simInitial)}>Reset</button><button type="button" className="flex-1 rounded-xl p-3 bg-emerald-600 text-white disabled:opacity-40" disabled={disabled} onClick={async()=>{setPending(true);setError('');try{const r=await submitSpatial(value);if(!r.success)setError(r.error);}finally{setPending(false);}}}>{pending?'Submitting…':'Submit my scenario'}</button></div>}{error&&<p role="alert" className="text-rose-700">{error}</p>}</section>;
 }
 function AppraisalResults({entries}){
  return <div className="space-y-3">{entries.map(e=>{const r=appraisalMetrics(e.response);return <div key={e.label} className="grid grid-cols-[48px_1fr_1fr] items-center gap-2 text-xs"><span style={{color:e.color}}>#{e.label.split(' ')[1]}</span><div><div>Demand {e.response.demand}</div><div className="h-2 bg-slate-800 rounded-full"><div className="h-2 rounded-full bg-[#FFDC4C]" style={{width:e.response.demand*10+'%'}}/></div></div><div><div>Resources {fmt(r.resources,1)}</div><div className="h-2 bg-slate-800 rounded-full"><div className="h-2 rounded-full bg-[#005C99]" style={{width:r.resources*10+'%'}}/></div></div></div>})}</div>;
 }
-export function SimulationResults({question,result,revealed,showResults=revealed,count,participant=false}){
+export function SimulationResults(props){return props.question.simMode==='explore'?<SimulationExplorer key={props.question.id} question={props.question} presenter={!props.participant}/>:<SimulationSubmissionResults {...props}/>;}
+function SimulationSubmissionResults({question,result,revealed,showResults=revealed,count,participant=false}){
  const cfg=simulationConfig(question),spec=simSpec(cfg.simKind),me=useIdentity(),[highlight,setHighlight]=useState('');
  const entries=useMemo(()=>(result?.simulationResults||[]).filter(e=>normalizeSimulation(cfg.simKind,e.response)),[result,cfg.simKind]);
  const summary=simulationSummary(cfg.simKind,entries),mine=entries.find(e=>e.label===me.label),chosen=entries.find(e=>e.label===(highlight|| (participant?me.label:'')));

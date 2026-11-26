@@ -32,3 +32,7 @@ test('summary uses valid submissions and excludes undefined evenness',()=>{
  assert.equal(simulationSummary('recovery',[]).means.exposure,null);
  assert.deepEqual(simulationConfig({simKind:'recovery',simInitial:{frequency:999}}).simInitial,defaultResponse('recovery'));
 });
+
+import {isExploreSimulation} from './src/simulations.js';
+import {activityDuration,publicActivity} from './src/activities.js';
+test('private exploration is opt-in, untimed, and exposed to the participant',()=>{const q={type:'simulation',simKind:'recovery',simMode:'explore',timerSeconds:90};assert.equal(isExploreSimulation(q),true);assert.equal(activityDuration(q,30),0);assert.equal(publicActivity(q).simMode,'explore');assert.equal(simulationConfig({simKind:'appraisal'}).simMode,'submit');});

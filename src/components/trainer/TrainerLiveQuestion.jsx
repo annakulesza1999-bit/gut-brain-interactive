@@ -6,6 +6,7 @@ import {SimulationResults} from '../common/SimulationActivity';
 import React, { useState } from 'react';
 import {SpatialResults} from '../common/SpatialActivity';
 import TextSlide from '../common/TextSlide';
+import {isExploreSimulation} from '../../simulations.js';
 import {textLines,liveResultsEnabled} from '../../activities.js';
 import {CurveResults} from '../common/CurveActivity';
 import SequenceMedia, {SequenceHeading} from '../common/SequenceMedia';
@@ -94,6 +95,7 @@ export default function TrainerLiveQuestion() {
   const answeredCount = liveAnswerCount.answeredCount;
   const isRevealed = questionState === 'revealed' || questionState === 'closed';
   const showResults=isRevealed||liveResultsEnabled(currentQuestion),liveData=liveResults?.questionIndex===currentQuestionIndex?liveResults.data:null,result=isRevealed?revealData:showResults?liveData:null;
+  const explore=isExploreSimulation(currentQuestion);
   const hasHiddenText=currentQuestion?.type==='text' && textVisible<textLines(currentQuestion).length;
 
   // Global Trainer Keyboard Shortcuts (Space/ArrowRight=Next, R=Reveal, L=Leaderboard, P=Pause/Resume, M=Mute, Q=Q&A)
@@ -104,10 +106,10 @@ export default function TrainerLiveQuestion() {
 
       if (e.key === ' ' || e.key === 'ArrowRight') {
         e.preventDefault();
-        if (hasHiddenText) revealTextLine(); else if (['curve','sequence','pointmap','matching','simulation','research','brain'].includes(currentQuestion?.type) && !isRevealed) revealAnswer(); else nextQuestion();
+        if (hasHiddenText) revealTextLine(); else if (['curve','sequence','pointmap','matching','simulation','research','brain'].includes(currentQuestion?.type) && !explore && !isRevealed) revealAnswer(); else nextQuestion();
       } else if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
-        if (hasHiddenText) revealTextLine(); else if (!isRevealed && currentQuestion?.type!=='text') revealAnswer();
+        if (hasHiddenText) revealTextLine(); else if (!isRevealed && currentQuestion?.type!=='text' && !explore) revealAnswer();
       } else if (e.key === 'l' || e.key === 'L') {
         e.preventDefault();
         setViewMode(v => v === 'leaderboard' ? 'question' : 'leaderboard');
@@ -213,12 +215,12 @@ export default function TrainerLiveQuestion() {
           <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-medium text-slate-300">
             <Users className="w-3.5 h-3.5 text-emerald-400" />
             <span>{participants.length} joined · {participants.filter(p=>p.connected).length} online</span>
-            {currentQuestion.type!=='text'&&<span className="ml-2">Completed:</span>}
-            {currentQuestion.type!=='text'&&<strong className="font-mono">{answeredCount}/{totalParticipantsCount}</strong>}
+            {currentQuestion.type!=='text'&&!explore&&<span className="ml-2">Completed:</span>}
+            {currentQuestion.type!=='text'&&!explore&&<strong className="font-mono">{answeredCount}/{totalParticipantsCount}</strong>}
           </div>
 
           {/* Countdown Timer */}
-          {!isRevealed && currentQuestion.type!=='text' && <TimerDisplay timeRemaining={timeRemaining} totalDuration={activeDuration} />}
+          {!isRevealed && currentQuestion.type!=='text' && !explore && <TimerDisplay timeRemaining={timeRemaining} totalDuration={activeDuration} />}
           <div className="flex items-center gap-2 text-sm border border-slate-800 rounded-xl px-3 py-1.5" aria-label="Current check-in"><span>👍 {thumbs.up}</span><span>👎 {thumbs.down}</span><button className="text-xs underline" onClick={resetThumbs}>Reset</button></div>
 
           {/* Pause / Resume Button */}
@@ -345,7 +347,7 @@ export default function TrainerLiveQuestion() {
           </button>
 
           {/* Reveal Answer (if not revealed) */}
-          {!isRevealed && currentQuestion.type!=='text' && (
+          {!isRevealed && currentQuestion.type!=='text' && !explore && (
             <button
               onClick={revealAnswer}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all"
@@ -358,7 +360,7 @@ export default function TrainerLiveQuestion() {
           {/* Next Question / Finish */}
           <button
             onClick={hasHiddenText?revealTextLine:nextQuestion}
-            disabled={['curve','sequence','pointmap','matching','simulation','research','brain'].includes(currentQuestion.type) && !isRevealed}
+            disabled={['curve','sequence','pointmap','matching','simulation','research','brain'].includes(currentQuestion.type) && !explore && !isRevealed}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-lg shadow-blue-500/25 transition-all transform hover:scale-105"
           >
             <span>{hasHiddenText?'Reveal next line':currentQuestionIndex + 1 >= totalQuestions ? 'Finish Quiz & Results' : 'Next Question'}</span>

@@ -26,7 +26,7 @@ export function normalizeSimulation(kind,value){
 }
 export function simulationConfig(q){
  const kind=SIM_KINDS.includes(q?.simKind)?q.simKind:'appraisal';
- return {simKind:kind,simTask:typeof q?.simTask==='string'?q.simTask.slice(0,2000):simSpec(kind).task,simInitial:normalizeSimulation(kind,q?.simInitial)||defaultResponse(kind)};
+ return {simKind:kind,simMode:q?.simMode==='explore'?'explore':'submit',simTask:typeof q?.simTask==='string'?q.simTask.slice(0,2000):simSpec(kind).task,simInitial:normalizeSimulation(kind,q?.simInitial)||defaultResponse(kind)};
 }
 export function appraisalMetrics(v){
  const resources=(v.control+v.support+v.prepared)/3;
@@ -58,3 +58,5 @@ export function simulationSummary(kind,entries){
  const keys=kind==='appraisal'?['resources','gap']:kind==='recovery'?['exposure']:['richness','shannon','evenness'];
  return {count:valid.length,means:Object.fromEntries(keys.map(k=>{const values=metrics.map(m=>m[k]).filter(Number.isFinite);return [k,values.length?values.reduce((a,b)=>a+b,0)/values.length:null];}))};
 }
+
+export const isExploreSimulation=q=>q?.type==='simulation'&&q.simMode==='explore';

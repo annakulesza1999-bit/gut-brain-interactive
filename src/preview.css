@@ -49,3 +49,5 @@
 .gm-audience-content .gm-prediction-options>div{margin:0!important}
 .gm-fullscreen-controls{position:relative;bottom:auto;left:auto;transform:none;z-index:20;background:#FFFFFF;padding:6px;border:0;border-top:1px solid #DCE5EC;white-space:nowrap;margin:0!important;align-items:center}
 .gm-rehearsal-reaction{animation:gmFloat 2.8s ease-out both}@keyframes gmFloat{0%{transform:translateY(0);opacity:0}12%{opacity:1}100%{transform:translateY(-180px);opacity:0}}@media(prefers-reduced-motion:reduce){.gm-rehearsal-reaction{animation:none;opacity:0}}
+
+.gm-audience-content .gm-explore-model{display:grid;grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr);gap:30px;align-items:center}.gm-audience-content .gm-explore-model>div{margin:0!important}.gm-audience-content .gm-explore-model .gm-model-visual svg{max-height:360px}.gm-audience-content .gm-explore-model .gm-model-controls label{font-size:20px}.gm-audience-content .gm-explore-model .gm-model-controls input[type=range]{height:24px}.gm-audience-content .gm-simulation-explorer>p{max-width:1000px}.gm-audience-content .gm-model-controls .font-mono{font-size:20px}

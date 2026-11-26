@@ -1,3 +1,4 @@
+import {isExploreSimulation} from '../src/simulations.js';
 import {curveReference} from '../src/activities.js';
 import {personalBrainFeedback} from '../src/anatomyActivities.js';
 import {randomBytes} from 'node:crypto';
@@ -703,6 +704,7 @@ io.on('connection', (socket) => {
     const session=sessions.get(sessionCode);
     if(!session||session.status!=='running'||session.questionState!=='active'||questionIndex!==session.currentQuestionIndex)return reply({success:false,error:'This activity is closed.'});
     const q=session.questions[questionIndex],index=session.participants.findIndex(p=>p.socketId===socket.id&&p.connected);
+    if(isExploreSimulation(q))return reply({success:false,error:'This simulation is private exploration; no responses are collected.'});
     if(index<0||!['pointmap','matching','simulation','research','brain'].includes(q?.type))return reply({success:false,error:'Join the active session first.'});
     const participantId=session.participants[index].id,entries=(session.spatialSubmissions||={})[questionIndex]||=[];
     if(entries.some(r=>r.participantId===participantId))return reply({success:false,error:'Already submitted.'});
@@ -746,6 +748,7 @@ io.on('connection', (socket) => {
     const session = sessions.get(sessionCode);
     if (!session || session.trainerSocketId!==socket.id || session.questionState!=='active') return;
     const q=session.questions[session.currentQuestionIndex];
+    if(isExploreSimulation(q))return;
     if(q?.type==='text'){if(socket.id===session.trainerSocketId){session.textVisible=Math.min(textLines(q).length,(session.textVisible||0)+1);broadcastText(session);}return;}
 
     if (session.timerInterval) {
@@ -777,7 +780,7 @@ io.on('connection', (socket) => {
 
     const current=session.questions[session.currentQuestionIndex];
     if(current?.type==='text' && (session.textVisible||0)<textLines(current).length){if(socket.id===session.trainerSocketId){session.textVisible++;broadcastText(session);}return;}
-    if(current?.type!=='text'&&session.questionState==='active'){if(socket.id===session.trainerSocketId){if(session.timerInterval)clearInterval(session.timerInterval);session.timerInterval=null;autoCloseQuestion(session);}return;}
+    if(current?.type!=='text'&&!isExploreSimulation(current)&&session.questionState==='active'){if(socket.id===session.trainerSocketId){if(session.timerInterval)clearInterval(session.timerInterval);session.timerInterval=null;autoCloseQuestion(session);}return;}
     if (!session.completedQuestions.includes(session.currentQuestionIndex)) {
       session.completedQuestions.push(session.currentQuestionIndex);
     }
