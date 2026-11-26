@@ -7,7 +7,7 @@ import {researchTemplate} from './src/researchActivities.js';
 import {defaultResponse} from './src/simulations.js';
 import {defaultPairs} from './src/spatialActivities.js';
 import {brainTemplate} from './src/anatomyActivities.js';
-import {exampleCortisolReference} from './src/activities.js';
+import {exampleCortisolReference,hpaStages} from './src/activities.js';
 const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
 const url='http://127.0.0.1:8765/editor-preview.html',out='preview-test-output';
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
@@ -16,7 +16,7 @@ const pred={...researchTemplate('prediction','scatter'),question:'Compare four h
 const evidence={...researchTemplate('evidence'),researchClaims:Array.from({length:5},(_,i)=>({text:'Evidence statement '+(i+1)+': evaluate whether this conclusion follows from the described study design and results.',answer:i%2,reason:'Explanation '+(i+1)+': the distinction between an observed association and an experimental causal conclusion must be maintained.'}))};
 const simulation=kind=>({type:'simulation',question:'Compare individual scenarios: '+kind,simKind:kind,simInitial:defaultResponse(kind),simTask:'Adjust the parameters of this illustrative model.',simMode:'submit'});
 const questions=[choice,{...choice,type:'sequence',sequenceTitle:'Teaching sequence',sequenceStep:1,sequenceTotal:5,beforePreset:'threat',afterPreset:'sympathetic'},{type:'wordcloud',question:'What comes to mind?'},{type:'curve',question:'Draw a predicted response',referenceCurve:exampleCortisolReference,referenceLabel:'Illustrative reference',referenceNote:'Normalized example, not measured cortisol.',axisExplanation:'T1 and T2 are pre-stressor sampling points.'},{type:'pointmap',question:'Where might you notice stress?',mapGraded:false},{type:'matching',question:'Match the teaching concepts',matchPairs:[...defaultPairs,{left:'Example five',right:'Category five'},{left:'Example six',right:'Category six'}],matchPoints:100},simulation('appraisal'),simulation('recovery'),simulation('microbiome'),pred,evidence,{...brainTemplate(),brainView:'sagittal-map',brainTargets:[-101],brainAnchor:null,brainTolerance:0}, {...simulation('appraisal'),simMode:'explore'},{...simulation('recovery'),simMode:'explore'}].map((q,i)=>({options:[],correctAnswer:null,...q,id:i+1,timerSeconds:0}));
-test('audience layout regression with fourteen demo responses, live and revealed, at 16:9', {timeout:180000}, async t=>{
+test('audience layout regression with fourteen demo responses, live and revealed, at 16:9', {timeout:240000}, async t=>{
  await mkdir(out,{recursive:true});
  const server=spawn('python3',['dist-preview/open-preview.py'],{env:{...process.env,GM_NO_BROWSER:'1'},stdio:['ignore','pipe','pipe']});
  t.after(()=>server.kill());let ready=false;
@@ -36,10 +36,10 @@ test('audience layout regression with fourteen demo responses, live and revealed
    return {wide:image(1057,375),timeline:image(1302,432),portrait:image(1127,1750),qr:image(90,90)};
   });
   questions[1].sequenceArtwork={body:media.portrait,brain:media.wide,layout:'vascular-v2'};
-  questions.push({...questions[1],id:questions.length+1,question:'Synthetic complete HPA loop',beforePreset:'cortisol',afterPreset:'feedback',sequenceStep:5});
+  for(const [j,stage] of hpaStages.slice(1).entries())questions.push({...questions[1],...stage,id:questions.length+1,question:'Synthetic HPA stage '+(j+2),sequenceStep:j+2});
   questions.push({type:'text',id:questions.length+1,question:'Social appraisal fixture',body:'**Two interpretations:**\n~ *Same audience behavior, different appraisals.*',revealMode:'all',options:[],correctAnswer:null,timerSeconds:0,slideSources:'Synthetic fixture'});
   questions.push({type:'wordcloud',wordcloudMode:'open',id:questions.length+1,question:'Open-ended interpretation fixture',options:[],correctAnswer:null,timerSeconds:0});
-  questions.push({type:'text',id:questions.length+1,question:'Example text fixture',body:'**Acute stress:**\n~ Example: giving a presentation.\n**Chronic stress:**\n~ Example: months of ongoing work pressure.\n~ Measurements: salivary cortisol, blood (BDNF, serum SCFAs) and stool (fecal SCFAs)',revealMode:'all',options:[],correctAnswer:null,timerSeconds:0,slideSources:'Synthetic fixture'});
+  questions.push({type:'text',id:questions.length+1,question:'Example text fixture',body:'**Acute stress:**\n~ Example: giving a presentation.\n**Chronic stress:**\n~ Example: months of ongoing work pressure.\n~ Chronic stress is associated with increased risk or symptom burden.\n~ Measurements: salivary cortisol, blood (BDNF, serum SCFAs) and stool (fecal SCFAs)',revealMode:'all',options:[],correctAnswer:null,timerSeconds:0,slideSources:'Synthetic fixture'});
   const fixtures=[
    {question:'Wide findings: compare three original-sized panels',body:'**Main association:** a fictional finding, not measured data.\n~ Group A: n = 35 | Group B: n = 39',figureLayout:'wide',revealMode:'all',textImages:[{media:media.wide,alt:'Wide geometry fixture'}]},
    {question:'Study design and sample: wide timeline and compact QR',body:'@ **Sample:** fictional participants, 18-35 years; initial N = 80\n@ **Groups:** A n = 35 | B n = 39\n**Sampling:** salivary and microbiome measurements\n**Behavioral data:** subjective ratings and a representative questionnaire\n**Microbiome:** composition and hypothetical functional measures',figureLayout:'wide',revealMode:'all',textImages:[{media:media.timeline,alt:'Timeline geometry fixture'},{media:media.qr,alt:'QR geometry fixture',role:'qr'}]},
@@ -77,6 +77,30 @@ test('audience layout regression with fourteen demo responses, live and revealed
   for(let i=0;i<questions.length;i++){
    const q=questions[i],name=(i+1)+'-'+q.type+(q.simKind?'-'+q.simKind:'')+(q.researchKind?'-'+q.researchKind:'');
    await nav.locator('button').nth(i).click();
+   if(q.type==='sequence'){
+    const phoneToggle=page.getByRole('button',{name:'Student phone',exact:true});if(await phoneToggle.getAttribute('aria-pressed')!=='true')await phoneToggle.click();
+    const phone=page.frameLocator('iframe[title="Student phone preview"]');
+    async function checkAnatomy(preset,phase){
+     const mobile=phone.locator('svg[data-hpa-stage="'+preset+'"][viewBox="0 0 410 980"]');
+     await mobile.waitFor();
+     for(const part of ['body','brain']){
+      assert.equal(await mobile.locator('[data-hpa-art="'+part+'"]').getAttribute('href'),q.sequenceArtwork[part],phase+' mobile '+part+' differs');
+      assert.equal(await stage.locator('[data-hpa-art="'+part+'"]').getAttribute('href'),q.sequenceArtwork[part],phase+' presenter '+part+' differs');
+     }
+     assert.equal(await mobile.locator('[data-vessel="artery"]').count(),6);
+     assert.equal(await mobile.locator('[data-vessel="vein"]').count(),6);
+     assert.equal(await mobile.locator('[data-hpa-pituitary]').count(),1);
+     const signals=async scope=>scope.locator('[data-hpa-signal] animateMotion').count();
+     assert.equal(await signals(mobile),await signals(stage),phase+' animated signals differ');
+     if(preset==='feedback')assert.equal(await mobile.locator('[data-hpa-inhibition] circle').count(),2);
+     await page.screenshot({path:out+'/hpa-phone-'+q.sequenceStep+'-'+phase+'.png'});
+    }
+    await checkAnatomy(q.beforePreset,'before');
+    await page.getByRole('button',{name:'Reveal results',exact:true}).click();
+    await checkAnatomy(q.afterPreset,'after');
+    await page.getByRole('button',{name:'Reset slide',exact:true}).click();
+    await phoneToggle.click();
+   }
    if(q.type==='text'&&!q.textImages?.length){
     const muted=stage.locator('.gm-muted-line');
     await muted.first().waitFor();
