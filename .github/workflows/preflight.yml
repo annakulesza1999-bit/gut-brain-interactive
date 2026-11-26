@@ -41,6 +41,9 @@ jobs:
       - name: Private pilot access controls with 30 real clients (loopback only)
         if: github.ref == 'refs/heads/deployment/private-pilot'
         run: GM_TEST_CLIENTS=30 GM_SIMPLE_SCORING=1 GM_TEST_PILOT=1 node --test test_session_smoke.js
+      - name: Restricted production configuration and reverse-proxy simulation
+        if: github.ref == 'refs/heads/deployment/private-pilot'
+        run: node --test test_render_pilot.mjs
       - name: Dependency audit
         if: ${{ always() && steps.install.outcome == 'success' }}
         run: npm audit --audit-level=low

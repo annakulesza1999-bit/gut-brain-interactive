@@ -3,7 +3,7 @@ import {simpleScoring,simpleSession,scoreWithPolicy,sharedRanks,cleanNickname,sc
 import {curveReference} from '../src/activities.js';
 import {personalBrainFeedback} from '../src/anatomyActivities.js';
 import {randomBytes} from 'node:crypto';
-import {pilotConfig,equalSecret,allowedRequest,isExpired,rateAllowed} from './pilotPolicy.js';
+import {pilotConfig,equalSecret,allowedRequest,isExpired,rateAllowed,renderPilotConfig,renderRequestAllowed} from './pilotPolicy.js';
 import {launchProblem} from '../src/presentations.js';
 import express from 'express';
 import { createServer } from 'http';
@@ -13,7 +13,6 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { db } from './db.js';
 import { curveIdentity, normalizeCurve, publicActivity, safeMedia, timerSeconds, activityDuration, textLines, initialTextCount, reactionSummary } from '../src/activities.js';
 
 import {normalizePoint,scoreMap,normalizeMatch,scoreMatch,matchKey,validPairs,validTarget} from '../src/spatialActivities.js';
@@ -27,29 +26,29 @@ import {normalizeBrain,normalizeBrainHit,brainProblem,scoreBrain,brainReveal} fr
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Temporary production guard until inherited access-control and privacy issues are fixed.
-if(process.env.NODE_ENV==='production')throw new Error('Public deployment blocked: security hardening is incomplete. See SECURITY-REVIEW.md.');
-
-const pilot=pilotConfig();
+// Fail closed: production may only start as the explicitly enabled restricted Render pilot.
+const pilot=process.env.NODE_ENV==='production'?renderPilotConfig():pilotConfig();
+const requestAllowed=req=>pilot?.production?renderRequestAllowed(pilot,req):allowedRequest(pilot,req);
 const token=()=>randomBytes(32).toString('hex');
 const matchesToken=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===64&&b.length===64&&equalSecret(a,b);
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   maxHttpBufferSize: 8 * 1024 * 1024,
-  allowRequest: (req,done)=>{if(pilot)return done(null,allowedRequest(pilot,req)&&(io.engine?.clientsCount||0)<pilot.maxConnections);const origin=req.headers.origin;done(null,!origin||/^http:\/\/(localhost|127\.0\.0\.1):(3000|5173|[1-9][0-9]{3,4})$/.test(origin));}
+  allowRequest: (req,done)=>{if(pilot)return done(null,requestAllowed(req)&&(io.engine?.clientsCount||0)<pilot.maxConnections);const origin=req.headers.origin;done(null,!origin||/^http:\/\/(localhost|127\.0\.0\.1):(3000|5173|[1-9][0-9]{3,4})$/.test(origin));}
 });
 
 const PORT = process.env.PORT || 3000;
 
 app.use((req,res,next)=>{
   res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('X-Frame-Options','DENY');
-  if(pilot){if(!allowedRequest(pilot,req))return res.status(403).json({error:'Origin not allowed'});return next();}
+  if(pilot?.production){res.setHeader('Strict-Transport-Security','max-age=31536000');res.setHeader('Cache-Control','no-store');if(req.method==='GET'&&req.path==='/healthz'&&allowedRequest(pilot,req))return res.status(200).type('text').send('ok');}
+  if(pilot){if(!requestAllowed(req))return res.status(403).json({error:'Origin not allowed'});return next();}
   if(!['localhost','127.0.0.1'].includes(req.hostname))return res.status(403).json({error:'Local preview only'});
   if(req.headers.origin&&!/^http:\/\/(localhost|127\.0\.0\.1):[0-9]+$/.test(req.headers.origin))return res.status(403).json({error:'Local preview only'});
   next();
 });
-app.use(express.json({ limit: '10mb' }));
+// No public JSON-write HTTP routes; submissions use bounded authenticated socket events.
 
 // Helper to detect local LAN IP
 function getLocalIpAddress() {
@@ -296,97 +295,6 @@ app.get('/api/info', (req, res) => {
   });
 });
 
-app.get('/api/questions', (req, res) => {
-  res.json(defaultQuestions);
-});
-
-app.post('/api/questions', (req, res) => {
-  try {
-    const { questions } = req.body;
-    if (Array.isArray(questions) && questions.length > 0) {
-      defaultQuestions = questions;
-      res.json({ success: true, count: questions.length });
-    } else {
-      res.status(400).json({ error: 'Invalid questions array' });
-    }
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Trainer Profile & Active Sessions Endpoints
-app.get('/api/trainers', (req, res) => {
-  res.json({ success: true, trainers: db.getAllTrainers() });
-});
-
-app.delete('/api/trainers/:id', (req, res) => {
-  const deleted = db.deleteTrainer(req.params.id);
-  res.json({ success: deleted, trainers: db.getAllTrainers() });
-});
-
-app.get('/api/active-sessions', (req, res) => {
-  const active = [];
-  sessions.forEach((s) => {
-    active.push({
-      code: s.code,
-      trainerName: s.trainerName,
-      status: s.status,
-      participantsCount: s.participants ? s.participants.length : 0,
-      currentQuestionIndex: s.currentQuestionIndex || 0,
-      totalQuestions: s.questions ? s.questions.length : 20,
-      timerDuration: s.timerDuration || 30,
-      showTopic: s.showTopic || false,
-      speedBonusEnabled: s.speedBonusEnabled !== undefined ? s.speedBonusEnabled : true
-    });
-  });
-  res.json({ success: true, sessions: active });
-});
-
-// Student Profile Endpoints
-app.get('/api/students', (req, res) => {
-  res.json(db.getAllStudents());
-});
-
-app.get('/api/student/:phoneOrId', (req, res) => {
-  const profile = db.getStudentFullProfile(req.params.phoneOrId);
-  if (!profile) {
-    return res.status(404).json({ error: 'Student profile not found' });
-  }
-  res.json(profile);
-});
-
-app.put('/api/student/:phoneOrId', (req, res) => {
-  const updated = db.updateStudentProfile(req.params.phoneOrId, req.body);
-  if (!updated) {
-    return res.status(404).json({ error: 'Student not found' });
-  }
-
-  // Also update live sessions if participant is currently active
-  sessions.forEach(session => {
-    const p = session.participants.find(x => x.phone === updated.phone || x.studentId === updated.id);
-    if (p) {
-      if (req.body.name) p.name = req.body.name.trim();
-      io.to(session.code).emit('participants_updated', {
-        participants: session.participants.map(item => ({ id: item.id, name: item.name, score: item.score, rank: item.currentRank, phone: item.phone, connected: item.connected })),
-        count: session.participants.length
-      });
-    }
-  });
-
-  res.json({ success: true, student: updated });
-});
-
-// Clear all active sessions (Reset DB)
-app.post('/api/reset', (req, res) => {
-  sessions.forEach(s => {
-    if (s.timerInterval) clearInterval(s.timerInterval);
-  });
-  sessions.clear();
-  io.emit('sessions_cleared');
-  console.log('[DB Reset] All active live quiz sessions cleared.');
-  res.json({ success: true, message: 'All live quiz sessions cleared successfully.' });
-});
-
 // Socket.io Real-time Event Handling
 io.on('connection', (socket) => {
   if(pilot){const all={},auth={};socket.use((packet,next)=>{const [event,payload]=packet;const cb=typeof packet.at(-1)==='function'?packet.at(-1):null;const reject=error=>{if(cb)cb({success:false,error});};if(!rateAllowed(all,Date.now(),180,60000))return reject('Too many requests.');if(['create_session','join_session','get_session_state','reconnect_trainer'].includes(event)&&!rateAllowed(auth,Date.now(),20,60000))return reject('Too many access attempts.');if(event!=='leave_session'&&(!payload||typeof payload!=='object'||Array.isArray(payload)))return reject('Invalid request.');if(packet.length>(event==='leave_session'?2:3)||packet.length===3&&!cb)return reject('Invalid request.');if(event!=='create_session'&&event!=='leave_session'&&JSON.stringify(payload).length>65536)return reject('Request too large.');if(event!=='create_session'&&event!=='leave_session'&&typeof payload.sessionCode!=='string')return reject('Invalid session code.');next();});}
@@ -464,7 +372,7 @@ io.on('connection', (socket) => {
   // Trainer reconnects to an existing active session
   socket.on('reconnect_trainer', ({ sessionCode, trainerName, trainerToken }, callback) => {
     try {
-      const code = (sessionCode || '').toUpperCase().trim();
+      const code = (typeof sessionCode==='string'?sessionCode:'').toUpperCase().trim();
       const session = sessions.get(code);
       if (!session) {
         return callback && callback({ success: false, error: 'Session not found or is no longer active.' });
@@ -538,7 +446,7 @@ io.on('connection', (socket) => {
     }
 
     session.showTopic = !session.showTopic;
-    console.log(`[Topic Toggle] Session ${sessionCode} showTopic is now: ${session.showTopic}`);
+    console.log('[Topic Toggle]');
 
     io.to(session.code).emit('topic_visibility_changed', {
       showTopic: session.showTopic
@@ -586,6 +494,7 @@ io.on('connection', (socket) => {
     const session = sessions.get(sessionCode);
     if (!session || session.trainerSocketId!==socket.id) return;
 
+    if(pilot&&session.status!=='ready')return;
     session.status = 'running';
     if(pilot)session.admissionClosed=true;
     session.currentQuestionIndex = 0;
@@ -933,7 +842,7 @@ io.on('connection', (socket) => {
     if (!session || session.trainerSocketId!==socket.id) return;
 
     if (session.timerInterval) clearInterval(session.timerInterval);
-
+    session.timerInterval=null;
     session.status = 'ready';
     session.currentQuestionIndex = 0;
     session.questionState = 'active';
@@ -953,6 +862,7 @@ io.on('connection', (socket) => {
 
     const participantList = session.participants.map(p => ({ id: p.id, name: p.name, phone: p.phone, score: p.score, rank: p.currentRank, connected: p.connected }));
 
+    if(pilot)publishStandings(session);
     io.to(session.code).emit('quiz_restarted', {
       sessionStatus: 'ready',
       participantsCount: session.participants.length,
@@ -1091,7 +1001,7 @@ io.on('connection', (socket) => {
 
   // Request live session state
   socket.on('get_session_state', ({ sessionCode, trainerToken, participantToken }={}, callback) => {
-    const code = (sessionCode || '').toUpperCase().trim();
+    const code = (typeof sessionCode==='string'?sessionCode:'').toUpperCase().trim();
     const session = sessions.get(code);
     if (!session) return callback && callback({ success: false, error: 'Session not active' });
 
@@ -1231,14 +1141,16 @@ io.on('connection', (socket) => {
 
 // Serve frontend build if dist folder exists
 const distPath = path.join(__dirname, '../dist');
+if(pilot?.production&&!fs.existsSync(path.join(distPath,'index.html')))throw Error('Frontend build is missing.');
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
+  app.use(express.static(distPath,{dotfiles:'deny',index:false}));
   app.get('*', (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
 
-httpServer.listen(PORT, '127.0.0.1', () => {
+httpServer.listen(PORT, pilot?.production?'0.0.0.0':'127.0.0.1', () => {
+  if(pilot?.production){console.log('Restricted Render pilot started.');return;}
   console.log(`=======================================================`);
   console.log(`  DIGI WARRIORS LOCAL-FIRST QUIZ ENGINE RUNNING!       `);
   console.log(`  Local URL:        http://localhost:${PORT}           `);
