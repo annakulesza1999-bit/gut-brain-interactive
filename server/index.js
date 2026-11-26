@@ -16,6 +16,8 @@ import {SIM_KINDS,normalizeSimulation,simulationConfig} from '../src/simulations
 
 import {normalizeResearch,normalizeResearchResponse,scoreResearch,revealResearch,researchProblem} from '../src/researchActivities.js';
 
+import {normalizeBrain,normalizeBrainHit,brainProblem,scoreBrain,brainReveal} from '../src/anatomyActivities.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -70,7 +72,7 @@ const sessions = new Map();
 function completionCount(session, index=session.currentQuestionIndex) {
  const q=session.questions[index];
  if(q?.type==='text')return 0;
- if(['pointmap','matching','simulation','research'].includes(q?.type))return (session.spatialSubmissions?.[index]||[]).length;
+ if(['pointmap','matching','simulation','research','brain'].includes(q?.type))return (session.spatialSubmissions?.[index]||[]).length;
  if(q?.type==='curve')return (session.curveSubmissions?.[index]||[]).length;
  if(q?.type==='wordcloud')return new Set((session.wordCloudSubmissions?.[index]||[]).map(x=>x.participantId).filter(Boolean)).size;
  return session.participants.filter(p=>p.answers[index]!==undefined).length;
@@ -79,7 +81,7 @@ function completionPayload(session) {return {questionIndex:session.currentQuesti
 function textState(session){const q=session.questions[session.currentQuestionIndex];return {questionIndex:session.currentQuestionIndex,visibleLines:textLines(q).slice(0,session.textVisible||0),textTotal:textLines(q).length};}
 function broadcastText(session){io.to(session.code).emit('text_reveal_updated',textState(session));}
 function thumbsState(session){return {questionIndex:session.currentQuestionIndex,...reactionSummary(session.thumbVotes)};}
-function spatialResults(session,index=session.currentQuestionIndex){const q=session.questions[index];if(!['pointmap','matching','simulation','research'].includes(q?.type))return {};const entries=session.spatialSubmissions?.[index]||[];if(q.type==='research')return {...revealResearch(q),researchResults:entries.map(({participantId,label,color,response,pointsEarned,correctCount,total,isCorrect})=>({label,color,response,pointsEarned,correctCount,total,isCorrect}))};if(q.type==='simulation')return {simulationResults:entries.map(({participantId,label,color,response})=>({label,color,response}))};return q.type==='pointmap'?{mapResults:entries.map(({participantId,...r})=>r),mapTarget:q.mapGraded?q.mapTarget:undefined,mapRadius:q.mapGraded?q.mapRadius:undefined}:{matchResults:entries.map(({participantId,...r})=>r),matchKey:matchKey(q)};}
+function spatialResults(session,index=session.currentQuestionIndex){const q=session.questions[index];if(!['pointmap','matching','simulation','research','brain'].includes(q?.type))return {};const entries=session.spatialSubmissions?.[index]||[];if(q.type==='brain')return {...brainReveal(q),brainResults:entries.map(({participantId,label,color,response,isCorrect,pointsEarned})=>({label,color,response,isCorrect,pointsEarned}))};if(q.type==='research')return {...revealResearch(q),researchResults:entries.map(({participantId,label,color,response,pointsEarned,correctCount,total,isCorrect})=>({label,color,response,pointsEarned,correctCount,total,isCorrect}))};if(q.type==='simulation')return {simulationResults:entries.map(({participantId,label,color,response})=>({label,color,response}))};return q.type==='pointmap'?{mapResults:entries.map(({participantId,...r})=>r),mapTarget:q.mapGraded?q.mapTarget:undefined,mapRadius:q.mapGraded?q.mapRadius:undefined}:{matchResults:entries.map(({participantId,...r})=>r),matchKey:matchKey(q)};}
 function resetActivityUI(session){session.textVisible=initialTextCount(session.questions[session.currentQuestionIndex]);session.thumbVotes={};}
 
 
@@ -125,7 +127,7 @@ function calculateSessionAnalytics(session) {
       }
     });
 
-    if (['curve','wordcloud','text','pointmap','matching','simulation','research'].includes(q.type)) answeredCount = completionCount(session,qIndex);
+    if (['curve','wordcloud','text','pointmap','matching','simulation','research','brain'].includes(q.type)) answeredCount = completionCount(session,qIndex);
     const notAnsweredCount = totalParticipants - answeredCount;
     const accuracyPct = totalParticipants > 0 ? Math.round((correctCount / totalParticipants) * 100) : 0;
     const avgResponseTimeMs = answeredCount > 0 ? Math.round(totalResponseTime / answeredCount) : 0;
@@ -147,7 +149,7 @@ function calculateSessionAnalytics(session) {
       answeredCount,
       notAnsweredCount,
       correctCount,
-      incorrectCount: (['curve','wordcloud','text','simulation'].includes(q.type)||(q.type==='pointmap'&&!q.mapGraded)||(q.type==='research'&&!q.researchGraded)) ? 0 : answeredCount - correctCount,
+      incorrectCount: (['curve','wordcloud','text','simulation'].includes(q.type)||(q.type==='pointmap'&&!q.mapGraded)||(q.type==='research'&&!q.researchGraded)||(q.type==='brain'&&!q.brainGraded)) ? 0 : answeredCount - correctCount,
       type: q.type || 'mcq',
       accuracyPct,
       avgResponseTimeMs,
@@ -395,6 +397,8 @@ io.on('connection', (socket) => {
     try {
       const code = (sessionCode || `DW-${Math.floor(1000 + Math.random() * 9000)}`).toUpperCase();
       const questionSet = ((customQuestions && customQuestions.length > 0) ? customQuestions : defaultQuestions).map(q => ({...q, beforeMedia: safeMedia(q.beforeMedia), afterMedia: safeMedia(q.afterMedia),mapImage:safeMedia(q.mapImage),...(q.type==='simulation'?simulationConfig(q):{}),...(q.type==='research'?normalizeResearch(q):{})}));
+      if(questionSet.some(q=>q.type==='brain'&&brainProblem(q)))return callback&&callback({success:false,error:'Check anatomy activity settings before presenting.'});
+      for(const q of questionSet)if(q.type==='brain')Object.assign(q,normalizeBrain(q));
       if(questionSet.some(q=>q.type==='research'&&researchProblem(q)))return callback&&callback({success:false,error:'Check research activity settings before presenting.'});
 
       const newSession = {
@@ -756,7 +760,7 @@ io.on('connection', (socket) => {
     if(session.questionState==='revealed')return;
     session.questionState = 'revealed';
     const index=session.currentQuestionIndex,q0=session.questions[index];
-    if(['pointmap','matching','research'].includes(q0?.type))for(const entry of session.spatialSubmissions?.[index]||[]){const p=session.participants.find(p=>p.id===entry.participantId);if(!p||p.answers[index])continue;const result=q0.type==='pointmap'?scoreMap(q0,entry.point):q0.type==='research'?scoreResearch(q0,entry.response):scoreMatch(q0,entry.selection);Object.assign(entry,result);p.score+=result.pointsEarned;p.answers[index]={...result,selectedOption:null,spatial:true,responseTimeMs:entry.responseTimeMs};}
+    if(['pointmap','matching','research','brain'].includes(q0?.type))for(const entry of session.spatialSubmissions?.[index]||[]){const p=session.participants.find(p=>p.id===entry.participantId);if(!p||p.answers[index])continue;const result=q0.type==='pointmap'?scoreMap(q0,entry.point):q0.type==='research'?scoreResearch(q0,entry.response):q0.type==='brain'?scoreBrain(q0,entry.response):scoreMatch(q0,entry.selection);Object.assign(entry,result);p.score+=result.pointsEarned;p.answers[index]={...result,selectedOption:null,spatial:true,responseTimeMs:entry.responseTimeMs};}
     updateSessionRankings(session);
 
     const analytics = calculateSessionAnalytics(session);
@@ -800,7 +804,7 @@ io.on('connection', (socket) => {
     }
 
     const q = session.questions[questionIndex];
-    if (questionIndex !== session.currentQuestionIndex || !q || ['curve','text','wordcloud','pointmap','matching','simulation','research'].includes(q.type) || !Number.isInteger(selectedOption) || selectedOption < 0 || selectedOption >= (q.options?.length || 0)) return callback && callback({success:false,error:'Invalid or inactive question.'});
+    if (questionIndex !== session.currentQuestionIndex || !q || ['curve','text','wordcloud','pointmap','matching','simulation','research','brain'].includes(q.type) || !Number.isInteger(selectedOption) || selectedOption < 0 || selectedOption >= (q.options?.length || 0)) return callback && callback({success:false,error:'Invalid or inactive question.'});
     const isCorrect = (selectedOption === q.correctAnswer);
 
     let basePoints = isCorrect ? 100 : 0;
@@ -860,12 +864,12 @@ io.on('connection', (socket) => {
     const session=sessions.get(sessionCode);
     if(!session||session.status!=='running'||session.questionState!=='active'||questionIndex!==session.currentQuestionIndex)return reply({success:false,error:'This activity is closed.'});
     const q=session.questions[questionIndex],index=session.participants.findIndex(p=>p.socketId===socket.id&&p.connected);
-    if(index<0||!['pointmap','matching','simulation','research'].includes(q?.type))return reply({success:false,error:'Join the active session first.'});
+    if(index<0||!['pointmap','matching','simulation','research','brain'].includes(q?.type))return reply({success:false,error:'Join the active session first.'});
     const participantId=session.participants[index].id,entries=(session.spatialSubmissions||={})[questionIndex]||=[];
     if(entries.some(r=>r.participantId===participantId))return reply({success:false,error:'Already submitted.'});
-    const value=q.type==='pointmap'?normalizePoint(response):q.type==='simulation'?normalizeSimulation(q.simKind,response):q.type==='research'?normalizeResearchResponse(q,response):normalizeMatch(q,response);
+    const value=q.type==='pointmap'?normalizePoint(response):q.type==='simulation'?normalizeSimulation(q.simKind,response):q.type==='research'?normalizeResearchResponse(q,response):q.type==='brain'?normalizeBrainHit(q,response):normalizeMatch(q,response);
     if(!value||(q.type==='pointmap'&&q.mapGraded&&!validTarget(q)))return reply({success:false,error:'Invalid response or target configuration.'});
-    entries.push({participantId,...curveIdentity(index),...(q.type==='pointmap'?{point:value}:['simulation','research'].includes(q.type)?{response:value}:{selection:value}),responseTimeMs:Math.max(0,Date.now()-(session.questionStartTime||Date.now()))});
+    entries.push({participantId,...curveIdentity(index),...(q.type==='pointmap'?{point:value}:['simulation','research','brain'].includes(q.type)?{response:value}:{selection:value}),responseTimeMs:Math.max(0,Date.now()-(session.questionStartTime||Date.now()))});
     reply({success:true});io.to(session.code).emit('live_answer_count',completionPayload(session));
   });
   socket.on('submit_curve', ({sessionCode, questionIndex, points} = {}, callback) => {
@@ -934,7 +938,7 @@ io.on('connection', (socket) => {
 
     const current=session.questions[session.currentQuestionIndex];
     if(current?.type==='text' && (session.textVisible||0)<textLines(current).length){if(socket.id===session.trainerSocketId){session.textVisible++;broadcastText(session);}return;}
-    if(['pointmap','matching','simulation','research'].includes(current?.type)&&session.questionState==='active'){if(socket.id===session.trainerSocketId){if(session.timerInterval)clearInterval(session.timerInterval);session.timerInterval=null;autoCloseQuestion(session);}return;}
+    if(['pointmap','matching','simulation','research','brain'].includes(current?.type)&&session.questionState==='active'){if(socket.id===session.trainerSocketId){if(session.timerInterval)clearInterval(session.timerInterval);session.timerInterval=null;autoCloseQuestion(session);}return;}
     if (!session.completedQuestions.includes(session.currentQuestionIndex)) {
       session.completedQuestions.push(session.currentQuestionIndex);
     }
@@ -1318,7 +1322,7 @@ io.on('connection', (socket) => {
 
     if (participantObj) {
       payload.participant = participantObj;
-      if (['pointmap','matching','simulation','research'].includes(currQ?.type)) payload.isAnswerSubmitted=(session.spatialSubmissions?.[session.currentQuestionIndex]||[]).some(c=>c.participantId===participantObj.id);
+      if (['pointmap','matching','simulation','research','brain'].includes(currQ?.type)) payload.isAnswerSubmitted=(session.spatialSubmissions?.[session.currentQuestionIndex]||[]).some(c=>c.participantId===participantObj.id);
       if (currQ?.type === 'curve') payload.isAnswerSubmitted = (session.curveSubmissions?.[session.currentQuestionIndex] || []).some(c=>c.participantId===participantObj.id);
       const ans = participantObj.answers[session.currentQuestionIndex];
       if (ans) {

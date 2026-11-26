@@ -1,3 +1,4 @@
+import {publicBrain} from './anatomyActivities.js';
 import { publicResearch } from './researchActivities.js';
 import { simulationConfig } from './simulations.js';
 import { matchChoices } from './spatialActivities.js';
@@ -15,7 +16,7 @@ export function normalizeCurve(points) {
   return points.map(p => p.map(v => Math.round(v*10000)/10000));
 }
 export function publicActivity(q, visible=initialTextCount(q)) {
-  return {type:q.type || 'mcq', ...(q.type==='simulation'?simulationConfig(q):{}), ...(q.type==='research'?publicResearch(q):{}), mapImage:q.type==='pointmap'?safeMedia(q.mapImage):undefined,mapWidth:q.mapWidth,mapHeight:q.mapHeight,mapGraded:q.mapGraded,matchLeft:q.type==='matching'?(q.matchPairs||[]).map(p=>p.left):undefined,matchChoices:q.type==='matching'?matchChoices(q):undefined, timerSeconds:q.timerSeconds, revealMode:q.revealMode, visibleLines:q.type==='text'?textLines(q).slice(0,visible):undefined, textTotal:q.type==='text'?textLines(q).length:undefined, xLabel:q.xLabel, yLabel:q.yLabel, xTicks:q.xTicks, stressMarker:q.stressMarker, sequenceTitle:q.sequenceTitle, sequenceStep:q.sequenceStep, sequenceTotal:q.sequenceTotal, beforeMedia:q.beforeMedia, beforePreset:q.beforePreset};
+  return {type:q.type || 'mcq', ...(q.type==='simulation'?simulationConfig(q):{}), ...(q.type==='research'?publicResearch(q):{}), ...(q.type==='brain'?publicBrain(q):{}), mapImage:q.type==='pointmap'?safeMedia(q.mapImage):undefined,mapWidth:q.mapWidth,mapHeight:q.mapHeight,mapGraded:q.mapGraded,matchLeft:q.type==='matching'?(q.matchPairs||[]).map(p=>p.left):undefined,matchChoices:q.type==='matching'?matchChoices(q):undefined, timerSeconds:q.timerSeconds, revealMode:q.revealMode, visibleLines:q.type==='text'?textLines(q).slice(0,visible):undefined, textTotal:q.type==='text'?textLines(q).length:undefined, xLabel:q.xLabel, yLabel:q.yLabel, xTicks:q.xTicks, stressMarker:q.stressMarker, sequenceTitle:q.sequenceTitle, sequenceStep:q.sequenceStep, sequenceTotal:q.sequenceTotal, beforeMedia:q.beforeMedia, beforePreset:q.beforePreset};
 }
 export function safeMedia(value) {
   if (typeof value !== 'string' || value.length > 500000) return '';

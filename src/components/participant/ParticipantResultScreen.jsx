@@ -1,3 +1,4 @@
+import {BrainResults} from '../common/BrainActivity';
 import {ResearchResults} from '../common/ResearchActivity';
 import {SimulationResults} from '../common/SimulationActivity';
 import {SpatialResults} from '../common/SpatialActivity';
@@ -38,6 +39,7 @@ export default function ParticipantResultScreen() {
   const speedBonus = lastAnswerResult?.speedBonus ?? 0;
   const pointsEarned = lastAnswerResult?.pointsEarned ?? (basePoints + speedBonus);
 
+  if(currentQuestion?.type==='brain')return <div className="pb-24"><BrainResults question={currentQuestion} result={revealData} revealed participant/><ReactionActionBar/></div>;
   if(currentQuestion?.type==='research')return <div className="pb-24"><ResearchResults question={currentQuestion} result={revealData} revealed participant/><ReactionActionBar/></div>;
   if(currentQuestion?.type==='simulation')return <div className="pb-24"><SimulationResults question={currentQuestion} result={revealData} revealed participant/><ReactionActionBar/></div>;
   if(['pointmap','matching'].includes(currentQuestion?.type))return <div className="pb-24"><SpatialResults question={currentQuestion} result={revealData} revealed participant/><ReactionActionBar/></div>;

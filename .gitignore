@@ -38,3 +38,7 @@ branch_structure.json
 temp_auto_push.bat
 temp_interactive_push.bat
 config.bat
+
+# Generated, version-pinned anatomy assets
+/public/atlas/brain.glb
+/public/atlas/draco/

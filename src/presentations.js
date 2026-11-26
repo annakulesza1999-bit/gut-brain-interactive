@@ -1,3 +1,4 @@
+import {brainProblem} from './anatomyActivities.js';
 import {researchProblem} from './researchActivities.js';
 import { SIM_KINDS } from './simulations.js';
 import {validTarget,validPairs} from './spatialActivities.js';
@@ -6,7 +7,7 @@ export const FORMAT='gut-mind-presentation';
 export const SCHEMA_VERSION=1;
 export const HISTORY_LIMIT=10;
 export const DEFAULT_SETTINGS={timerDuration:30,speedBonus:false,showTopic:false};
-export const SUPPORTED_TYPES=['mcq','wordcloud','sequence','curve','text','pointmap','matching','simulation','research'];
+export const SUPPORTED_TYPES=['mcq','wordcloud','sequence','curve','text','pointmap','matching','simulation','research','brain'];
 const copy=value=>JSON.parse(JSON.stringify(value));
 export const blankSlide=()=>({id:1,type:'text',question:'New presentation',body:'Add your first point here.',revealMode:'all',options:[],correctAnswer:null});
 export function normalizeContent(input) {
@@ -43,6 +44,7 @@ export function snapshot(history,content,label,at=new Date().toISOString()){
 export function launchProblem(content){
  for(const [i,q] of content.questions.entries()){
   if(!SUPPORTED_TYPES.includes(q.type||'mcq'))return 'Slide '+(i+1)+' uses an activity not supported by this app version. Its data is preserved.';
+  if(q.type==='brain'&&brainProblem(q))return 'Slide '+(i+1)+': '+brainProblem(q);
   if(q.type==='research'&&researchProblem(q))return 'Slide '+(i+1)+': '+researchProblem(q);
   if(q.type==='simulation'&&!SIM_KINDS.includes(q.simKind))return 'Choose a simulation model on slide '+(i+1)+'.';
   if(q.type==='pointmap'&&q.mapGraded&&!validTarget(q))return 'Set a valid target on slide '+(i+1)+'.';
