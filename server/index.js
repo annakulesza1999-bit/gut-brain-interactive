@@ -104,6 +104,15 @@ function textState(session){const q=session.questions[session.currentQuestionInd
 function broadcastText(session){io.to(session.code).emit('text_reveal_updated',textState(session));}
 function thumbsState(session){return {questionIndex:session.currentQuestionIndex,...reactionSummary(session.thumbVotes)};}
 function spatialResults(session,index=session.currentQuestionIndex){const q=session.questions[index];if(!['pointmap','matching','simulation','research','brain'].includes(q?.type))return {};const entries=session.spatialSubmissions?.[index]||[];if(q.type==='brain')return {...brainReveal(q),brainResults:entries.map(({participantId,label,color,response,isCorrect,pointsEarned})=>({label,color,response,isCorrect,pointsEarned}))};if(q.type==='research')return {...revealResearch(q),researchResults:entries.map(({participantId,label,color,response,pointsEarned,correctCount,total,isCorrect})=>({label,color,response,pointsEarned,correctCount,total,isCorrect}))};if(q.type==='simulation')return {simulationResults:entries.map(({participantId,label,color,response})=>({label,color,response}))};return q.type==='pointmap'?{mapResults:entries.map(({participantId,...r})=>r),mapTarget:q.mapGraded?q.mapTarget:undefined,mapRadius:q.mapGraded?q.mapRadius:undefined}:{matchResults:entries.map(({participantId,...r})=>r),matchKey:matchKey(q)};}
+function liveSnapshot(session){
+ const i=session.currentQuestionIndex,q=session.questions[i];if(!q||q.resultsMode==='reveal'||q.type==='text')return null;
+ const fields={pointmap:['mapResults','point'],matching:['matchResults','selection'],simulation:['simulationResults','response'],research:['researchResults','response'],brain:['brainResults','response']};
+ if(q.type==='curve')return {curves:(session.curveSubmissions?.[i]||[]).map(({label,color,points})=>({label,color,points}))};
+ if(q.type==='wordcloud')return {words:(session.wordCloudSubmissions?.[i]||[]).map(({text})=>text)};
+ if(fields[q.type]){const [key,field]=fields[q.type];return {[key]:(session.spatialSubmissions?.[i]||[]).map(e=>({label:e.label,color:e.color,[field]:e[field]}))};}
+ const n=completionCount(session,i);return {optionDist:(q.options||[]).map((_,j)=>{const count=session.participants.filter(p=>p.answers[i]?.selectedOption===j).length;return {count,pct:n?Math.round(count/n*100):0};})};
+}
+function publishLive(session){const data=liveSnapshot(session);if(data&&session.trainerSocketId)io.to(session.trainerSocketId).emit('live_results',{questionIndex:session.currentQuestionIndex,data});}
 function resetActivityUI(session){session.textVisible=initialTextCount(session.questions[session.currentQuestionIndex]);session.thumbVotes={};}
 
 
@@ -480,6 +489,7 @@ io.on('connection', (socket) => {
           answeredCount: completionCount(session),
           totalParticipants: session.participants.length
         },
+        liveResults:liveSnapshot(session),
         analytics
       };
 
@@ -670,6 +680,7 @@ io.on('connection', (socket) => {
       totalParticipants: session.participants.length
     });
 
+    publishLive(session);
     if (callback) {
       callback({
         success: true,
@@ -694,7 +705,7 @@ io.on('connection', (socket) => {
     const value=q.type==='pointmap'?normalizePoint(response):q.type==='simulation'?normalizeSimulation(q.simKind,response):q.type==='research'?normalizeResearchResponse(q,response):q.type==='brain'?normalizeBrainHit(q,response):normalizeMatch(q,response);
     if(!value||(q.type==='pointmap'&&q.mapGraded&&!validTarget(q)))return reply({success:false,error:'Invalid response or target configuration.'});
     entries.push({participantId,...curveIdentity(index),...(q.type==='pointmap'?{point:value}:['simulation','research','brain'].includes(q.type)?{response:value}:{selection:value}),responseTimeMs:Math.max(0,Date.now()-(session.questionStartTime||Date.now()))});
-    reply({success:true});io.to(session.code).emit('live_answer_count',completionPayload(session));
+    reply({success:true});io.to(session.code).emit('live_answer_count',completionPayload(session));publishLive(session);
   });
   socket.on('submit_curve', ({sessionCode, questionIndex, points} = {}, callback) => {
     const reply = typeof callback === 'function' ? callback : () => {};
@@ -709,7 +720,7 @@ io.on('connection', (socket) => {
     if (entries.some(c=>c.participantId===participantId)) return reply({success:false,error:'Prediction already submitted.'});
     entries.push({participantId,...curveIdentity(index),points:normalized});
     reply({success:true});
-    io.to(session.code).emit('live_answer_count',{questionIndex,answeredCount:entries.length,totalParticipants:session.participants.length});
+    io.to(session.code).emit('live_answer_count',{questionIndex,answeredCount:entries.length,totalParticipants:session.participants.length});publishLive(session);
   });
 
   socket.on('reset_thumbs', ({sessionCode}={}) => {
@@ -1029,21 +1040,9 @@ io.on('connection', (socket) => {
     const currentWords = session.wordCloudSubmissions[qIdx].map(({text,timestamp})=>({text,timestamp}));
     io.to(session.code).emit('live_answer_count',completionPayload(session));
 
-    // Compute word map frequencies
-    const wordMap = {};
-    currentWords.forEach(w => {
-      const u = w.text.toUpperCase();
-      wordMap[u] = (wordMap[u] || 0) + 1;
-    });
+    publishLive(session);
+    if(callback)callback({success:true});
 
-    io.to(session.code).emit('word_cloud_updated', {
-      questionIndex: qIdx,
-      words: currentWords,
-      wordMap,
-      totalResponses: currentWords.length
-    });
-
-    if (callback) callback({ success: true, words: currentWords, wordMap, totalResponses: currentWords.length });
   };
 
   socket.on('submit_word_cloud', handleWordCloudSubmit);
@@ -1104,7 +1103,8 @@ io.on('connection', (socket) => {
         totalParticipants: session.participants.length
       },
       qaQuestions: session.qaQuestions || [],
-      wordCloudWords: (session.wordCloudSubmissions?.[session.currentQuestionIndex] || []).map(({text,timestamp})=>({text,timestamp})),
+      liveResults:isTrainer?liveSnapshot(session):undefined,
+      wordCloudWords: session.questionState==='revealed'?(session.wordCloudSubmissions?.[session.currentQuestionIndex] || []).map(({text,timestamp})=>({text,timestamp})):[],
       analytics:isTrainer?analytics:session.status==='finished'?{totalQuestions:analytics.totalQuestions,gradedQuestionCount:analytics.gradedQuestionCount,leaderboard:publicLeaderboard(session,participantObj.id)}:undefined
     };
 
@@ -1142,6 +1142,7 @@ io.on('connection', (socket) => {
       const currQA = analytics.questionAnalytics[session.currentQuestionIndex];
       payload.revealData = {
         ...spatialResults(session),
+        wordCloudWords:(session.wordCloudSubmissions?.[session.currentQuestionIndex]||[]).map(({text})=>text),
         questionIndex: session.currentQuestionIndex,
         correctAnswer: currQ.correctAnswer,
         curves: currQ.type === 'curve' ? (session.curveSubmissions?.[session.currentQuestionIndex] || []).map(({participantId,...curve})=>curve) : undefined,

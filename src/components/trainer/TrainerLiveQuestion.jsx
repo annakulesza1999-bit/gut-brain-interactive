@@ -4,7 +4,7 @@ import {SimulationResults} from '../common/SimulationActivity';
 import React, { useState } from 'react';
 import {SpatialResults} from '../common/SpatialActivity';
 import TextSlide from '../common/TextSlide';
-import {textLines} from '../../activities.js';
+import {textLines,liveResultsEnabled} from '../../activities.js';
 import {CurveResults} from '../common/CurveActivity';
 import SequenceMedia, {SequenceHeading} from '../common/SequenceMedia';
 import { useQuiz } from '../../context/QuizContext';
@@ -44,7 +44,7 @@ export default function TrainerLiveQuestion() {
     timeRemaining,
     timerDuration,activeDuration,textVisible,thumbs,resetThumbs,revealTextLine,
     showTopic,
-    revealData,
+    revealData,liveResults,
     liveAnswerCount,
     participants,
     leaderboard,
@@ -91,6 +91,7 @@ export default function TrainerLiveQuestion() {
   const totalParticipantsCount = participants.length || liveAnswerCount.totalParticipants;
   const answeredCount = liveAnswerCount.answeredCount;
   const isRevealed = questionState === 'revealed' || questionState === 'closed';
+  const showResults=isRevealed||liveResultsEnabled(currentQuestion),liveData=liveResults?.questionIndex===currentQuestionIndex?liveResults.data:null,result=isRevealed?revealData:showResults?liveData:null;
   const hasHiddenText=currentQuestion?.type==='text' && textVisible<textLines(currentQuestion).length;
 
   // Global Trainer Keyboard Shortcuts (Space/ArrowRight=Next, R=Reveal, L=Leaderboard, P=Pause/Resume, M=Mute, Q=Q&A)
@@ -247,10 +248,10 @@ export default function TrainerLiveQuestion() {
           leaderboard={leaderboard}
           onClose={() => setViewMode('question')}
         />
-      ) : currentQuestion.type==='brain'?<BrainResults key={currentQuestionIndex} question={currentQuestion} result={revealData} revealed={isRevealed} count={answeredCount}/> : currentQuestion.type==='research'?<ResearchResults key={currentQuestionIndex} question={currentQuestion} result={revealData} revealed={isRevealed} count={answeredCount}/> : currentQuestion.type==='simulation'? <SimulationResults key={currentQuestionIndex} question={currentQuestion} result={revealData} revealed={isRevealed} count={answeredCount}/> : ['pointmap','matching'].includes(currentQuestion.type) ? <SpatialResults key={currentQuestionIndex} question={currentQuestion} result={revealData} revealed={isRevealed} count={answeredCount}/> : currentQuestion.type === 'text' ? <TextSlide question={currentQuestion} visible={textVisible} presenter/> : currentQuestion.type === 'curve' ? <CurveResults key={currentQuestionIndex} question={currentQuestion} curves={revealData?.curves||[]} revealed={isRevealed} count={answeredCount}/> : currentQuestion.type === 'wordcloud' ? (
+      ) : currentQuestion.type==='brain'?<BrainResults key={currentQuestionIndex} question={currentQuestion} result={result} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : currentQuestion.type==='research'?<ResearchResults key={currentQuestionIndex} question={currentQuestion} result={result} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : currentQuestion.type==='simulation'? <SimulationResults key={currentQuestionIndex} question={currentQuestion} result={result} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : ['pointmap','matching'].includes(currentQuestion.type) ? <SpatialResults key={currentQuestionIndex} question={currentQuestion} result={result} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : currentQuestion.type === 'text' ? <TextSlide question={currentQuestion} visible={textVisible} presenter/> : currentQuestion.type === 'curve' ? <CurveResults key={currentQuestionIndex} question={currentQuestion} curves={result?.curves||[]} revealed={isRevealed} showResults={showResults} count={answeredCount}/> : currentQuestion.type === 'wordcloud' ? (
         <WordCloudDisplay
-          words={wordCloudWords}
-          totalResponses={wordCloudWords.length}
+          words={showResults?(liveData?.words||revealData?.wordCloudWords||wordCloudWords):[]}
+          totalResponses={showResults?(liveData?.words||revealData?.wordCloudWords||wordCloudWords).length:0} hidden={!showResults}
         />
       ) : (
         <div className="space-y-6">
@@ -279,6 +280,7 @@ export default function TrainerLiveQuestion() {
                     </div>
                     <span className="text-base sm:text-lg font-semibold text-slate-100">
                       {opt}
+                      {showResults&&<span className="block mt-2 text-sm text-slate-400">{liveData?.optionDist?.[idx]?.count||0} · {liveData?.optionDist?.[idx]?.pct||0}%<span className="block h-2 mt-1 rounded-full bg-slate-800"><span className="block h-2 rounded-full bg-[#9B88AA] transition-all" style={{width:(liveData?.optionDist?.[idx]?.pct||0)+'%'}}/></span></span>}
                     </span>
                   </div>
                 );

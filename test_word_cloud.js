@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {wordFrequencies,layoutWords} from './src/wordCloudLayout.js';
+import {liveResultsEnabled} from './src/activities.js';
+test('frequency counts normalize case and spacing, including prototype property names',()=>{const stats=wordFrequencies([' Stress ','stress','RECOVERY','__proto__','constructor',{text:'recovery'}]);assert.equal(stats.length,4);assert.equal(stats.find(x=>x.key==='stress').count,2);assert.equal(stats.find(x=>x.key==='recovery').count,2);});
+test('packed word layout is deterministic, in bounds and non-overlapping',()=>{const stats=wordFrequencies(['stress','stress','stress','coping','coping','appraisal','sleep','support','recovery','exercise','perceived control','gut–brain axis','preparation','cortisol','microbiome']);const measure=(text,size)=>text.length*size*.57;const a=layoutWords(stats,measure);assert.equal(a.length,stats.length);assert.deepEqual(a,layoutWords(stats,measure));assert.ok(a[0].size>a.at(-1).size);for(let i=0;i<a.length;i++){const x=a[i];assert.ok(x.x-x.w/2>=12&&x.x+x.w/2<=888&&x.y-x.h/2>=12&&x.y+x.h/2<=448);for(const y of a.slice(i+1))assert.ok(Math.abs(x.x-y.x)>=(x.w+y.w)/2+5||Math.abs(x.y-y.y)>=(x.h+y.h)/2+5);}});
+test('existing slides default to live, explicit reveal overrides',()=>{assert.equal(liveResultsEnabled({}),true);assert.equal(liveResultsEnabled({resultsMode:'live'}),true);assert.equal(liveResultsEnabled({resultsMode:'reveal'}),false);});

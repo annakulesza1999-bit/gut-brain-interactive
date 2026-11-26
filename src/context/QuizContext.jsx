@@ -49,6 +49,7 @@ export function QuizProvider({ children }) {
   
   // Live reveal data
   const [revealData, setRevealData] = useState(null);
+  const [liveResults,setLiveResults]=useState(null);
   const [liveAnswerCount, setLiveAnswerCount] = useState({ answeredCount: 0, totalParticipants: 0 });
   
   // Server connection info
@@ -118,6 +119,7 @@ export function QuizProvider({ children }) {
           setCurrentQuestion(res.currentQuestion);
         }
 
+        setLiveResults(res.liveResults?{questionIndex:res.currentQuestionIndex,data:res.liveResults}:null);
         if (res.liveAnswerCount) {
           setLiveAnswerCount(res.liveAnswerCount);
         }
@@ -179,7 +181,7 @@ export function QuizProvider({ children }) {
       setSelectedOption(null);
       setIsAnswerSubmitted(false);
       setLastAnswerResult(null);
-      setRevealData(null);
+      setRevealData(null);setLiveResults(null);
       setQuestionStartTime(Date.now());
       setLiveAnswerCount({answeredCount:0,totalParticipants:0});
       if (data.question) {
@@ -219,11 +221,12 @@ export function QuizProvider({ children }) {
       setSelectedOption(null);
       setIsAnswerSubmitted(false);
       setLastAnswerResult(null);
-      setRevealData(null);
+      setRevealData(null);setLiveResults(null);
       setLiveAnswerCount({answeredCount:0,totalParticipants:0});
       setWordCloudWords([]);
     };
 
+    const handleLiveResults=payload=>setLiveResults(payload);
     const handleLiveAnswerCount = (data) => {
       setLiveAnswerCount({
         answeredCount: data.answeredCount,
@@ -269,7 +272,7 @@ export function QuizProvider({ children }) {
       setSelectedOption(null);
       setIsAnswerSubmitted(false);
       setLastAnswerResult(null);
-      setRevealData(null);
+      setRevealData(null);setLiveResults(null);
       setAnalytics(null);
       setLeaderboard([]);
       setWordCloudWords([]);
@@ -311,6 +314,7 @@ export function QuizProvider({ children }) {
     socket.on('participant_question', handleParticipantQuestion);
     socket.on('question_changed', handleQuestionChanged);
     socket.on('live_answer_count', handleLiveAnswerCount);
+    socket.on('live_results',handleLiveResults);
     socket.on('answer_revealed', handleAnswerRevealed);
     socket.on('private_answer_result',handlePrivateAnswer);
     socket.on('display_leaderboard', handleDisplayLeaderboard);
@@ -340,6 +344,7 @@ export function QuizProvider({ children }) {
       socket.off('participant_question', handleParticipantQuestion);
       socket.off('question_changed', handleQuestionChanged);
       socket.off('live_answer_count', handleLiveAnswerCount);
+      socket.off('live_results',handleLiveResults);
       socket.off('answer_revealed', handleAnswerRevealed);
       socket.off('private_answer_result',handlePrivateAnswer);
       socket.off('display_leaderboard', handleDisplayLeaderboard);
@@ -408,6 +413,7 @@ export function QuizProvider({ children }) {
         setTotalQuestions(res.totalQuestions || 20);
         if (res.participants) setParticipants(res.participants);
         if (res.currentQuestion) setCurrentQuestion(res.currentQuestion);
+        setLiveResults(res.liveResults?{questionIndex:res.currentQuestionIndex,data:res.liveResults}:null);
         if (res.liveAnswerCount) setLiveAnswerCount(res.liveAnswerCount);
         if (res.revealData) setRevealData(res.revealData);
         if (res.analytics) {
@@ -539,7 +545,7 @@ export function QuizProvider({ children }) {
     setSelectedOption(null);
     setIsAnswerSubmitted(false);
     setLastAnswerResult(null);
-    setRevealData(null);
+    setRevealData(null);setLiveResults(null);
     localStorage.removeItem('dw_role');
     localStorage.removeItem('dw_trainer_name');
     localStorage.removeItem('dw_participant_name');
@@ -657,7 +663,7 @@ export function QuizProvider({ children }) {
       selectedOption,
       isAnswerSubmitted,
       lastAnswerResult,
-      revealData,
+      revealData,liveResults,
       liveAnswerCount,
       connected,
       serverInfo,

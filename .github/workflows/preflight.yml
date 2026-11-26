@@ -24,7 +24,7 @@ jobs:
         id: install
         run: npm ci --ignore-scripts
       - name: Unit tests
-        run: node --test test_activities.js test_anatomy_activities.js test_presentations.js test_research_activities.js test_simulations.js test_spatial_activities.js
+        run: node --test test_activities.js test_anatomy_activities.js test_presentations.js test_research_activities.js test_simulations.js test_spatial_activities.js test_word_cloud.js
       - name: Prepare pinned anatomical model
         run: npm run prepare:atlas
       - name: Build frontend

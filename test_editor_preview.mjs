@@ -89,6 +89,8 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   await page.getByText('👍 1',{exact:true}).waitFor();
   await page.getByRole('button',{name:'Add demo responses'}).click();
   await page.getByRole('status').filter({hasText:'15/15 completed'}).waitFor();
+  await page.getByText('15 predictions',{exact:true}).waitFor(); // live, before reveal
+  assert.equal(await phone.getByText('15 predictions',{exact:true}).count(),0);
   await page.getByRole('button',{name:'Reveal results'}).click();
   await phone.getByText('15 predictions',{exact:true}).waitFor();
   await page.screenshot({path:out+'/05-presenter-and-phone.png'});
