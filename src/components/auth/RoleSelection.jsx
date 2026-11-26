@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export default function RoleSelection({ onSelectRole }) {
-  const { joinSession, errorMessage, setErrorMessage } = useQuiz();
+  const { joinSession, errorMessage, setErrorMessage,serverInfo } = useQuiz();
   
   // Instant Quick-Join Form State
   const [quickCode, setQuickCode] = useState(() => {
@@ -102,7 +102,7 @@ export default function RoleSelection({ onSelectRole }) {
                 </div>
                 <div>
                   <h2 className="text-lg sm:text-xl font-bold text-white">Join Live Session</h2>
-                  <p className="text-xs text-slate-400">Enter code to vote, answer questions & react</p>
+                  <p className="text-xs text-slate-400">{serverInfo?.pilot?'Use your private invitation link':'Enter code to vote, answer questions & react'}</p>
                 </div>
               </div>
               <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
@@ -118,7 +118,7 @@ export default function RoleSelection({ onSelectRole }) {
             )}
 
             {/* Quick Join Form */}
-            <form onSubmit={handleQuickJoin} className="space-y-4">
+            {serverInfo?.pilot?<p className="text-sm">Ask your presenter for the private invitation link. No account is needed.</p>:<form onSubmit={handleQuickJoin} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
                   Session code
@@ -144,7 +144,7 @@ export default function RoleSelection({ onSelectRole }) {
                 <span>{isJoining ? 'Connecting...' : 'Join session'}</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
-            </form>
+            </form>}
           </div>
 
           {/* Quick micro-interaction tester */}

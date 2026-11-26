@@ -236,7 +236,8 @@ export default function TrainerLogin({ onBack }) {
               type="text"
               required
               autoFocus={!name}
-              placeholder="e.g., Rishi Bharathi B T / Coach Dave"
+              aria-label="Presenter name"
+              placeholder="Presenter name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-medium transition-all"

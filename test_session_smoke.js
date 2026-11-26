@@ -4,6 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {createServer} from 'node:net';
+import {request} from 'node:http';
 import {once} from 'node:events';
 import {io} from 'socket.io-client';
 import {defaultPairs,matchKey} from './src/spatialActivities.js';
@@ -56,7 +57,7 @@ test('loopback session: '+N+' participants, all activity families, auth and priv
  {id:13,...researchTemplate('prediction','curve'),researchGraded:true,researchCorrect:0,timerSeconds:0,resultsMode:'reveal'}
  ];
  const simple=process.env.GM_SIMPLE_SCORING==='1';if(simple)for(const q of questions)q.scoringMode='simple';
- if(pilot){assert.equal((await ack(intruder,'create_session',{trainerName:'Intruder',customQuestions:questions})).success,false);assert.equal((await fetch(url+'/api/info',{headers:{Origin:'https://other.invalid'}})).status,403);assert.equal((await fetch(url+'/api/info',{headers:{Host:'other.invalid'}})).status,403);}
+ if(pilot){assert.equal((await ack(intruder,'create_session',{trainerName:'Intruder',customQuestions:questions})).success,false);assert.equal((await fetch(url+'/api/info',{headers:{Origin:'https://other.invalid'}})).status,403);assert.equal(await new Promise((resolve,reject)=>{const req=request(url+'/api/info',{headers:{Host:'other.invalid'}},res=>{res.resume();resolve(res.statusCode);});req.on('error',reject);req.end();}),403);const denied=io(url,{forceNew:true,reconnection:false,autoConnect:false,transports:['websocket'],extraHeaders:{Origin:'https://other.invalid'}});sockets.push(denied);const refusal=event(denied,'connect_error');denied.connect();await refusal;}
  const created=await ack(presenter,'create_session',{trainerName:'Synthetic presenter',customQuestions:questions,timerDuration:0,speedBonusEnabled:false,...(pilot?{presenterSecret}:{})});
  assert.ok(created.success,created.error);const sessionCode=created.sessionCode,invite=pilot?{inviteToken:created.inviteToken}:{};
  if(pilot){assert.match(created.inviteToken,/^[a-f0-9]{64}$/);assert.equal(created.joinUrl,url);assert.equal((await ack(intruder,'join_session',{sessionCode,nickname:'No invitation'})).success,false);assert.equal((await ack(presenter,'join_session',{sessionCode,nickname:'Wrong role',...invite})).success,false);}

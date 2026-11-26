@@ -54,6 +54,11 @@ jobs:
           npm install --save-exact --ignore-scripts --no-fund playwright@1.58.2
           npm audit --audit-level=low
           node node_modules/playwright/cli.js install --with-deps chromium
+      - name: Private pilot live browser verification (loopback only)
+        if: github.ref == 'refs/heads/deployment/private-pilot'
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/gm-browser/node_modules/playwright/index.mjs
+        run: node --test test_pilot_browser.mjs
       - name: Browser editor verification
         env:
           PLAYWRIGHT_MODULE: ${{ runner.temp }}/gm-browser/node_modules/playwright/index.mjs
