@@ -527,7 +527,7 @@ export function QuizProvider({ children }) {
     setTrainerName('');
     setParticipantName('');
     setParticipantPhone('');
-    socket.disconnect();socket.connect();
+    socket.emit('leave_session');
     setSessionCode('');
     setSessionStatus('ready');
     setCurrentQuestion(null);

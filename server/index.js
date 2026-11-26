@@ -1227,6 +1227,14 @@ io.on('connection', (socket) => {
     if (callback) callback(payload);
   });
 
+  // Explicit leave removes membership without a reconnect race. Tokens can restore the same identity.
+  socket.on('leave_session',()=>{
+    for(const session of sessions.values()){
+      if(session.trainerSocketId===socket.id){session.trainerSocketId=null;socket.leave(session.code);}
+      const p=participantFor(session,socket);
+      if(p){p.connected=false;p.socketId=null;socket.leave(session.code);io.to(session.code).emit('participants_updated',{participants:session.participants.map(publicParticipant),count:session.participants.length});}
+    }
+  });
   // Disconnect handler
   socket.on('disconnect', () => {
     sessions.forEach(session => {

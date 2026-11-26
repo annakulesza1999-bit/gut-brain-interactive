@@ -6,11 +6,13 @@ export default function ParticipantDetailModal({ participant, totalQuestions = 2
   if (!participant) return null;
 
   const answersObj = participant.answers || {};
-  const answeredCount = Object.keys(answersObj).length;
-  const correctCount = Object.values(answersObj).filter(a => a.isCorrect).length;
-  const incorrectCount = answeredCount - correctCount;
-  const unansweredCount = Math.max(0, totalQuestions - answeredCount);
-  const accuracyPct = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+  const gradedCount=questions.length?questions.filter(q=>q.graded!==false).length:totalQuestions;
+  const gradedAnswers=Object.values(answersObj).filter(a=>typeof a.isCorrect==='boolean');
+  const answeredCount=gradedAnswers.length;
+  const correctCount=gradedAnswers.filter(a=>a.isCorrect).length;
+  const incorrectCount=answeredCount-correctCount;
+  const unansweredCount=Math.max(0,gradedCount-answeredCount);
+  const accuracyPct=gradedCount>0?Math.round(correctCount/gradedCount*100):null;
 
   const times = Object.values(answersObj).map(a => a.responseTimeMs || 0).filter(t => t > 0);
   const avgResponseTimeSec = times.length > 0 
@@ -76,7 +78,7 @@ export default function ParticipantDetailModal({ participant, totalQuestions = 2
           <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
             <span className="text-[11px] uppercase font-semibold text-slate-400">Accuracy</span>
             <div className="font-mono text-2xl font-black text-emerald-400 mt-1">
-              {accuracyPct}%
+              {accuracyPct===null?'—':accuracyPct+'%'}
             </div>
           </div>
 

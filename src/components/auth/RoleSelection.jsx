@@ -196,7 +196,7 @@ export default function RoleSelection({ onSelectRole }) {
               </div>
 
               <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 flex items-center justify-between text-xs">
-                <span className="text-slate-400">Phone Remote Support:</span>
+                <span className="text-slate-400">Phone remote:</span>
                 <span className="text-blue-400 font-bold">Available</span>
               </div>
             </div>
