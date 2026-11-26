@@ -41,7 +41,7 @@ export default function ParticipantDetailModal({ participant, totalQuestions = 2
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800/80 hover:bg-slate-700 transition-colors"
+          className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-100 rounded-xl bg-slate-800/80 hover:bg-slate-700 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
@@ -53,7 +53,7 @@ export default function ParticipantDetailModal({ participant, totalQuestions = 2
           </div>
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-2xl font-black text-white">
+              <h2 className="text-2xl font-black text-slate-100">
                 {participant.name}
               </h2>
               <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
@@ -84,7 +84,7 @@ export default function ParticipantDetailModal({ participant, totalQuestions = 2
 
           <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
             <span className="text-[11px] uppercase font-semibold text-slate-400">Correct / Wrong</span>
-            <div className="font-mono text-xl font-black text-white mt-1">
+            <div className="font-mono text-xl font-black text-slate-100 mt-1">
               <span className="text-emerald-400">{correctCount}</span> / <span className="text-rose-400">{incorrectCount}</span>
             </div>
           </div>
@@ -170,7 +170,7 @@ export default function ParticipantDetailModal({ participant, totalQuestions = 2
                     {isAnswered ? (
                       <>
                         <span className="text-slate-400">
-                          Selected: <strong className="text-white">{optionLetters[ans.selectedOption]}</strong>
+                          Selected: <strong className="text-slate-100">{optionLetters[ans.selectedOption]}</strong>
                         </span>
                         <span className="font-bold text-blue-400">
                           +{ans.pointsEarned || 0} pts

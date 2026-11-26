@@ -99,13 +99,13 @@ export default function TrainerFinalResults() {
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold mb-3">
             <Trophy className="w-3.5 h-3.5" />
-            <span>Official Assessment Complete</span>
+            <span>Session complete</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-100 tracking-tight">
             🎉 Final Results & Performance Analytics
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Digi Warriors — Course 1 Day 1 &bull; Session <strong className="text-blue-400 font-mono">{sessionCode}</strong>
+            Gut &amp; Mind &bull; Session <strong className="text-blue-400 font-mono">{sessionCode}</strong>
           </p>
         </div>
 
@@ -113,7 +113,7 @@ export default function TrainerFinalResults() {
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
             onClick={() => exportParticipantsCsv(sessionCode, leaderboard, analytics?.gradedQuestionCount??totalQuestions)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-blue-500 text-slate-200 hover:text-white text-xs font-bold transition-all shadow"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-blue-500 text-slate-200 hover:text-slate-100 text-xs font-bold transition-all shadow"
           >
             <Download className="w-3.5 h-3.5 text-blue-400" />
             <span>Export Roster CSV</span>
@@ -121,7 +121,7 @@ export default function TrainerFinalResults() {
 
           <button
             onClick={() => exportQuestionsCsv(sessionCode, questionAnalytics)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500 text-slate-200 hover:text-white text-xs font-bold transition-all shadow"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500 text-slate-200 hover:text-slate-100 text-xs font-bold transition-all shadow"
           >
             <Download className="w-3.5 h-3.5 text-emerald-400" />
             <span>Export Questions CSV</span>
@@ -133,7 +133,7 @@ export default function TrainerFinalResults() {
                 restartQuiz();
               }
             }}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-500 text-slate-200 hover:text-white text-xs font-bold transition-all shadow"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-amber-500 text-slate-200 hover:text-slate-100 text-xs font-bold transition-all shadow"
           >
             <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
             <span>Restart Quiz</span>
@@ -161,7 +161,7 @@ export default function TrainerFinalResults() {
             <span className="text-xs uppercase font-semibold text-slate-400">Participants</span>
             <Users className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white font-mono">
+          <div className="text-2xl sm:text-3xl font-black text-slate-100 font-mono">
             {totalParticipants}
           </div>
           <div className="text-[11px] text-slate-400 mt-1">Completed Assessment</div>
@@ -224,7 +224,7 @@ export default function TrainerFinalResults() {
             </div>
             <div>
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Rank 2</span>
-              <h3 className="text-xl font-bold text-white truncate mt-1">
+              <h3 className="text-xl font-bold text-slate-100 truncate mt-1">
                 {top2.name}
               </h3>
               <div className="font-mono text-2xl font-black text-slate-300 mt-2">
@@ -246,16 +246,16 @@ export default function TrainerFinalResults() {
             </div>
             <div>
               <span className="text-xs font-extrabold uppercase tracking-wider text-amber-400">Champion &bull; Rank 1</span>
-              <h3 className="text-2xl font-black text-white truncate mt-1">
+              <h3 className="text-2xl font-black text-slate-100 truncate mt-1">
                 {top1.name}
               </h3>
               <div className="font-mono text-3xl font-black text-amber-400 mt-2">
-                {(top1.score || 0).toLocaleString()} <span className="text-xs font-sans text-amber-200/60 font-normal">pts</span>
+                {(top1.score || 0).toLocaleString()} <span className="text-xs font-sans text-amber-700 font-normal">pts</span>
               </div>
             </div>
             <button
               onClick={() => setSelectedParticipant(top1)}
-              className="mt-4 text-xs text-amber-300 hover:text-amber-200 font-bold"
+              className="mt-4 text-xs text-amber-300 hover:text-amber-700 font-bold"
             >
               View Full Profile &rarr;
             </button>
@@ -268,7 +268,7 @@ export default function TrainerFinalResults() {
             </div>
             <div>
               <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600">Rank 3</span>
-              <h3 className="text-xl font-bold text-white truncate mt-1">
+              <h3 className="text-xl font-bold text-slate-100 truncate mt-1">
                 {top3.name}
               </h3>
               <div className="font-mono text-2xl font-black text-amber-600 mt-2">
@@ -293,7 +293,7 @@ export default function TrainerFinalResults() {
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'overview'
               ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-              : 'bg-slate-900 text-slate-400 hover:text-white'
+              : 'bg-slate-900 text-slate-400 hover:text-slate-100'
           }`}
         >
           <Trophy className="w-3.5 h-3.5" />
@@ -305,7 +305,7 @@ export default function TrainerFinalResults() {
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'class_graph'
               ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-              : 'bg-slate-900 text-slate-400 hover:text-white'
+              : 'bg-slate-900 text-slate-400 hover:text-slate-100'
           }`}
         >
           <TrendingUp className="w-3.5 h-3.5" />
@@ -317,7 +317,7 @@ export default function TrainerFinalResults() {
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
             activeTab === 'categories'
               ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-              : 'bg-slate-900 text-slate-400 hover:text-white'
+              : 'bg-slate-900 text-slate-400 hover:text-slate-100'
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
@@ -329,7 +329,7 @@ export default function TrainerFinalResults() {
       {activeTab === 'overview' && (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl animate-fade-in">
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
-            <h2 className="text-lg font-bold text-white">
+            <h2 className="text-lg font-bold text-slate-100">
               All Participants ({leaderboard.length})
             </h2>
 
@@ -341,7 +341,7 @@ export default function TrainerFinalResults() {
                 placeholder="Search participant..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
               />
             </div>
           </div>
@@ -358,7 +358,7 @@ export default function TrainerFinalResults() {
                     {p.currentRank || idx + 1}
                   </div>
                   <div className="truncate">
-                    <span className="font-bold text-white text-sm">
+                    <span className="font-bold text-slate-100 text-sm">
                       {p.name}
                     </span>
                     <span className="text-xs text-slate-500 ml-2">
@@ -386,7 +386,7 @@ export default function TrainerFinalResults() {
       {activeTab === 'class_graph' && (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl animate-fade-in">
           <div className="mb-6">
-            <h2 className="text-lg font-bold text-white">
+            <h2 className="text-lg font-bold text-slate-100">
               Question-by-Question Class Accuracy
             </h2>
             <p className="text-xs text-slate-400 mt-1">
@@ -402,7 +402,7 @@ export default function TrainerFinalResults() {
                 <YAxis unit="%" domain={[0, 100]} stroke="#64748b" tick={{ fontSize: 12 }} />
                 <Tooltip
                   formatter={(value) => [`${value}% Accuracy`, 'Class Performance']}
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#FFFFFF', color: '#032138', borderColor: '#DCE5EC', borderRadius: '12px', fontSize: '12px' }}
                 />
                 <Line
                   type="monotone"
@@ -445,7 +445,7 @@ export default function TrainerFinalResults() {
       {activeTab === 'categories' && (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl animate-fade-in">
           <div className="mb-6">
-            <h2 className="text-lg font-bold text-white">
+            <h2 className="text-lg font-bold text-slate-100">
               Performance by Technical Category
             </h2>
             <p className="text-xs text-slate-400 mt-1">
@@ -458,10 +458,10 @@ export default function TrainerFinalResults() {
               <BarChart data={categoryAnalytics} layout="vertical" margin={{ left: 40, right: 30 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                 <XAxis type="number" domain={[0, 100]} unit="%" stroke="#64748b" tick={{ fontSize: 12 }} />
-                <YAxis dataKey="category" type="category" stroke="#cbd5e1" tick={{ fontSize: 12 }} width={120} />
+                <YAxis dataKey="category" type="category" stroke="#354D60" tick={{ fontSize: 12 }} width={120} />
                 <Tooltip
                   formatter={(value) => [`${value}% Accuracy`, 'Category Mastery']}
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: '#FFFFFF', color: '#032138', borderColor: '#DCE5EC', borderRadius: '12px', fontSize: '12px' }}
                 />
                 <Bar dataKey="accuracyPct" radius={[0, 8, 8, 0]}>
                   {categoryAnalytics.map((entry, index) => (
@@ -477,7 +477,7 @@ export default function TrainerFinalResults() {
             {categoryAnalytics.map((cat, idx) => (
               <div key={idx} className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-white">{cat.category}</span>
+                  <span className="text-xs font-bold text-slate-100">{cat.category}</span>
                   <span className="font-mono text-sm font-black text-blue-400">{cat.accuracyPct}%</span>
                 </div>
                 <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden mt-2">

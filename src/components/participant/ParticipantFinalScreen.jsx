@@ -75,13 +75,13 @@ export default function ParticipantFinalScreen() {
       <div className="text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold mb-3">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Official Assessment Report</span>
+          <span>Personal session results</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-black text-slate-100 tracking-tight">
           🎉 Great Work, {participantName}!
         </h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">
-          Digi Warriors — Performance Summary & Report Card
+          Gut &amp; Mind - Performance Summary
         </p>
       </div>
 
