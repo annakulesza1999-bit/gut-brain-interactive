@@ -103,7 +103,7 @@ test('audience layout regression with fourteen demo responses, live and revealed
      assert.ok(metrics.figureFooterGap>=-1,name+' figure/caption overlaps footer '+JSON.stringify(metrics));
      if(q.figureLayout==='wide')assert.ok(metrics.logicalWidth>=850,name+' wide figure too small '+JSON.stringify(metrics));
      if(q.figureLayout==='large')assert.ok(metrics.logicalWidth>=280,name+' portrait figure too small '+JSON.stringify(metrics));
-     if(q.textImages.length===2)assert.ok(metrics.qrWidth>=65&&metrics.qrWidth<=90,name+' QR size '+JSON.stringify(metrics));
+     if(q.textImages.length===2)assert.ok(metrics.qrWidth>=110&&metrics.qrWidth<=125,name+' QR size '+JSON.stringify(metrics));
      await page.screenshot({path:out+'/layout-'+name+'-'+suffix+'.png'});
     };
     await figures('720p');
