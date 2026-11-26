@@ -58,7 +58,8 @@ export default function TrainerLogin({ onBack }) {
     { label: 'No timer', value: 0 },
   ];
 
-  const handleReconnectSession = (session) => {
+  const handleReconnectSession = async (session) => {
+    if(library.busy||!await library.flush())return;
     setReconnectingCode(session.code);
     reconnectTrainer({
       code: session.code,
@@ -86,7 +87,7 @@ export default function TrainerLogin({ onBack }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()||library.busy) return;
+    if (!name.trim()||library.busy||isSubmitting) return;
     if(library.active){const problem=launchProblem(library.active.content);if(problem){setFileError(problem);return;}if(!await library.flush(true,'Before presenting')){setFileError('Could not save your presentation. Download a backup before continuing.');return;}}
     setFileError('');
     setIsSubmitting(true);
@@ -108,7 +109,7 @@ export default function TrainerLogin({ onBack }) {
       
       {/* Back Button */}
       <button
-        onClick={onBack}
+        onClick={async()=>{if(!library.busy&&await library.flush())onBack();}}
         className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />

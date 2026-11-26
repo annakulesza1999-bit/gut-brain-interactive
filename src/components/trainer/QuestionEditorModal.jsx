@@ -224,7 +224,7 @@ export default function QuestionEditorModal({
 
         {saveError&&<p role="alert" className="px-4 py-2 text-xs text-rose-700">{saveError} Download a backup before closing.</p>}
         {/* Main Body: Sidebar Question List + Form Editor */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden" inert={saving?'':undefined} style={saving?{pointerEvents:'none',opacity:.8}:undefined}>
           
           {/* Left Sidebar: Question List */}
           <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-slate-800 bg-slate-950/50 flex flex-col h-48 md:h-auto overflow-hidden flex-shrink-0">

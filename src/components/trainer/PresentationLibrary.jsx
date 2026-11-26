@@ -1,7 +1,7 @@
 import React,{useState} from 'react';
 import {Plus,Copy,Download,Upload,History,FolderOpen} from 'lucide-react';
 export default function PresentationLibrary({library,onEdit}){
- const {records,active,status,error,busy,update,create,open,duplicate,restore,importFile,exportFile,flush}=library;
+ const {records,active,status,error,busy,update,create,open,duplicate,restore,importFile,exportFile,flush,protectStorage}=library;
  const [historyOpen,setHistoryOpen]=useState(false);
  const btn='inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-xs font-medium disabled:opacity-40';
  return <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
@@ -11,6 +11,6 @@ export default function PresentationLibrary({library,onEdit}){
  {active&&<><label className="block text-xs font-medium">Presentation title<input className="block w-full mt-1 rounded-lg border border-slate-700 p-2 bg-slate-950 text-sm" disabled={busy} value={active.content.title} maxLength={160} onChange={e=>update({title:e.target.value})}/></label>
  <div className="flex flex-wrap gap-2"><button type="button" className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold" disabled={busy} onClick={onEdit}><FolderOpen size={14} className="inline mr-1"/>Edit slides</button><button type="button" className={btn} disabled={busy} onClick={duplicate}><Copy size={14}/>Duplicate</button><button type="button" className={btn} onClick={exportFile}><Download size={14}/>Backup</button><button type="button" className={btn} disabled={busy} onClick={()=>flush(true,'Manual checkpoint')}>Save version</button><button type="button" className={btn} onClick={()=>setHistoryOpen(v=>!v)}><History size={14}/>Version history</button></div>
  {historyOpen&&<div className="border-t border-slate-800 pt-3 space-y-2"><p className="text-xs">Up to 10 checkpoints. Restoring keeps a copy of the current content first.</p>{(active.history||[]).map((v,i)=><div key={i} className="flex items-center justify-between gap-2 text-xs"><div>{v.label}<br/><span className="text-slate-400">{new Date(v.at).toLocaleString()} · {v.content.questions.length} slides</span></div><button type="button" className={btn} disabled={busy} onClick={()=>{if(confirm('Restore this version? Your current content will be kept as a checkpoint.'))restore(i);}}>Restore</button></div>).reverse()}</div>}</>}
- <p role="status" className="text-xs text-slate-400">{status}</p>{error&&<p role="alert" className="text-xs text-rose-700">{error} {active&&'Use Backup to protect your current work.'}</p>}
+ <div className="flex flex-wrap gap-2 items-center"><p role="status" className="text-xs text-slate-400">{status}</p><button type="button" className="text-xs underline text-slate-400" onClick={protectStorage}>Request persistent storage</button></div>{error&&<p role="alert" className="text-xs text-rose-700">{error} {active&&'Use Backup to protect your current work.'}</p>}
  </section>;
 }
