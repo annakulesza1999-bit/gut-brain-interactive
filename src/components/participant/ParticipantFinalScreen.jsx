@@ -26,7 +26,8 @@ export default function ParticipantFinalScreen() {
 
   const answersObj = myEntry?.answers || {};
   const correctCount = Object.values(answersObj).filter(a => a.isCorrect).length;
-  const accuracyPct = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
+  const gradedCount=analytics?.gradedQuestionCount??totalQuestions;
+  const accuracyPct = gradedCount > 0 ? Math.round((correctCount / gradedCount) * 100) : null;
 
   // Compute speed stats
   const answerEntries = Object.values(answersObj);
@@ -120,10 +121,10 @@ export default function ParticipantFinalScreen() {
             <Target className="w-3.5 h-3.5 text-emerald-400" /> Accuracy
           </div>
           <div className="font-mono text-xl sm:text-2xl font-black text-emerald-400">
-            {accuracyPct}%
+            {accuracyPct===null?'—':accuracyPct+'%'}
           </div>
           <div className="text-[10px] text-slate-500 mt-0.5">
-            {correctCount}/{totalQuestions} correct
+            {correctCount}/{gradedCount} graded activities correct
           </div>
         </div>
 

@@ -116,30 +116,6 @@ export default function Header() {
               </button>
             )}
 
-            {/* Trainer: Student Directory */}
-            {role === 'trainer' && (
-              <button
-                onClick={() => setShowDirectoryModal(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-blue-600/15 border border-blue-500/30 hover:bg-blue-600/25 text-blue-400 text-xs font-bold transition-colors"
-                title="View All Students & Historical Analytics"
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Student Directory</span>
-              </button>
-            )}
-
-            {/* Participant: My Profile */}
-            {role === 'participant' && (
-              <button
-                onClick={() => setShowProfileModal(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-600/15 border border-emerald-500/30 hover:bg-emerald-600/25 text-emerald-400 text-xs font-bold transition-colors"
-                title="View Profile & Past Scores"
-              >
-                <UserCheck className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">My Profile</span>
-              </button>
-            )}
-
             {/* Live Q&A Wall Trigger */}
             {sessionCode && (
               <button
@@ -190,21 +166,7 @@ export default function Header() {
             </div>
 
             {/* Clear DB Button (Trainer only) */}
-            {role === 'trainer' && (
-              <button
-                onClick={() => {
-                  if (confirm('Clear active live session state? (Student histories in db.json will be preserved)')) {
-                    clearDatabase();
-                  }
-                }}
-                title="Reset Live Session"
-                className="p-1.5 sm:p-2 rounded-lg bg-slate-900 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/30 text-slate-400 hover:text-rose-400 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </button>
-            )}
-
-            {/* Exit / Leave */}
+                        {/* Exit / Leave */}
             {role && (
               <button
                 onClick={() => {

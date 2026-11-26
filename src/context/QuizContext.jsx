@@ -4,12 +4,16 @@ import { soundFX } from '../services/soundEffects';
 import defaultQuestionsData from '../data/questions.json';
 
 const QuizContext = createContext();
+const tokenKey=(kind,code)=>'gm_session_'+kind+'_'+code;
+const readToken=(kind,code)=>{try{return sessionStorage.getItem(tokenKey(kind,code))||'';}catch{return '';}};
+const saveToken=(kind,code,value)=>{try{if(value)sessionStorage.setItem(tokenKey(kind,code),value);else sessionStorage.removeItem(tokenKey(kind,code));}catch{}};
+
 
 export function QuizProvider({ children }) {
   const [role, setRole] = useState(() => localStorage.getItem('dw_role') || null);
   const [trainerName, setTrainerName] = useState(() => localStorage.getItem('dw_trainer_name') || '');
   const [participantName, setParticipantName] = useState(() => localStorage.getItem('dw_participant_name') || '');
-  const [participantPhone, setParticipantPhone] = useState(() => localStorage.getItem('dw_participant_phone') || '');
+  const [participantPhone, setParticipantPhone] = useState('');
   const [sessionCode, setSessionCode] = useState(() => localStorage.getItem('dw_session_code') || '');
   
   const [sessionStatus, setSessionStatus] = useState('ready'); // 'ready' | 'running' | 'paused' | 'finished'
@@ -59,7 +63,7 @@ export function QuizProvider({ children }) {
   useEffect(() => {
     if (trainerName) localStorage.setItem('dw_trainer_name', trainerName);
     if (participantName) localStorage.setItem('dw_participant_name', participantName);
-    if (participantPhone) localStorage.setItem('dw_participant_phone', participantPhone);
+    localStorage.removeItem('dw_participant_phone');
     if (sessionCode) localStorage.setItem('dw_session_code', sessionCode);
   }, [trainerName, participantName, participantPhone, sessionCode]);
 
@@ -87,8 +91,9 @@ export function QuizProvider({ children }) {
   const syncStateWithServer = useCallback(() => {
     if (!sessionCode) return;
 
-    socket.emit('get_session_state', { sessionCode, participantName, participantPhone, role }, (res) => {
+    socket.emit('get_session_state', { sessionCode, trainerToken:role==='trainer'?readToken('trainer',sessionCode):'',participantToken:role==='participant'?readToken('participant',sessionCode):'' }, (res) => {
       if (res && res.success) {
+        if(res.participant?.name)setParticipantName(res.participant.name);
         setSessionStatus(res.status);
         setCurrentQuestionIndex(res.currentQuestionIndex);
         setQuestionState(res.questionState);
@@ -141,7 +146,7 @@ export function QuizProvider({ children }) {
         if (res.wordCloudWords) {
           setWordCloudWords(res.wordCloudWords);
         }
-      }
+      }else if(res?.success===false){setErrorMessage(res.error||'Session expired. Join again.');setRole(null);setSessionCode('');localStorage.removeItem('dw_session_code');}
     });
   }, [sessionCode, participantName, participantPhone, role]);
 
@@ -224,6 +229,7 @@ export function QuizProvider({ children }) {
       });
     };
 
+    const handlePrivateAnswer=data=>{setLastAnswerResult(data);};
     const handleAnswerRevealed = (data) => {
       setQuestionState('revealed');
       setRevealData(data);
@@ -304,6 +310,7 @@ export function QuizProvider({ children }) {
     socket.on('question_changed', handleQuestionChanged);
     socket.on('live_answer_count', handleLiveAnswerCount);
     socket.on('answer_revealed', handleAnswerRevealed);
+    socket.on('private_answer_result',handlePrivateAnswer);
     socket.on('display_leaderboard', handleDisplayLeaderboard);
     socket.on('quiz_paused', handleQuizPaused);
     socket.on('quiz_resumed', handleQuizResumed);
@@ -332,6 +339,7 @@ export function QuizProvider({ children }) {
       socket.off('question_changed', handleQuestionChanged);
       socket.off('live_answer_count', handleLiveAnswerCount);
       socket.off('answer_revealed', handleAnswerRevealed);
+      socket.off('private_answer_result',handlePrivateAnswer);
       socket.off('display_leaderboard', handleDisplayLeaderboard);
       socket.off('quiz_paused', handleQuizPaused);
       socket.off('quiz_resumed', handleQuizResumed);
@@ -361,12 +369,14 @@ export function QuizProvider({ children }) {
       customQuestions
     }, (res) => {
       if (res && res.success) {
+        saveToken('trainer',res.sessionCode,res.trainerToken);
         setSessionCode(res.sessionCode);
         setRole('trainer');
         setParticipants([]);
         if (callback) callback(res);
       } else {
         setErrorMessage(res?.error || 'Failed to create session');
+        if(callback)callback(res);
       }
     });
   }, []);
@@ -378,7 +388,7 @@ export function QuizProvider({ children }) {
 
     socket.emit('reconnect_trainer', {
       sessionCode: cleanCode,
-      trainerName: cleanName
+      trainerName: cleanName,trainerToken:readToken('trainer',cleanCode)
     }, (res) => {
       if (res && res.success) {
         setSessionCode(cleanCode);
@@ -423,13 +433,13 @@ export function QuizProvider({ children }) {
 
     socket.emit('join_session', {
       sessionCode: cleanCode,
-      participantName: cleanName,
-      participantPhone: cleanPhone
+      participantToken:readToken('participant',cleanCode)
     }, (res) => {
       if (res && res.success) {
         setSessionCode(cleanCode);
-        setParticipantName(cleanName);
-        setParticipantPhone(cleanPhone);
+        saveToken('participant',cleanCode,res.participantToken);
+        setParticipantName(res.participant?.name||'Participant');
+        setParticipantPhone('');
         setRole('participant');
         setSessionStatus(res.sessionStatus || 'ready');
         setTimerDuration(res.timerDuration??30);setActiveDuration(res.activeDuration??res.timerDuration??30);setTimeRemaining(res.timeRemaining??0);applyActivityUI(res);
@@ -445,6 +455,7 @@ export function QuizProvider({ children }) {
         }
         if (callback) callback(res);
       } else {
+        if(res?.error?.includes('expired'))saveToken('participant',cleanCode,'');
         setErrorMessage(res?.error || 'Unable to join session');
         if (callback) callback(res);
       }
@@ -472,9 +483,7 @@ export function QuizProvider({ children }) {
       selectedOption: optionIndex,
       responseTimeMs
     }, (res) => {
-      if (res && res.success) {
-        setLastAnswerResult(res);
-      }
+      if (!res?.success) {setIsAnswerSubmitted(false);setSelectedOption(null);setErrorMessage(res?.error||'Could not submit answer');}
     });
   }, [isAnswerSubmitted, questionState, sessionCode, participantName, participantPhone, currentQuestionIndex, questionStartTime]);
 
@@ -518,6 +527,7 @@ export function QuizProvider({ children }) {
     setTrainerName('');
     setParticipantName('');
     setParticipantPhone('');
+    socket.disconnect();socket.connect();
     setSessionCode('');
     setSessionStatus('ready');
     setCurrentQuestion(null);

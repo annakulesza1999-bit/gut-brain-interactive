@@ -30,8 +30,6 @@ export default function RoleSelection({ onSelectRole }) {
     }
     return '';
   });
-  const [quickName, setQuickName] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('dw_participant_name') || '' : ''));
-  const [quickPhone, setQuickPhone] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('dw_participant_phone') || '' : ''));
   const [isJoining, setIsJoining] = useState(false);
   const [activeTab, setActiveTab] = useState('participant'); // 'participant' | 'trainer'
 
@@ -46,16 +44,14 @@ export default function RoleSelection({ onSelectRole }) {
 
   const handleQuickJoin = (e) => {
     e.preventDefault();
-    if (!quickCode.trim() || !quickName.trim() || !quickPhone.trim()) {
-      setErrorMessage('Please fill in Session Code, Name, and Mobile Number.');
+    if (!quickCode.trim()) {
+      setErrorMessage('Please enter the session code.');
       return;
     }
 
     setIsJoining(true);
     joinSession({
-      code: quickCode.toUpperCase().trim(),
-      name: quickName.trim(),
-      phone: quickPhone.trim()
+      code: quickCode.toUpperCase().trim()
     }, (res) => {
       setIsJoining(false);
       if (res && res.success) {
@@ -138,37 +134,7 @@ export default function RoleSelection({ onSelectRole }) {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Your Full Name
-                  </label>
-                  <input
-                    type="text"
-                    value={quickName}
-                    onChange={(e) => setQuickName(e.target.value)}
-                    placeholder="e.g. Priya Sharma"
-                    maxLength={40}
-                    className="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-xl px-3.5 py-2.5 text-slate-100 text-sm font-semibold placeholder-slate-600 outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Mobile Number (ID)
-                  </label>
-                  <input
-                    type="tel"
-                    value={quickPhone}
-                    onChange={(e) => setQuickPhone(e.target.value.replace(/\D/g, ''))}
-                    placeholder="10-digit number"
-                    maxLength={10}
-                    className="w-full bg-slate-950 border border-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-xl px-3.5 py-2.5 text-slate-100 font-mono text-sm font-semibold placeholder-slate-600 outline-none"
-                    required
-                  />
-                </div>
-              </div>
+              <p className="text-sm text-slate-400">Join anonymously. You'll receive a participant number and your own color.</p>
 
               <button
                 type="submit"

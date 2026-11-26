@@ -1,3 +1,4 @@
+import {randomBytes} from 'node:crypto';
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -24,19 +25,22 @@ const __dirname = path.dirname(__filename);
 // Temporary production guard until inherited access-control and privacy issues are fixed.
 if(process.env.NODE_ENV==='production')throw new Error('Public deployment blocked: security hardening is incomplete. See SECURITY-REVIEW.md.');
 
+const token=()=>randomBytes(32).toString('hex');
+const matchesToken=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===64&&a===b;
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   maxHttpBufferSize: 8 * 1024 * 1024,
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST", "PUT"]
-  }
+  allowRequest: (req,done)=>{const origin=req.headers.origin;done(null,!origin||/^http:\/\/(localhost|127\.0\.0\.1):(3000|5173|[1-9][0-9]{3,4})$/.test(origin));}
 });
 
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+app.use((req,res,next)=>{
+  if(!['localhost','127.0.0.1'].includes(req.hostname))return res.status(403).json({error:'Local preview only'});
+  if(req.headers.origin&&!/^http:\/\/(localhost|127\.0\.0\.1):[0-9]+$/.test(req.headers.origin))return res.status(403).json({error:'Local preview only'});
+  next();
+});
 app.use(express.json({ limit: '10mb' }));
 
 // Helper to detect local LAN IP
@@ -52,7 +56,7 @@ function getLocalIpAddress() {
   return 'localhost';
 }
 
-const localIp = getLocalIpAddress();
+const localIp = '127.0.0.1';
 
 // Load initial questions
 let defaultQuestions = [];
@@ -72,6 +76,22 @@ try {
 
 // In-Memory Sessions Store (live running sessions)
 const sessions = new Map();
+const publicParticipant=p=>({id:p.id,name:p.name,phone:'',score:p.score,rank:p.currentRank,currentRank:p.currentRank,previousRank:p.previousRank,rankDelta:p.rankDelta,connected:p.connected});
+const publicLeaderboard=(session,ownId=null)=>[...session.participants].sort((a,b)=>b.score-a.score).map(p=>({...publicParticipant(p),...(p.id===ownId?{answers:p.answers}:{} )}));
+const participantFor=(session,socket)=>session?.participants.find(p=>p.socketId===socket.id&&p.connected);
+function attachSocket(session,person,socket){
+ const oldId=person?person.socketId:session.trainerSocketId;
+ if(oldId&&oldId!==socket.id)io.sockets?.sockets?.get(oldId)?.leave(session.code);
+ if(person){person.socketId=socket.id;person.connected=true;}else session.trainerSocketId=socket.id;
+ socket.join(session.code);
+}
+function gradedQuestion(q){
+ if(['curve','wordcloud','text','simulation'].includes(q.type))return false;
+ if(q.type==='pointmap')return !!q.mapGraded;
+ if(q.type==='research')return !!q.researchGraded;
+ if(q.type==='brain')return !!q.brainGraded;
+ return true;
+}
 function completionCount(session, index=session.currentQuestionIndex) {
  const q=session.questions[index];
  if(q?.type==='text')return 0;
@@ -132,7 +152,8 @@ function calculateSessionAnalytics(session) {
 
     if (['curve','wordcloud','text','pointmap','matching','simulation','research','brain'].includes(q.type)) answeredCount = completionCount(session,qIndex);
     const notAnsweredCount = totalParticipants - answeredCount;
-    const accuracyPct = totalParticipants > 0 ? Math.round((correctCount / totalParticipants) * 100) : 0;
+    const graded=gradedQuestion(q);
+    const accuracyPct = graded&&totalParticipants>0 ? Math.round((correctCount / totalParticipants) * 100) : null;
     const avgResponseTimeMs = answeredCount > 0 ? Math.round(totalResponseTime / answeredCount) : 0;
 
     const optionDist = optionCounts.map(count => ({
@@ -154,6 +175,7 @@ function calculateSessionAnalytics(session) {
       correctCount,
       incorrectCount: (['curve','wordcloud','text','simulation'].includes(q.type)||(q.type==='pointmap'&&!q.mapGraded)||(q.type==='research'&&!q.researchGraded)||(q.type==='brain'&&!q.brainGraded)) ? 0 : answeredCount - correctCount,
       type: q.type || 'mcq',
+      graded,
       accuracyPct,
       avgResponseTimeMs,
       optionCounts,
@@ -163,7 +185,7 @@ function calculateSessionAnalytics(session) {
 
   // Category analytics
   const categoriesMap = {};
-  questionAnalytics.forEach(qa => {
+  questionAnalytics.filter(qa=>qa.graded).forEach(qa => {
     const cat = qa.category || 'General';
     if (!categoriesMap[cat]) {
       categoriesMap[cat] = {
@@ -190,17 +212,19 @@ function calculateSessionAnalytics(session) {
   const maxScore = scores.length > 0 ? Math.max(...scores) : 0;
   const minScore = scores.length > 0 ? Math.min(...scores) : 0;
 
-  const totalPossibleAnswers = totalParticipants * totalQuestions;
+  const gradedQuestionCount=session.questions.filter(gradedQuestion).length;
+  const totalPossibleAnswers = totalParticipants * gradedQuestionCount;
   let totalCorrectOverall = 0;
   session.participants.forEach(p => {
     Object.values(p.answers).forEach(a => {
       if (a.isCorrect) totalCorrectOverall++;
     });
   });
-  const avgAccuracy = totalPossibleAnswers > 0 ? Math.round((totalCorrectOverall / totalPossibleAnswers) * 100) : 0;
+  const avgAccuracy = totalPossibleAnswers > 0 ? Math.round((totalCorrectOverall / totalPossibleAnswers) * 100) : null;
 
   return {
     totalQuestions,
+    gradedQuestionCount,
     totalParticipants,
     avgScore,
     maxScore,
@@ -225,6 +249,13 @@ function calculateSessionAnalytics(session) {
 }
 
 // REST API Endpoints
+// Disable inherited profile and administrative APIs during the local preview.
+app.use('/api',(req,res,next)=>{
+ if(req.method==='GET'&&req.path==='/info')return next();
+ if(req.method==='GET'&&req.path==='/trainers')return res.json({success:true,trainers:[]});
+ if(req.method==='GET'&&req.path==='/active-sessions')return res.json({success:true,sessions:[]});
+ return res.status(403).json({success:false,error:'Legacy data API disabled in local preview'});
+});
 app.get('/api/info', (req, res) => {
   res.json({
     status: 'ok',
@@ -398,7 +429,8 @@ io.on('connection', (socket) => {
   // Trainer creates a session
   socket.on('create_session', ({ trainerName, sessionCode, timerDuration = 30, speedBonusEnabled = true, showTopic = false, customQuestions = null }, callback) => {
     try {
-      const code = (sessionCode || `DW-${Math.floor(1000 + Math.random() * 9000)}`).toUpperCase();
+      const code = (typeof sessionCode==='string'&&sessionCode?sessionCode:'GM-'+randomBytes(3).toString('hex')).toUpperCase().trim();
+      if(!/^[A-Z0-9-]{4,12}$/.test(code)||sessions.has(code)||sessions.size>=30)return callback&&callback({success:false,error:'Session code unavailable or local session limit reached.'});
       const questionSet = ((customQuestions && customQuestions.length > 0) ? customQuestions : defaultQuestions).map(q => ({...q, beforeMedia: safeMedia(q.beforeMedia), afterMedia: safeMedia(q.afterMedia),mapImage:safeMedia(q.mapImage),...(q.type==='simulation'?simulationConfig(q):{}),...(q.type==='research'?normalizeResearch(q):{})}));
       if(questionSet.some(q=>q.type==='brain'&&brainProblem(q)))return callback&&callback({success:false,error:'Check anatomy activity settings before presenting.'});
       for(const q of questionSet)if(q.type==='brain')Object.assign(q,normalizeBrain(q));
@@ -408,6 +440,7 @@ io.on('connection', (socket) => {
         code,
         trainerName: trainerName || 'Trainer',
         trainerSocketId: socket.id,
+        trainerToken:token(),
         status: 'ready',
         timerDuration: timerSeconds(timerDuration),
         speedBonusEnabled: Boolean(speedBonusEnabled),
@@ -431,7 +464,7 @@ io.on('connection', (socket) => {
       sessions.set(code, newSession);
       socket.join(code);
 
-      db.createOrUpdateTrainer(newSession.trainerName, { sessionCode: code });
+      // Local preview: do not persist presenter or participant identities.
 
       console.log(`[Session Created] Code: ${code} by ${newSession.trainerName} with ${questionSet.length} questions (ShowTopic: ${newSession.showTopic})`);
 
@@ -439,6 +472,7 @@ io.on('connection', (socket) => {
         callback({
           success: true,
           sessionCode: code,
+          trainerToken:newSession.trainerToken,
           localIp,
           port: PORT,
           joinUrl: `http://${localIp}:${PORT}`,
@@ -461,7 +495,7 @@ io.on('connection', (socket) => {
   });
 
   // Trainer reconnects to an existing active session
-  socket.on('reconnect_trainer', ({ sessionCode, trainerName }, callback) => {
+  socket.on('reconnect_trainer', ({ sessionCode, trainerName, trainerToken }, callback) => {
     try {
       const code = (sessionCode || '').toUpperCase().trim();
       const session = sessions.get(code);
@@ -469,12 +503,8 @@ io.on('connection', (socket) => {
         return callback && callback({ success: false, error: 'Session not found or is no longer active.' });
       }
 
-      session.trainerSocketId = socket.id;
-      if (trainerName && trainerName.trim()) {
-        session.trainerName = trainerName.trim();
-        db.createOrUpdateTrainer(session.trainerName, { sessionCode: code });
-      }
-      socket.join(code);
+      if(session.trainerSocketId!==socket.id&&!matchesToken(session.trainerToken,trainerToken))return callback&&callback({success:false,error:'Presenter authentication required.'});
+      attachSocket(session,null,socket);
 
       console.log(`[Trainer Reconnected] Session ${code} reconnected by trainer: ${session.trainerName}`);
 
@@ -522,7 +552,7 @@ io.on('connection', (socket) => {
 
       if (currQ && session.questionState === 'revealed') {
         const qa=analytics.questionAnalytics[session.currentQuestionIndex];
-        payload.revealData={...qa,...spatialResults(session),curves:currQ.type==='curve'?(session.curveSubmissions?.[session.currentQuestionIndex]||[]).map(({participantId,...curve})=>curve):undefined,afterMedia:currQ.afterMedia,afterPreset:currQ.afterPreset,leaderboard:analytics.leaderboard.slice(0,10)};
+        payload.revealData={...qa,...spatialResults(session),curves:currQ.type==='curve'?(session.curveSubmissions?.[session.currentQuestionIndex]||[]).map(({participantId,...curve})=>curve):undefined,afterMedia:currQ.afterMedia,afterPreset:currQ.afterPreset,leaderboard:publicLeaderboard(session).slice(0,10)};
       }
       if (callback) callback(payload);
     } catch (e) {
@@ -533,7 +563,7 @@ io.on('connection', (socket) => {
   // Trainer toggles topic / category visibility live
   socket.on('toggle_topic_visibility', ({ sessionCode }, callback) => {
     const session = sessions.get(sessionCode);
-    if (!session) {
+    if (!session || session.trainerSocketId!==socket.id) {
       if (callback) callback({ success: false, error: 'Session not found' });
       return;
     }
@@ -550,154 +580,35 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Participant joins a session with phone and name
-  socket.on('join_session', ({ sessionCode, participantName, participantPhone }, callback) => {
-    try {
-      const code = (sessionCode || '').toUpperCase().trim();
-      const name = (participantName || '').trim();
-      const phone = (participantPhone || '').replace(/\D/g, '').trim();
-
-      if (!code || (!name && !phone)) {
-        return callback && callback({ success: false, error: 'Session code, name, and mobile number are required.' });
-      }
-
-      const session = sessions.get(code);
-      if (!session) {
-        return callback && callback({ success: false, error: 'Session not found. Please check the code.' });
-      }
-
-      // Check DB for persistent student account
-      let student = null;
-      if (phone) {
-        student = db.findStudentByPhone(phone);
-      }
-      if (!student && name) {
-        student = db.findStudentByName(name);
-      }
-
-      // If student account exists, sync name/phone
-      const effectiveName = name || (student ? student.name : 'Participant');
-      const effectivePhone = phone || (student ? student.phone : `98765${Math.floor(10000 + Math.random() * 90000)}`);
-
-      if (!student) {
-        student = db.createOrUpdateStudent(effectivePhone, effectiveName);
-      } else {
-        if (name && student.name !== name) {
-          student = db.createOrUpdateStudent(effectivePhone, effectiveName);
-        }
-      }
-
-      // Prevent duplicate phone number in the same active session
-      let existing = session.participants.find(p => 
-        (p.phone && p.phone === effectivePhone) || 
-        (p.name.toLowerCase() === effectiveName.toLowerCase())
-      );
-
-      if (existing) {
-        // Resume session for this participant
-        existing.connected = true;
-        existing.socketId = socket.id;
-        if (effectivePhone) existing.phone = effectivePhone;
-        if (effectiveName) existing.name = effectiveName;
-        socket.join(code);
-
-        io.to(code).emit('participants_updated', {
-          participants: session.participants.map(p => ({ id: p.id, name: p.name, phone: p.phone, score: p.score, rank: p.currentRank, connected: p.connected })),
-          count: session.participants.length
-        });
-
-        const q = session.questions[session.currentQuestionIndex];
-        const participantQuestion = q ? {
-          index: session.currentQuestionIndex,
-          total: session.questions.length,
-          id: q.id,
-          question: q.question,
-          options: q.options,
-          difficulty: q.difficulty,
-          category: q.category,
-          ...publicActivity(q,session.textVisible)
-        } : null;
-
-        const myAns = existing.answers[session.currentQuestionIndex];
-
-        return callback && callback({
-          success: true,
-          resumed: true,
-          sessionCode: code,
-          student,
-          participant: existing,
-          sessionStatus: session.status,
-          currentQuestionIndex: session.currentQuestionIndex,
-          currentQuestion: participantQuestion,
-          questionState: session.questionState,
-          timeRemaining: session.timeRemaining,
-          timerDuration: session.timerDuration,
-          activeDuration: activityDuration(session.questions[session.currentQuestionIndex],session.timerDuration),
-          activityUI: {textVisible:session.textVisible||0,thumbs:thumbsState(session)},
-          speedBonusEnabled: session.speedBonusEnabled,
-          totalQuestions: session.questions.length,
-          participants: session.participants.map(p => ({ id: p.id, name: p.name, phone: p.phone, score: p.score, rank: p.currentRank, connected: p.connected })),
-          selectedOption: myAns ? myAns.selectedOption : null,
-          isAnswerSubmitted: Boolean(myAns) || (session.spatialSubmissions?.[session.currentQuestionIndex]||[]).some(c=>c.participantId===existing.id) || (session.curveSubmissions?.[session.currentQuestionIndex] || []).some(c=>c.participantId===existing.id)
-        });
-      }
-
-      // New participant in this active session
-      const newParticipant = {
-        id: `p-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-        studentId: student.id,
-        phone: effectivePhone,
-        name: effectiveName,
-        score: 0,
-        previousRank: session.participants.length + 1,
-        currentRank: session.participants.length + 1,
-        rankDelta: 0,
-        connected: true,
-        socketId: socket.id,
-        answers: {}
-      };
-
-      session.participants.push(newParticipant);
-      updateSessionRankings(session);
-      socket.join(code);
-
-      console.log(`[Participant Joined] ${effectiveName} (${effectivePhone}) joined session ${code} (Total: ${session.participants.length})`);
-
-      const participantList = session.participants.map(p => ({ id: p.id, name: p.name, phone: p.phone, score: p.score, rank: p.currentRank, connected: p.connected }));
-
-      io.to(code).emit('participants_updated', {
-        participants: participantList,
-        count: session.participants.length
-      });
-
-      if (callback) {
-        callback({
-          success: true,
-          sessionCode: code,
-          student,
-          participant: newParticipant,
-          currentQuestion: session.status === 'ready' ? null : (() => { const q = session.questions[session.currentQuestionIndex]; return {index:session.currentQuestionIndex,total:session.questions.length,id:q.id,question:q.question,options:q.options,category:q.category,difficulty:q.difficulty,...publicActivity(q,session.textVisible)}; })(),
-          sessionStatus: session.status,
-          currentQuestionIndex: session.currentQuestionIndex,
-          questionState: session.questionState,
-          timeRemaining: session.timeRemaining,
-          timerDuration: session.timerDuration,
-          activeDuration: activityDuration(session.questions[session.currentQuestionIndex],session.timerDuration),
-          activityUI: {textVisible:session.textVisible||0,thumbs:thumbsState(session)},
-          speedBonusEnabled: session.speedBonusEnabled,
-          totalQuestions: session.questions.length,
-          participants: participantList
-        });
-      }
-    } catch (e) {
-      if (callback) callback({ success: false, error: e.message });
+  // Anonymous per-session identities. No student accounts, real names or phone numbers.
+  socket.on('join_session', ({sessionCode,participantToken}={},callback)=>{
+    const reply=typeof callback==='function'?callback:()=>{};
+    if(typeof sessionCode!=='string')return reply({success:false,error:'Enter a session code.'});
+    const code=sessionCode.toUpperCase().trim(),session=sessions.get(code);
+    if(!session)return reply({success:false,error:'Session not found.'});
+    let p=participantFor(session,socket);
+    if(!p&&participantToken)p=session.participants.find(x=>matchesToken(x.token,participantToken));
+    if(!p&&participantToken)return reply({success:false,error:'This saved participation has expired. Join again.'});
+    const resumed=!!p;
+    if(!p){
+      if(session.participants.length>=30)return reply({success:false,error:'Session is full.'});
+      const number=session.participants.length+1;
+      p={id:'p-'+randomBytes(12).toString('hex'),token:token(),name:'Participant '+number,phone:'',score:0,previousRank:number,currentRank:number,rankDelta:0,connected:true,socketId:socket.id,answers:{}};
+      session.participants.push(p);
     }
+    attachSocket(session,p,socket);
+    updateSessionRankings(session);
+    const participantList=session.participants.map(publicParticipant);
+    io.to(code).emit('participants_updated',{participants:participantList,count:participantList.length});
+    const q=session.questions[session.currentQuestionIndex],ans=p.answers[session.currentQuestionIndex];
+    const submitted=!!ans||['curveSubmissions','spatialSubmissions'].some(k=>(session[k]?.[session.currentQuestionIndex]||[]).some(e=>e.participantId===p.id));
+    reply({success:true,resumed,sessionCode:code,participantToken:p.token,participant:publicParticipant(p),sessionStatus:session.status,currentQuestionIndex:session.currentQuestionIndex,currentQuestion:session.status==='ready'?null:{index:session.currentQuestionIndex,total:session.questions.length,id:q.id,question:q.question,options:q.options,category:q.category,difficulty:q.difficulty,...publicActivity(q,session.textVisible)},questionState:session.questionState,timeRemaining:session.timeRemaining,timerDuration:session.timerDuration,activeDuration:activityDuration(q,session.timerDuration),activityUI:{textVisible:session.textVisible||0,thumbs:thumbsState(session)},speedBonusEnabled:session.speedBonusEnabled,totalQuestions:session.questions.length,participants:participantList,selectedOption:ans?.selectedOption??null,isAnswerSubmitted:submitted});
   });
 
   // Trainer starts the quiz
   socket.on('start_quiz', ({ sessionCode }) => {
     const session = sessions.get(sessionCode);
-    if (!session) return;
+    if (!session || session.trainerSocketId!==socket.id) return;
 
     session.status = 'running';
     session.currentQuestionIndex = 0;
@@ -764,8 +675,14 @@ io.on('connection', (socket) => {
     session.questionState = 'revealed';
     const index=session.currentQuestionIndex,q0=session.questions[index];
     if(['pointmap','matching','research','brain'].includes(q0?.type))for(const entry of session.spatialSubmissions?.[index]||[]){const p=session.participants.find(p=>p.id===entry.participantId);if(!p||p.answers[index])continue;const result=q0.type==='pointmap'?scoreMap(q0,entry.point):q0.type==='research'?scoreResearch(q0,entry.response):q0.type==='brain'?scoreBrain(q0,entry.response):scoreMatch(q0,entry.selection);Object.assign(entry,result);p.score+=result.pointsEarned;p.answers[index]={...result,selectedOption:null,spatial:true,responseTimeMs:entry.responseTimeMs};}
+    if(['mcq','sequence'].includes(q0?.type||'mcq'))for(const p of session.participants){
+      const ans=p.answers[index];if(!ans?.pending)continue;
+      const isCorrect=ans.selectedOption===q0.correctAnswer,duration=activityDuration(q0,session.timerDuration),basePoints=isCorrect?100:0;
+      const speedBonus=isCorrect&&q0.type!=='sequence'&&session.speedBonusEnabled&&duration>0?Math.round(Math.max(0,1-ans.responseTimeMs/(duration*1000))*50):0;
+      Object.assign(ans,{pending:false,isCorrect,basePoints,speedBonus,pointsEarned:basePoints+speedBonus});p.score+=ans.pointsEarned;
+    }
     updateSessionRankings(session);
-
+    for(const p of session.participants){const ans=p.answers[index];if(ans&&p.connected)io.to(p.socketId).emit('private_answer_result',{questionIndex:index,...ans,currentScore:p.score});}
     const analytics = calculateSessionAnalytics(session);
     const currQA = analytics.questionAnalytics[session.currentQuestionIndex];
     const q = session.questions[session.currentQuestionIndex];
@@ -783,7 +700,7 @@ io.on('connection', (socket) => {
       notAnsweredCount: currQA.notAnsweredCount,
       correctCount: currQA.correctCount,
       accuracyPct: currQA.accuracyPct,
-      leaderboard: analytics.leaderboard.slice(0, 10)
+      leaderboard: publicLeaderboard(session).slice(0,10)
     });
   }
 
@@ -792,14 +709,11 @@ io.on('connection', (socket) => {
     const session = sessions.get(sessionCode);
     if (!session) return callback && callback({ success: false, error: 'Session not found' });
 
-    if (session.questionState !== 'active') {
+    if (session.status!=='running'||session.questionState !== 'active') {
       return callback && callback({ success: false, error: 'Question is already closed.' });
     }
 
-    const participant = session.participants.find(p => 
-      (participantPhone && p.phone === participantPhone) ||
-      (p.name.toLowerCase() === (participantName || '').toLowerCase())
-    );
+    const participant = participantFor(session,socket);
     if (!participant) return callback && callback({ success: false, error: 'Participant not found' });
 
     if (participant.answers[questionIndex] !== undefined) {
@@ -808,32 +722,10 @@ io.on('connection', (socket) => {
 
     const q = session.questions[questionIndex];
     if (questionIndex !== session.currentQuestionIndex || !q || ['curve','text','wordcloud','pointmap','matching','simulation','research','brain'].includes(q.type) || !Number.isInteger(selectedOption) || selectedOption < 0 || selectedOption >= (q.options?.length || 0)) return callback && callback({success:false,error:'Invalid or inactive question.'});
-    const isCorrect = (selectedOption === q.correctAnswer);
-
-    let basePoints = isCorrect ? 100 : 0;
-    let speedBonus = 0;
-
     const duration=activityDuration(q,session.timerDuration);
-    if (isCorrect && q.type !== 'sequence' && session.speedBonusEnabled && duration > 0) {
-      const timeUsedSec = Math.min(duration, (responseTimeMs || 0) / 1000);
-      const remainingRatio = Math.max(0, (duration - timeUsedSec) / duration);
-      speedBonus = Math.round(remainingRatio * 50);
-    }
-
-    const pointsEarned = basePoints + speedBonus;
-    participant.score += pointsEarned;
-
-    participant.answers[questionIndex] = {
-      selectedOption,
-      isCorrect,
-      responseTimeMs: responseTimeMs || 0,
-      pointsEarned,
-      basePoints,
-      speedBonus
-    };
-
-    updateSessionRankings(session);
-
+    const elapsed=duration>0?Math.max(0,duration-session.timeRemaining)*1000:Math.max(0,Date.now()-session.questionStartTime);
+    participant.answers[questionIndex]={selectedOption,responseTimeMs:elapsed,pending:true};
+    
     let answeredCount = 0;
     session.participants.forEach(p => {
       if (p.answers[questionIndex] !== undefined) answeredCount++;
@@ -848,11 +740,7 @@ io.on('connection', (socket) => {
     if (callback) {
       callback({
         success: true,
-        selectedOption,
-        pointsEarned,
-        basePoints,
-        speedBonus,
-        currentScore: participant.score
+        selectedOption
       });
     }
 
@@ -923,14 +811,14 @@ io.on('connection', (socket) => {
   // Trainer shows Leaderboard
   socket.on('show_leaderboard', ({ sessionCode }) => {
     const session = sessions.get(sessionCode);
-    if (!session) return;
+    if (!session || session.trainerSocketId!==socket.id) return;
 
     updateSessionRankings(session);
     const analytics = calculateSessionAnalytics(session);
 
     io.to(session.code).emit('display_leaderboard', {
-      leaderboard: analytics.leaderboard.slice(0, 10),
-      allParticipants: analytics.leaderboard
+      leaderboard: publicLeaderboard(session).slice(0,10),
+      allParticipants: publicLeaderboard(session)
     });
   });
 
@@ -941,7 +829,7 @@ io.on('connection', (socket) => {
 
     const current=session.questions[session.currentQuestionIndex];
     if(current?.type==='text' && (session.textVisible||0)<textLines(current).length){if(socket.id===session.trainerSocketId){session.textVisible++;broadcastText(session);}return;}
-    if(['pointmap','matching','simulation','research','brain'].includes(current?.type)&&session.questionState==='active'){if(socket.id===session.trainerSocketId){if(session.timerInterval)clearInterval(session.timerInterval);session.timerInterval=null;autoCloseQuestion(session);}return;}
+    if(current?.type!=='text'&&session.questionState==='active'){if(socket.id===session.trainerSocketId){if(session.timerInterval)clearInterval(session.timerInterval);session.timerInterval=null;autoCloseQuestion(session);}return;}
     if (!session.completedQuestions.includes(session.currentQuestionIndex)) {
       session.completedQuestions.push(session.currentQuestionIndex);
     }
@@ -958,13 +846,9 @@ io.on('connection', (socket) => {
 
       console.log(`[Quiz Finished] Session ${sessionCode} completed. Recording in permanent DB...`);
 
-      // Permanently record completed exam in db.json!
-      db.recordCompletedExam(sessionCode, session, finalAnalytics);
-
-      io.to(session.code).emit('quiz_finished', {
-        analytics: finalAnalytics,
-        leaderboard: [...session.participants].sort((a, b) => b.score - a.score)
-      });
+      // Keep classroom responses in memory only. Presenter receives full report; each student receives only their own answers.
+      io.to(session.trainerSocketId).emit('quiz_finished',{analytics:finalAnalytics,leaderboard:[...finalAnalytics.leaderboard].sort((a,b)=>b.score-a.score)});
+      for(const p of session.participants)if(p.connected)io.to(p.socketId).emit('quiz_finished',{analytics:{totalQuestions:finalAnalytics.totalQuestions,gradedQuestionCount:finalAnalytics.gradedQuestionCount},leaderboard:publicLeaderboard(session,p.id)});
     } else {
       session.currentQuestionIndex = nextIndex;
       session.questionState = 'active';
@@ -1005,7 +889,7 @@ io.on('connection', (socket) => {
   socket.on('jump_to_question', ({ sessionCode, questionIndex }) => {
     const session = sessions.get(sessionCode);
     if (!session || session.trainerSocketId!==socket.id) return;
-    if (questionIndex < 0 || questionIndex >= session.questions.length) return;
+    if (!Number.isInteger(questionIndex)||questionIndex < 0 || questionIndex >= session.questions.length) return;
 
     session.currentQuestionIndex = questionIndex;
     session.questionState = 'active';
@@ -1044,7 +928,7 @@ io.on('connection', (socket) => {
   // Pause quiz
   socket.on('pause_quiz', ({ sessionCode }) => {
     const session = sessions.get(sessionCode);
-    if (!session) return;
+    if (!session || session.trainerSocketId!==socket.id) return;
 
     session.status = 'paused';
     io.to(session.code).emit('quiz_paused', { message: 'Quiz paused by trainer.' });
@@ -1053,7 +937,7 @@ io.on('connection', (socket) => {
   // Resume quiz
   socket.on('resume_quiz', ({ sessionCode }) => {
     const session = sessions.get(sessionCode);
-    if (!session) return;
+    if (!session || session.trainerSocketId!==socket.id) return;
 
     session.status = 'running';
     io.to(session.code).emit('quiz_resumed');
@@ -1062,7 +946,7 @@ io.on('connection', (socket) => {
   // Reset / Restart session
   socket.on('restart_quiz', ({ sessionCode }) => {
     const session = sessions.get(sessionCode);
-    if (!session) return;
+    if (!session || session.trainerSocketId!==socket.id) return;
 
     if (session.timerInterval) clearInterval(session.timerInterval);
 
@@ -1114,15 +998,15 @@ io.on('connection', (socket) => {
   // Live Audience Q&A - Submit Question
   const handleQASubmit = ({ sessionCode, text, authorName, authorPhone }, callback) => {
     const session = sessions.get(sessionCode);
-    if (!session || !text) return callback && callback({ success: false, error: 'Session or text invalid' });
+    if (!session || (!participantFor(session,socket)&&session.trainerSocketId!==socket.id)||typeof text!=='string'||!text.trim()||text.length>500||(session.qaQuestions||[]).length>=100) return callback && callback({ success: false, error: 'Session or text invalid' });
 
     if (!session.qaQuestions) session.qaQuestions = [];
 
     const newQA = {
       id: `qa-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       text: text.trim(),
-      authorName: authorName || 'Anonymous',
-      authorPhone: authorPhone || '',
+      authorName: 'Anonymous',
+      authorPhone: '',
       upvotes: 0,
       upvotedBy: [],
       answered: false,
@@ -1142,10 +1026,10 @@ io.on('connection', (socket) => {
   socket.on('upvote_qa_question', ({ sessionCode, questionId, userPhone }, callback) => {
     const session = sessions.get(sessionCode);
     if (!session || !session.qaQuestions) return callback && callback({ success: false });
-
+    const participant=participantFor(session,socket);if(!participant&&session.trainerSocketId!==socket.id)return callback&&callback({success:false});
     const q = session.qaQuestions.find(item => item.id === questionId);
     if (q) {
-      const userKey = userPhone || socket.id;
+      const userKey = participant?.id || 'presenter';
       if (!q.upvotedBy) q.upvotedBy = [];
 
       if (!q.upvotedBy.includes(userKey)) {
@@ -1164,7 +1048,7 @@ io.on('connection', (socket) => {
   // Live Audience Q&A - Toggle / Mark Answered
   const handleQAToggleAnswered = ({ sessionCode, questionId, answered }, callback) => {
     const session = sessions.get(sessionCode);
-    if (!session || !session.qaQuestions) return callback && callback({ success: false });
+    if (!session || session.trainerSocketId!==socket.id || !session.qaQuestions) return callback && callback({ success: false });
 
     const q = session.qaQuestions.find(item => item.id === questionId);
     if (q) {
@@ -1180,7 +1064,7 @@ io.on('connection', (socket) => {
   // Live Audience Q&A - Delete Question
   socket.on('delete_qa_question', ({ sessionCode, questionId }, callback) => {
     const session = sessions.get(sessionCode);
-    if (!session || !session.qaQuestions) return callback && callback({ success: false });
+    if (!session || session.trainerSocketId!==socket.id || !session.qaQuestions) return callback && callback({ success: false });
 
     session.qaQuestions = session.qaQuestions.filter(item => item.id !== questionId);
     io.to(session.code).emit('qa_questions_updated', { qaQuestions: session.qaQuestions });
@@ -1202,6 +1086,7 @@ io.on('connection', (socket) => {
       session.wordCloudSubmissions[qIdx] = [];
     }
 
+    if(session.wordCloudSubmissions[qIdx].filter(e=>e.participantId===participant.id).length>=10)return callback&&callback({success:false});
     session.wordCloudSubmissions[qIdx].push({
       text: word.trim(),
       participantId:participant.id,
@@ -1232,30 +1117,15 @@ io.on('connection', (socket) => {
   socket.on('submit_word', handleWordCloudSubmit);
 
   // Request live session state
-  socket.on('get_session_state', ({ sessionCode, participantName, participantPhone, role }, callback) => {
+  socket.on('get_session_state', ({ sessionCode, trainerToken, participantToken }={}, callback) => {
     const code = (sessionCode || '').toUpperCase().trim();
     const session = sessions.get(code);
     if (!session) return callback && callback({ success: false, error: 'Session not active' });
 
-    socket.join(code);
-
-    if (role === 'trainer') {
-      session.trainerSocketId = socket.id;
-    }
-
-    let participantObj = null;
-    if (participantPhone || participantName) {
-      const p = session.participants.find(x => 
-        (participantPhone && x.phone === participantPhone) ||
-        (participantName && x.name.toLowerCase() === participantName.toLowerCase())
-      );
-      if (p) {
-        p.connected = true;
-        p.socketId = socket.id;
-        participantObj = p;
-      }
-    }
-
+    const isTrainer=socket.id===session.trainerSocketId||matchesToken(session.trainerToken,trainerToken);
+    const participantObj=isTrainer?null:(participantFor(session,socket)||session.participants.find(p=>matchesToken(p.token,participantToken)));
+    if(!isTrainer&&!participantObj)return callback&&callback({success:false,error:'Session authentication required.'});
+    attachSocket(session,participantObj,socket);
     const participantList = session.participants.map(p => ({
       id: p.id,
       name: p.name,
@@ -1270,7 +1140,6 @@ io.on('connection', (socket) => {
       count: session.participants.length
     });
 
-    const isTrainer = (role === 'trainer' || socket.id === session.trainerSocketId);
     const analytics = calculateSessionAnalytics(session);
     const currQ = session.questions[session.currentQuestionIndex];
 
@@ -1303,7 +1172,7 @@ io.on('connection', (socket) => {
       },
       qaQuestions: session.qaQuestions || [],
       wordCloudWords: (session.wordCloudSubmissions?.[session.currentQuestionIndex] || []).map(({text,timestamp})=>({text,timestamp})),
-      analytics
+      analytics:isTrainer?analytics:session.status==='finished'?{totalQuestions:analytics.totalQuestions,gradedQuestionCount:analytics.gradedQuestionCount,leaderboard:publicLeaderboard(session,participantObj.id)}:undefined
     };
 
     if (currQ) {
@@ -1324,14 +1193,15 @@ io.on('connection', (socket) => {
     }
 
     if (participantObj) {
-      payload.participant = participantObj;
+      payload.participant = publicParticipant(participantObj);
+      payload.isAnswerSubmitted=false;
       if (['pointmap','matching','simulation','research','brain'].includes(currQ?.type)) payload.isAnswerSubmitted=(session.spatialSubmissions?.[session.currentQuestionIndex]||[]).some(c=>c.participantId===participantObj.id);
       if (currQ?.type === 'curve') payload.isAnswerSubmitted = (session.curveSubmissions?.[session.currentQuestionIndex] || []).some(c=>c.participantId===participantObj.id);
       const ans = participantObj.answers[session.currentQuestionIndex];
       if (ans) {
         payload.selectedOption = ans.selectedOption;
         payload.isAnswerSubmitted = true;
-        payload.lastAnswerResult = ans;
+        if(session.questionState==='revealed'||session.status==='finished')payload.lastAnswerResult=ans;
       }
     }
 
@@ -1350,7 +1220,7 @@ io.on('connection', (socket) => {
         notAnsweredCount: currQA.notAnsweredCount,
         correctCount: currQA.correctCount,
         accuracyPct: currQA.accuracyPct,
-        leaderboard: analytics.leaderboard.slice(0, 10)
+        leaderboard: publicLeaderboard(session).slice(0,10)
       };
     }
 
@@ -1381,7 +1251,7 @@ if (fs.existsSync(distPath)) {
   });
 }
 
-httpServer.listen(PORT, '0.0.0.0', () => {
+httpServer.listen(PORT, '127.0.0.1', () => {
   console.log(`=======================================================`);
   console.log(`  DIGI WARRIORS LOCAL-FIRST QUIZ ENGINE RUNNING!       `);
   console.log(`  Local URL:        http://localhost:${PORT}           `);

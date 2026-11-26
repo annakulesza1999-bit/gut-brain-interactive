@@ -23,7 +23,7 @@ export default function ParticipantResultScreen() {
 
   const [isQAOpen, setIsQAOpen] = useState(false);
 
-  const optionLetters = ['A', 'B', 'C', 'D'];
+  const optionLetters = ['A', 'B', 'C', 'D','E','F'];
   const correctAnswer = revealData?.correctAnswer ?? currentQuestion?.correctAnswer;
   const isCorrect = selectedOption !== null && selectedOption === correctAnswer;
   const explanation = revealData?.explanation ?? currentQuestion?.explanation;

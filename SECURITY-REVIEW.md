@@ -26,3 +26,7 @@ Status: NOT approved for classroom deployment. Do not start the inherited main b
 
 ## Current limitations
 The review environment cannot resolve the npm registry (EAI_AGAIN), so no dependency installation, audit, production build, end-to-end testing or live hosting has been performed. Five isolated anatomy logic checks passed; these do not test WebGL or the original server. No card game work planned at present.
+
+## Local preview verification changes
+- Anonymous joining assigns a unique session participant number and random reconnect token; the browser retains role-specific tokens in sessionStorage. No real student identity or account is required. Public state and leaderboard exclude private tokens and live answers. Presenter restoration requires the original presenter socket or its token. MCQ correctness and scores are computed on reveal rather than returned immediately. Legacy profile/admin endpoints are disabled in this preview; server and Vite bind to loopback only; production guard remains enabled. Remote control is intentionally disabled pending secure pairing.
+- Remaining: full end-to-end testing, a formal authorization review (including cross-session/socket lifecycle and origin enforcement), public hosting configuration, rate limiting, session expiry, and dependency review. Local preview is not an approval to use real classroom data or deploy publicly.
