@@ -7,7 +7,7 @@ const stages={
  crh:{title:'CRH reaches the anterior pituitary',caption:'Corticotropin-releasing hormone travels through the local pituitary portal circulation.',focus:'crh'},
  acth:{title:'ACTH travels to the adrenal cortex',caption:'The anterior pituitary releases ACTH into the blood. It reaches the adrenal glands above the kidneys.',focus:'acth'},
  cortisol:{title:'Cortisol enters circulation',caption:'The adrenal cortex releases cortisol, which acts on tissues throughout the body.',focus:'cortisol'},
- feedback:{title:'Negative feedback - the complete HPA loop',caption:'CRH → ACTH → cortisol. Circulating cortisol feeds back to inhibit further CRH and ACTH release. These processes overlap.',focus:'feedback'}
+ feedback:{title:'Negative feedback - the HPA loop',caption:'CRH → ACTH → cortisol. Circulating cortisol feeds back to inhibit further CRH and ACTH release. These processes overlap.',focus:'feedback'}
 };
 export default function SequenceMedia({media,preset,phase='before',artwork}){
  const uid=useId().replace(/:/g,''),src=safeMedia(media),stage=stages[preset],host=useRef(null),[compact,setCompact]=useState(false);
@@ -30,18 +30,18 @@ export default function SequenceMedia({media,preset,phase='before',artwork}){
  {vascular&&<g data-hpa-vascular="true">
  {/* Simplified paired arterial and venous paths, confined to the torso and upper limbs. */}
  <g opacity=".76">
- {['M224 168 Q217 150 217 127 L217 88','M224 168 Q235 148 235 127 L235 88','M224 169 Q198 128 181 137 Q171 147 165 176 L150 220 L140 255','M224 169 Q251 128 269 137 Q280 147 285 176 L301 220 L309 255','M222 184 Q213 202 214 225 Q214 239 202 241','M222 184 Q236 203 237 225 Q237 239 247 240'].map((d,i)=><path key={'a'+i} data-vessel="artery" d={d} fill="none" stroke="#C77C7D" strokeWidth="2.2" strokeLinecap="round"/>)}
- {['M226 168 Q224 149 224 126 L224 89','M226 168 Q241 148 241 126 L241 90','M224 174 Q200 136 187 142 Q176 151 170 178 L157 221 L146 254','M226 174 Q250 136 263 142 Q274 151 279 178 L294 221 L303 254','M228 184 Q219 205 219 226 Q219 243 205 246','M228 184 Q242 205 242 226 Q242 243 249 245'].map((d,i)=><path key={'v'+i} data-vessel="vein" d={d} fill="none" stroke="#6995AA" strokeWidth="1.8" strokeLinecap="round"/>)}
+ {['M224 168 Q218 150 218 127 L218 88','M224 168 Q231 148 231 127 L231 88','M224 169 Q198 128 181 137 Q173 147 170 176 Q164 198 158 220 L148 255','M224 169 Q251 128 269 137 Q278 147 280 176 Q285 198 291 220 L301 255','M222 184 Q213 202 214 225 Q214 239 202 241','M222 184 Q236 203 237 225 Q237 239 247 240'].map((d,i)=><path key={'a'+i} data-vessel="artery" d={d} fill="none" stroke="#C77C7D" strokeWidth="2.2" strokeLinecap="round"/>)}
+ {['M226 168 Q214 149 214 126 L214 89','M226 168 Q235 148 235 126 L235 90','M224 174 Q200 136 187 142 Q179 151 175 178 Q170 201 163 221 L153 254','M226 174 Q250 136 263 142 Q273 151 275 178 Q279 201 286 221 L296 254','M228 184 Q219 205 219 226 Q219 243 205 246','M228 184 Q242 205 242 226 Q242 243 249 245'].map((d,i)=><path key={'v'+i} data-vessel="vein" d={d} fill="none" stroke="#6995AA" strokeWidth="1.8" strokeLinecap="round"/>)}
  </g>
- {line('M164 184 L129 204 H37',muted,1.3)}<text x="37" y="199" fontSize="13">Bloodstream</text><circle cx="164" cy="184" r="2.8" fill={muted}/>
+ {line('M169 184 L129 204 H37',muted,1.3)}<text x="37" y="199" fontSize="13">Bloodstream</text><circle cx="169" cy="184" r="2.8" fill={muted}/>
  <g fontSize="11" fill={ink}><line x1="25" x2="42" y1="410" y2="410" stroke="#C77C7D" strokeWidth="2.5"/><text x="47" y="414">Arterial</text><line x1="25" x2="42" y1="426" y2="426" stroke="#6995AA" strokeWidth="2.5"/><text x="47" y="430">Venous</text></g>
  </g>}
  {line('M224 75 L224 148 L224 208', '#BAADA0',vascular?1.5:2.2)}
  {preset==='threat'&&<circle cx="224" cy="61" r="13" fill={sage} opacity=".25"/>}
  {headFocus&&<circle cx="224" cy="70" r="8" fill={sage} opacity=".3"/>}
  {neural&&<>{motion('M224 72 L224 144 Q224 164 228 181',sage)}{motion('M224 106 L224 144 Q205 146 199 164',sage)}{motion('M224 144 Q242 144 250 164',sage)}</>}
- {(preset==='acth'||complete)&& (vascular?<>{motion('M224 78 Q224 126 224 166 Q213 202 214 225 Q214 239 202 241',plum,'acth')}{motion('M224 78 Q224 126 224 166 Q236 203 237 225 Q237 239 247 240',plum,'acth','.35s')}</>:motion('M224 78 C226 110 226 153 226 186 L224 232 Q214 240 203 242',plum,'acth'))}
- {(preset==='cortisol'||complete)&& (vascular?<>{motion('M205 246 Q219 243 219 226 Q219 205 228 184 Q225 148 224 90',ochre,'cortisol')}{motion('M249 245 Q242 243 242 226 Q242 205 228 184 Q250 136 263 142 Q274 151 279 178 L294 221 L303 254',ochre,'cortisol','.55s')}</>:<>{motion('M203 242 Q222 244 224 232 L224 182 L224 102',ochre,'cortisol')}{motion('M250 242 Q224 244 224 232 L224 182',ochre,'cortisol')}</>)}
+ {(preset==='acth'||complete)&& (vascular?<>{motion('M224 78 Q231 97 231 127 Q231 151 224 166 Q213 202 214 225 Q214 239 202 241',plum,'acth')}{motion('M224 78 Q231 97 231 127 Q231 151 224 166 Q236 203 237 225 Q237 239 247 240',plum,'acth','.35s')}</>:motion('M224 78 C226 110 226 153 226 186 L224 232 Q214 240 203 242',plum,'acth'))}
+ {(preset==='cortisol'||complete)&& (vascular?<>{motion('M205 246 Q219 243 219 226 Q219 205 228 184 Q214 149 214 126 L214 89',ochre,'cortisol')}{motion('M249 245 Q242 243 242 226 Q242 205 228 184 Q250 136 263 142 Q273 151 275 178 Q279 201 286 221 L296 254',ochre,'cortisol','.55s')}{motion('M205 246 Q219 243 219 226 Q219 205 228 184 Q200 136 187 142 Q179 151 175 178 Q170 201 163 221 L153 254',ochre,'cortisol','1.1s')}</>:<>{motion('M203 242 Q222 244 224 232 L224 182 L224 102',ochre,'cortisol')}{motion('M250 242 Q224 244 224 232 L224 182',ochre,'cortisol')}</>)}
  {!vascular&&complete&&motion('M203 242 Q224 244 224 232 L224 182 L224 74',ochre,'feedback')}
  <g transform={compact?"translate(-410 490)":undefined}>
  <text x="459" y="27" fontSize="12" fontWeight="700" letterSpacing="2">MAGNIFIED BRAIN REGION</text>
@@ -56,6 +56,7 @@ export default function SequenceMedia({media,preset,phase='before',artwork}){
  {(preset==='crh'||complete)&&motion(vascular?'M574 181 Q574 194 571 213':'M574 181 Q574 194 572 224',sage,'crh')}
  {(preset==='acth'||complete)&&motion(vascular?'M571 215 Q550 240 530 262':'M572 224 L550 251 L530 278',plum,'acth','.35s')}
  {complete&&<>{motion(vascular?'M530 269 Q536 205 565 184':'M530 280 Q536 205 574 181',ochre,'feedback','.65s')}{motion(vascular?'M530 269 Q548 242 563 218':'M530 280 Q548 242 572 224',ochre,'feedback','.9s')}{vascular&&<g data-hpa-inhibition="true" fill="white" stroke={ochre} strokeWidth="1.8"><circle cx="565" cy="184" r="5"/><path d="M562 184 H568"/><circle cx="563" cy="218" r="5"/><path d="M560 218 H566"/></g>}</>}
+ {vascular&&complete&&<text x="471" y="284" fontSize="10" fill={ochre}>From circulation</text>}
  {vascular&&complete&&<g fontSize="10.5" fill={ink}><circle cx="447" cy="329" r="3" fill={sage}/><text x="453" y="333">CRH</text><circle cx="489" cy="329" r="3" fill={plum}/><text x="495" y="333">ACTH</text><circle cx="539" cy="329" r="3" fill={ochre}/><text x="545" y="333">Cortisol / feedback (−)</text></g>}
  <rect x="440" y="337" width="360" height="133" rx="15" fill="#DFEFF0" stroke="#C5D3DE"/>
  <text x="458" y="356" fontSize="10.5" fontWeight="700" letterSpacing="1.05" fill={sage}>{phase==='before'?'CURRENT EVENT - PREDICT THE NEXT STEP':'EVENT REVEALED'}</text>
