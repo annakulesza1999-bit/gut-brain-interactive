@@ -28,6 +28,8 @@ test('audience layout regression with fourteen demo responses, live and revealed
   await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(140);
   const metrics=await page.locator('.gm-slide-viewport').evaluate(v=>{const c=v.querySelector('.gm-slide-canvas'),s=v.querySelector('.gm-stage-content'),a=c.getBoundingClientRect(),b=s.getBoundingClientRect();return {fit:Number(v.dataset.fitScale),ratio:a.width/a.height,overflow:b.bottom-a.bottom,scroll:v.scrollHeight-v.clientHeight};});
   if(await page.evaluate(()=>!!document.fullscreenElement)){
+   // fullscreenchange updates React controls asynchronously. Wait for the DOM before checking styles.
+   await page.locator('.gm-fullscreen-controls').waitFor({state:'visible'});
    const chrome=await page.evaluate(()=>{const stage=document.fullscreenElement,viewport=stage.querySelector('.gm-slide-viewport'),controls=stage.querySelector('.gm-fullscreen-controls');return {stage:getComputedStyle(stage).backgroundColor,viewport:getComputedStyle(viewport).backgroundColor,controls:getComputedStyle(controls).backgroundColor,divider:getComputedStyle(controls).borderTopWidth};});
    assert.equal(chrome.stage,'rgb(255, 255, 255)',name+' full-screen surround');assert.equal(chrome.viewport,'rgb(255, 255, 255)',name+' viewport surround');assert.equal(chrome.controls,'rgb(255, 255, 255)',name+' controls');assert.equal(chrome.divider,'1px',name+' divider');
   }
@@ -140,7 +142,7 @@ test('audience layout regression with fourteen demo responses, live and revealed
     await phoneToggle.click();
     await page.setViewportSize({width:1280,height:720});
     await page.getByRole('button',{name:'Full screen',exact:true}).click();
-    await page.waitForFunction(()=>!!document.fullscreenElement);
+    await page.waitForFunction(()=>!!document.fullscreenElement);await page.locator('.gm-fullscreen-controls').waitFor({state:'visible'});
     const figures=async suffix=>{
      await stage.locator('.gm-slide-figures img,.gm-annotated-figure').first().waitFor();
      for(const sample of await stage.locator('.gm-sample-line').all()){const m=await sample.evaluate(el=>({bullet:getComputedStyle(el,'::before').content,size:parseFloat(getComputedStyle(el).fontSize)}));assert.ok(['none','normal'].includes(m.bullet));assert.ok(m.size<=17.1);}
@@ -163,7 +165,7 @@ test('audience layout regression with fourteen demo responses, live and revealed
     await figures('720p');
     await page.getByRole('button',{name:'Exit full screen'}).click();await page.waitForFunction(()=>!document.fullscreenElement);
     await page.setViewportSize({width:1920,height:1080});
-    await page.getByRole('button',{name:'Full screen',exact:true}).click();await page.waitForFunction(()=>!!document.fullscreenElement);
+    await page.getByRole('button',{name:'Full screen',exact:true}).click();await page.waitForFunction(()=>!!document.fullscreenElement);await page.locator('.gm-fullscreen-controls').waitFor({state:'visible'});
     await figures('1080p');
     await page.getByRole('button',{name:'Exit full screen'}).click();await page.waitForFunction(()=>!document.fullscreenElement);
     await page.setViewportSize({width:1366,height:768});
@@ -177,7 +179,7 @@ test('audience layout regression with fourteen demo responses, live and revealed
     await input.fill(sentence);await input.press('Enter');await phone.getByText(sentence,{exact:true}).waitFor();await stage.getByText(sentence,{exact:true}).waitFor();
     await input.fill(sentence);await input.press('Enter');await stage.getByText('16 responses',{exact:true}).waitFor();
     assert.equal(await stage.getByText(sentence,{exact:true}).count(),2);assert.equal(await stage.locator('[data-open-response]').count(),16);
-    await phoneToggle.click();await page.getByRole('button',{name:'Full screen',exact:true}).click();await page.waitForFunction(()=>!!document.fullscreenElement);await fit(name+' live');
+    await phoneToggle.click();await page.getByRole('button',{name:'Full screen',exact:true}).click();await page.waitForFunction(()=>!!document.fullscreenElement);await page.locator('.gm-fullscreen-controls').waitFor({state:'visible'});await fit(name+' live');
     const region=stage.getByRole('region',{name:'Open-ended responses'});assert.ok(await region.evaluate(el=>{el.scrollTop=el.scrollHeight;return el.scrollHeight>el.clientHeight&&el.scrollTop>0;}));
     await page.locator('.gm-fullscreen-controls').getByRole('button',{name:'Reveal results'}).click();await fit(name+' revealed');assert.equal(await stage.locator('[data-open-response]').count(),16);await capture({path:out+'/open-ended.png'});
     await page.getByRole('button',{name:'Exit full screen'}).click();await page.waitForFunction(()=>!document.fullscreenElement);continue;
@@ -202,7 +204,7 @@ test('audience layout regression with fourteen demo responses, live and revealed
     await cloudFit(name+' live page 1 again',15);
     if(await phoneToggle.getAttribute('aria-pressed')==='true')await phoneToggle.click();
    }
-   await page.getByRole('button',{name:'Full screen',exact:true}).click();await page.waitForFunction(()=>!!document.fullscreenElement);
+   await page.getByRole('button',{name:'Full screen',exact:true}).click();await page.waitForFunction(()=>!!document.fullscreenElement);await page.locator('.gm-fullscreen-controls').waitFor({state:'visible'});
    await fit(name+' live');
    if(q.type==='simulation'&&q.simMode==='explore'&&q.simKind==='appraisal'){
     const scale=stage.getByRole('img',{name:'Conceptual demand and resource balance'});assert.equal(await scale.locator('[data-balance-platform]').count(),2);assert.equal(await scale.locator('[data-balance-string][stroke="#171717"]').count(),2);assert.equal(await scale.locator('[data-balance-brick="demand"]').count(),8);await stage.getByRole('slider',{name:'Perceived demands'}).fill('10');assert.equal(await scale.locator('[data-balance-brick="demand"]').count(),10);await stage.getByRole('slider',{name:'Perceived demands'}).fill('0');assert.equal(await scale.locator('[data-balance-brick="demand"]').count(),0);await stage.getByRole('slider',{name:'Perceived demands'}).fill('8');
