@@ -116,7 +116,7 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   // Verify a full-screen viewport (not the old 1100px cap).
   await page.getByRole('button',{name:'Full screen',exact:true}).click();
   await page.waitForFunction(()=>!!document.fullscreenElement);
-  await page.waitForFunction(()=>{const v=document.querySelector('.gm-slide-viewport'),c=document.querySelector('.gm-slide-canvas'),s=document.querySelector('.gm-stage-content');if(!v||!c||!s)return false;const a=v.getBoundingClientRect(),b=c.getBoundingClientRect(),d=s.getBoundingClientRect();return b.width>1100&&Math.abs(b.width/b.height-16/9)<.02&&d.top>=b.top-1&&d.bottom<=b.bottom+1&&a.scrollHeight<=a.clientHeight+1;});
+  await page.waitForFunction(()=>{const v=document.querySelector('.gm-slide-viewport'),c=document.querySelector('.gm-slide-canvas'),s=document.querySelector('.gm-stage-content');if(!v||!c||!s)return false;const a=v.getBoundingClientRect(),b=c.getBoundingClientRect(),d=s.getBoundingClientRect();return b.width>1100&&Math.abs(b.width/b.height-16/9)<.02&&d.top>=b.top-1&&d.bottom<=b.bottom+1&&v.scrollHeight<=v.clientHeight+1;});
   await page.getByRole('button',{name:'Exit full screen'}).click();await page.waitForFunction(()=>!document.fullscreenElement);
   // Whole-body sequence and responsive phone diagram.
   await page.getByRole('button',{name:'Edit current slide'}).click();
