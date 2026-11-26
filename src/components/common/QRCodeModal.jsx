@@ -8,7 +8,7 @@ export default function QRCodeModal({ onClose }) {
   const [copied, setCopied] = useState(false);
 
   // Direct join URL with prefilled session code
-  const joinUrl = `${serverInfo.joinUrl}?code=${encodeURIComponent(sessionCode)}${inviteToken?'#invite='+encodeURIComponent(inviteToken):''}`;
+  const joinUrl = `${new URL('/',serverInfo.joinUrl).href}?code=${encodeURIComponent(sessionCode)}${inviteToken?'#invite='+encodeURIComponent(inviteToken):''}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(joinUrl);

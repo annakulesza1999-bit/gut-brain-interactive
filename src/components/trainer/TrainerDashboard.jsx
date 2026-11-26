@@ -19,7 +19,7 @@ export default function TrainerDashboard() {
   const [showQr, setShowQr] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const joinUrl = `${serverInfo.joinUrl}?code=${encodeURIComponent(sessionCode)}${inviteToken?'#invite='+encodeURIComponent(inviteToken):''}`;
+  const joinUrl = `${new URL('/',serverInfo.joinUrl).href}?code=${encodeURIComponent(sessionCode)}${inviteToken?'#invite='+encodeURIComponent(inviteToken):''}`;
   const remoteUrl = `${serverInfo.joinUrl}?role=remote&session=${sessionCode}`;
 
   const copyLink = () => {
