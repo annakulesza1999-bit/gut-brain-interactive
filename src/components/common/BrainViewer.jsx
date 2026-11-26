@@ -1,9 +1,12 @@
 import React,{useEffect,useRef,useState} from 'react';
 import SagittalReference from './SagittalReference';
+import SagittalMap from './SagittalMap';
+import {SAGITTAL_VIEW} from '../../sagittalRegions.js';
 import {brainNode,nodeVisible,viewLabels} from '../../anatomyActivities.js';
 const btn='px-3 py-2 rounded-lg border border-slate-700 bg-slate-900 text-xs disabled:opacity-40';
 const credit=<p className="text-[11px] text-slate-400">Atlas: <a className="underline" href="https://github.com/itayinbarr/brainproject" target="_blank" rel="noreferrer">Brain Project</a> · Z-Anatomy / BodyParts3D (DBCLS) · <a className="underline" href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">CC BY-SA 4.0</a>. Gross anatomy model.</p>;
-export default function BrainViewer({view,markers=[],targets=[],anchor=null,tolerance=0,onPick,showLabels=false,onStatus}){
+export default function BrainViewer(props){return props.view===SAGITTAL_VIEW?<SagittalMap {...props} renderContext={()=> <AtlasViewer view="medial-left"/>}/>:<AtlasViewer {...props}/>;}
+function AtlasViewer({view,markers=[],targets=[],anchor=null,tolerance=0,onPick,showLabels=false,onStatus}){
  const host=useRef(null),api=useRef(null),latest=useRef(null);
  const [status,setStatus]=useState('loading'),[message,setMessage]=useState(''),[spin,setSpin]=useState(false),[retry,setRetry]=useState(0),[through,setThrough]=useState(true),[reference,setReference]=useState(false);
  latest.current={view,markers,targets,anchor,tolerance,onPick,showLabels,onStatus,through};

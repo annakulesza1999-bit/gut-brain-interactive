@@ -1,10 +1,13 @@
+import {SAGITTAL_VIEW,sagittalRegions,sagittalHit} from './sagittalRegions.js';
 import {atlasNodes} from './atlasNodes.js';
 export const ATLAS_VERSION='brainproject-2929e94f521a8ddceab26bc100a98dc06b0da060';
-export const BRAIN_VIEWS=['surface','medial-left','medial-right','deep'];
-export const viewLabels={surface:'Whole brain · exterior','medial-left':'Left hemisphere · medial cutaway','medial-right':'Right hemisphere · medial cutaway',deep:'Internal structures · cortex hidden'};
-const byId=new Map(atlasNodes.map(n=>[n.id,n]));
+export const BRAIN_VIEWS=['surface','medial-left','medial-right','deep',SAGITTAL_VIEW];
+export const viewLabels={surface:'Whole brain · exterior','medial-left':'Left hemisphere · medial cutaway','medial-right':'Right hemisphere · medial cutaway',deep:'Internal structures · cortex hidden',[SAGITTAL_VIEW]:'Midsagittal teaching map (clickable)'};
+const byId=new Map([...atlasNodes,...sagittalRegions].map(n=>[n.id,n]));
 export function nodeVisible(n,view){
  if(!n)return false;
+ if(view===SAGITTAL_VIEW)return n.category==='sagittal';
+ if(n.category==='sagittal')return false;
  const deepCortex=/hippocampus|dentate gyrus|subiculum|amygdal/i.test(n.label);
  if(view==='surface')return ['cortex','cerebellum','brainstem'].includes(n.category)&&!deepCortex;
  // The bulk telencephalic white-matter volume obscures the diencephalon; retain named tracts.
@@ -16,11 +19,12 @@ export function nodeVisible(n,view){
 export function normalizeBrain(q){
  const brainView=BRAIN_VIEWS.includes(q.brainView)?q.brainView:'surface';
  const brainTargets=Array.isArray(q.brainTargets)?[...new Set(q.brainTargets.filter(id=>Number.isInteger(id)&&nodeVisible(byId.get(id),brainView)))].slice(0,80):[];
- const brainAnchor=normalizeBrainHit({brainView},q.brainAnchor);
- const brainTolerance=Number.isFinite(q.brainTolerance)?Math.max(0,Math.min(.2,q.brainTolerance)):0;
+ const brainAnchor=brainView===SAGITTAL_VIEW?null:normalizeBrainHit({brainView},q.brainAnchor);
+ const brainTolerance=brainView!==SAGITTAL_VIEW&&Number.isFinite(q.brainTolerance)?Math.max(0,Math.min(.2,q.brainTolerance)):0;
  return {brainAtlas:ATLAS_VERSION,brainView,brainTargets,brainAnchor,brainTolerance,brainGraded:q.brainGraded!==false,brainFeedback:q.brainFeedback!==false,brainPoints:Number.isFinite(q.brainPoints)?Math.max(0,Math.min(1000,Math.round(q.brainPoints))):100,brainExplanation:typeof q.brainExplanation==='string'?q.brainExplanation.slice(0,3000):''};
 }
 export function normalizeBrainHit(q,hit){
+ if(q.brainView===SAGITTAL_VIEW){if(!hit||!Array.isArray(hit.point)||hit.point.length!==3||hit.point[2]!==0)return null;const normalized=sagittalHit(hit.point[0],hit.point[1]);return normalized&&normalized.nodeId===hit.nodeId?normalized:null;}
  if(!hit||!Number.isInteger(hit.nodeId)||!nodeVisible(byId.get(hit.nodeId),q.brainView)||!Array.isArray(hit.point)||hit.point.length!==3||hit.point.some(x=>!Number.isFinite(x)||Math.abs(x)>3))return null;
  return {nodeId:hit.nodeId,point:hit.point.map(x=>Math.round(x*100000)/100000)};
 }

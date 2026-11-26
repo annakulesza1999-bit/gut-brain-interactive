@@ -143,6 +143,21 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   assert.equal(await phone.getByLabel('Show highlighted structures through surrounding anatomy').isChecked(),true);
   await phone.getByLabel('Show highlighted structures through surrounding anatomy').uncheck();await phone.getByLabel('Show highlighted structures through surrounding anatomy').check();
   await page.screenshot({path:out+'/08-medial-brain-feedback.png'});
+  // A real midsagittal map, independent of WebGL picking.
+  await page.getByRole('button',{name:'Edit current slide'}).click();await page.getByRole('button',{name:'+ 3D brain anatomy',exact:true}).click();
+  await page.getByLabel('Anatomical view').selectOption('sagittal-map');
+  await page.getByLabel('Hypothalamus (approximate region)',{exact:true}).check();
+  await page.getByRole('button',{name:'Present this slide'}).click();
+  const sagittal=phone.getByRole('img',{name:'Interactive midsagittal anatomy'});
+  await sagittal.waitFor();await sagittal.scrollIntoViewIfNeeded();
+  const wrongPoint=await sagittal.evaluate(el=>{const p=el.createSVGPoint();p.x=540;p.y=370;const r=p.matrixTransform(el.getScreenCTM());return {x:r.x,y:r.y};});
+  const rect=await sagittal.boundingBox();const local=await sagittal.evaluate(el=>{const p=el.createSVGPoint();p.x=540;p.y=370;const r=p.matrixTransform(el.getScreenCTM()),b=el.getBoundingClientRect();return {x:r.x-b.left,y:r.y-b.top};});
+  await sagittal.click({position:local});
+  await enabled(phone.getByRole('button',{name:'Check location',exact:true}));
+  await phone.getByRole('button',{name:'Check location',exact:true}).click();
+  await phone.getByText('Not quite - you selected Thalamus',{exact:true}).waitFor();
+  await phone.getByText('Accepted teaching region highlighted in green.',{exact:false}).waitFor();
+  await page.screenshot({path:out+'/12-clickable-sagittal.png'});
   // Compare a reference curve, but only after closing the prediction.
   await page.getByRole('button',{name:'Edit current slide'}).click();await page.getByRole('button',{name:'+ Draw a curve',exact:true}).click();await page.getByRole('button',{name:'Use illustrative cortisol example'}).click();
   await page.getByRole('button',{name:'Present this slide'}).click();await phone.getByRole('button',{name:'Submit prediction'}).waitFor();await page.getByRole('button',{name:'Add demo responses'}).click();assert.equal(await page.locator('[data-reference-curve]').count(),0);await page.getByRole('button',{name:'Reveal results'}).click();await page.locator('[data-reference-curve]').waitFor();await phone.locator('[data-reference-curve]').waitFor();await page.screenshot({path:out+'/09-reference-curve.png'});
