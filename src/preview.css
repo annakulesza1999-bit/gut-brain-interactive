@@ -117,3 +117,11 @@
 .gm-audience-content .gm-figure-wide .gm-slide-figures.gm-has-qr{grid-template-columns:minmax(0,1fr) 120px}
 .gm-audience-content .gm-figure-wide .gm-slide-figures .gm-qr{max-width:120px}
 .gm-audience-content .gm-figure-wide .gm-slide-figures .gm-qr img{width:120px;height:120px;max-height:120px}
+
+.gm-audience-content .gm-text-slide .gm-slide-bullets li.gm-sample-line{font-size:17px;line-height:1.12;margin-bottom:0}
+.gm-audience-content .gm-text-slide .gm-slide-bullets li.gm-sample-line+li.gm-sample-line{margin-top:-.60em}
+.gm-audience-content .gm-figure-wide .gm-slide-bullets li.gm-sample-line+li.gm-sample-line{margin-top:2px}
+.gm-audience-content .gm-figure-wide .gm-slide-bullets li.gm-sample-line:last-of-type{margin-bottom:4px}
+.gm-audience-content .gm-pointer-layout .gm-annotated-figure{max-height:490px}
+.gm-audience-content .gm-pointer-layout.gm-with-figures{grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);align-content:start;align-items:start}
+@media(prefers-reduced-motion:reduce){.gm-hpa-artwork animateMotion{display:none}}

@@ -2,7 +2,8 @@
 export const shortDashes=value=>typeof value==='string'?value.replaceAll('—','-'):value;
 export function parseSlideLine(line){
  let text=shortDashes(String(line||'')),kind='bullet';
- if(text.startsWith('~ ')){kind='muted';text=text.slice(2);}
+ if(text.startsWith('@ ')){kind='sample';text=text.slice(2);}
+ else if(text.startsWith('~ ')){kind='muted';text=text.slice(2);}
  else if(text.startsWith('> ')){kind='indent';text=text.slice(2);}
  else if(text.endsWith(':')&&text.length<85)kind='heading';
  const tokens=[];const re=/\*\*([^*\n]+)\*\*|\*([^*\n]+)\*/g;let cursor=0;

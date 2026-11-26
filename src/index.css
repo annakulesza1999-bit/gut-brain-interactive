@@ -167,3 +167,12 @@ button:is(.bg-emerald-600,.bg-emerald-700,.bg-blue-600,.bg-blue-700):hover:not(:
 .gm-figure-wide .gm-slide-figures .gm-qr{max-width:120px}
 .gm-figure-wide .gm-slide-figures .gm-qr img{width:120px;height:120px;max-width:100%}
 @media(max-width:600px){.gm-figure-wide .gm-slide-figures.gm-has-qr{grid-template-columns:minmax(0,1fr)}}
+
+/* Compact study sample metadata, consistently unbulleted in every layout. */
+.gm-text-slide .gm-slide-bullets li.gm-sample-line{display:block;color:var(--gm-muted);font-size:.66em;line-height:1.12;margin:0}
+.gm-text-slide .gm-slide-bullets li.gm-sample-line::before,.gm-text-slide .gm-slide-bullets li.gm-muted-line::before,.gm-text-slide .gm-slide-bullets li.gm-numbered-line::before{content:none!important;display:none!important}
+.gm-text-slide .gm-slide-bullets li.gm-sample-line+li.gm-sample-line{margin-top:-.46em}
+.gm-text-slide .gm-slide-bullets li.gm-numbered-line{display:grid;grid-template-columns:1.1em minmax(0,1fr);gap:.45em;align-items:start}
+.gm-pointer-number{display:inline-grid;place-items:center;width:1.1em;height:1.1em;border-radius:50%;background:#0063A6;color:white;font-size:.88em;font-weight:700;line-height:1}
+.gm-annotated-figure{display:block;width:100%;height:auto;max-height:52vh}
+.gm-hpa-artwork svg{background:white}

@@ -260,7 +260,7 @@ export default function TrainerLiveQuestion() {
       ) : (
         <div className="space-y-6">
           
-          {currentQuestion.type === 'sequence' && <div className="space-y-2"><SequenceHeading question={currentQuestion}/><SequenceMedia key={currentQuestionIndex+'-'+isRevealed} media={isRevealed?currentQuestion.afterMedia:currentQuestion.beforeMedia} preset={isRevealed?currentQuestion.afterPreset:currentQuestion.beforePreset} phase={isRevealed?'after':'before'}/></div>}
+          {currentQuestion.type === 'sequence' && <div className="space-y-2"><SequenceHeading question={currentQuestion}/><SequenceMedia artwork={currentQuestion.sequenceArtwork} key={currentQuestionIndex+'-'+isRevealed} media={isRevealed?currentQuestion.afterMedia:currentQuestion.beforeMedia} preset={isRevealed?currentQuestion.afterPreset:currentQuestion.beforePreset} phase={isRevealed?'after':'before'}/></div>}
           {/* Large Question Card */}
           <div className="p-6 sm:p-10 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl">
             <h1 className="text-xl sm:text-3xl lg:text-4xl font-black text-white leading-tight tracking-tight">

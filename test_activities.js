@@ -66,3 +66,15 @@ test('wide figure mode is opt-in and survives the public slide payload',()=>{
  for(const layout of ['wide','large','normal']){const q={type:'text',body:'First point\nSecond point',figureLayout:layout,revealMode:'step',sourceNotes:'private'};assert.equal(slideFigureLayout(q),layout);assert.equal(publicActivity(q,1).figureLayout,layout);assert.deepEqual(publicActivity(q,1).visibleLines,['First point']);assert.equal(publicActivity(q,1).sourceNotes,undefined);}
  assert.equal(slideFigureLayout({figureLayout:'invalid'}),'normal');assert.equal(slideFigureLayout({}),'normal');
 });
+
+import {safeSequenceArtwork,safeFigurePointers} from './src/activities.js';
+test('approved sequence artwork and staged pointer coordinates are bounded public data',()=>{
+ const media='data:image/png;base64,YQ==',art={body:media,brain:media};
+ assert.deepEqual(safeSequenceArtwork(art),art);
+ assert.equal(safeSequenceArtwork({body:media,brain:'https://example.com/image.png'}),undefined);
+ assert.deepEqual(publicActivity({type:'sequence',sequenceArtwork:art}).sequenceArtwork,art);
+ const pointers={aspect:.75,groups:[[[[.1,.2],[.5,.4]]],[[[-1,.3],[.5,.6]]]]};
+ assert.deepEqual(safeFigurePointers(pointers),{aspect:.75,groups:[[[[.1,.2],[.5,.4]]],[]]});
+ const q={type:'text',body:'First point\nSecond point',revealMode:'step',textImages:[{media,pointers}]};
+ assert.equal(publicActivity(q,1).visibleLines.length,1);assert.equal(publicActivity(q,1).textImages[0].pointers.groups.length,2);
+});

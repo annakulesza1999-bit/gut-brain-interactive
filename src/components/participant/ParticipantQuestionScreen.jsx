@@ -123,7 +123,7 @@ export default function ParticipantQuestionScreen() {
           <WordCloudInput question={currentQuestion} />
         ) : (
           <>
-            {currentQuestion.type === 'sequence' && <div className="space-y-2 mb-4"><SequenceHeading question={currentQuestion}/><SequenceMedia media={currentQuestion.beforeMedia} preset={currentQuestion.beforePreset}/></div>}
+            {currentQuestion.type === 'sequence' && <div className="space-y-2 mb-4"><SequenceHeading question={currentQuestion}/><SequenceMedia artwork={currentQuestion.sequenceArtwork} media={currentQuestion.beforeMedia} preset={currentQuestion.beforePreset}/></div>}
             {/* Large Readable Question Card */}
             <div className="p-5 sm:p-7 rounded-3xl bg-slate-900 border border-slate-800 shadow-xl mb-4 sm:mb-6">
               <h2 className="text-base sm:text-xl md:text-2xl font-black text-white leading-snug tracking-tight">

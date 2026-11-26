@@ -35,11 +35,12 @@ test('audience layout regression with fourteen demo responses, live and revealed
    function image(w,h){const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const c=canvas.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,w,h);c.strokeStyle='#0063A6';c.lineWidth=3;c.strokeRect(4,4,w-8,h-8);c.fillStyle='#032138';c.font='24px sans-serif';c.fillText('Synthetic geometry fixture',20,35);for(let x=30;x<w-30;x+=80){c.beginPath();c.moveTo(x,55);c.lineTo(x,h-25);c.stroke();}return canvas.toDataURL('image/png');}
    return {wide:image(1057,375),timeline:image(1302,432),portrait:image(1127,1750),qr:image(90,90)};
   });
+  questions[1].sequenceArtwork={body:media.portrait,brain:media.wide};
   const fixtures=[
    {question:'Wide findings: compare three original-sized panels',body:'**Main association:** a fictional finding, not measured data.\n~ Group A: n = 35 | Group B: n = 39',figureLayout:'wide',revealMode:'all',textImages:[{media:media.wide,alt:'Wide geometry fixture'}]},
-   {question:'Study design and sample: wide timeline and compact QR',body:'~ **Sample:** fictional participants, 18-35 years; initial N = 80\n~ **Groups:** A n = 35 | B n = 39\n**Sampling:** salivary and microbiome measurements\n**Behavioral data:** subjective ratings and a representative questionnaire\n**Microbiome:** composition and hypothetical functional measures',figureLayout:'wide',revealMode:'all',textImages:[{media:media.timeline,alt:'Timeline geometry fixture'},{media:media.qr,alt:'QR geometry fixture',role:'qr'}]},
+   {question:'Study design and sample: wide timeline and compact QR',body:'@ **Sample:** fictional participants, 18-35 years; initial N = 80\n@ **Groups:** A n = 35 | B n = 39\n**Sampling:** salivary and microbiome measurements\n**Behavioral data:** subjective ratings and a representative questionnaire\n**Microbiome:** composition and hypothetical functional measures',figureLayout:'wide',revealMode:'all',textImages:[{media:media.timeline,alt:'Timeline geometry fixture'},{media:media.qr,alt:'QR geometry fixture',role:'qr'}]},
    {question:'Portrait illustration and longer source footer',body:'**Nervous system:** alertness and vigilance\n**Cardiovascular and respiratory systems:** heart rate and breathing rate\n**Energy mobilization:** glucose availability and skeletal muscle blood flow\n**Digestive system:** changes in motility and secretion',figureLayout:'large',revealMode:'all',textImages:[{media:media.portrait,alt:'Portrait geometry fixture: includes illustrative acute and chronic effects.'}]},
-   {question:'Wide figure with gradual reveal',body:'First visible point\nSecond visible point\nThird visible point',figureLayout:'wide',revealMode:'step',textImages:[{media:media.timeline,alt:'Step geometry fixture'}]}
+   {question:'Wide figure with gradual reveal',body:'First visible point\nSecond visible point\nThird visible point',figureLayout:'wide',revealMode:'step',textImages:[{media:media.timeline,alt:'Step geometry fixture',pointers:{aspect:1302/432,groups:[[[[.05,.2],[.5,.3]]],[[[.05,.5],[.6,.6]]],[[[.05,.8],[.8,.8]]]]}}]}
   ];
   for(const [j,q] of fixtures.entries())questions.push({...q,type:'text',options:[],correctAnswer:null,id:questions.length+1,timerSeconds:0,slideSources:'Synthetic reference with supporting source details; no real study data or private lecture figures.',sourceNotes:'Private fixture note'});
 
@@ -80,9 +81,11 @@ test('audience layout regression with fourteen demo responses, live and revealed
     assert.equal(await phone.getByText('Private fixture note',{exact:true}).count(),0);
     if(q.revealMode==='step'){
      assert.equal(await phone.getByText('First visible point',{exact:true}).count(),0);
+     assert.equal(await stage.locator('[data-pointer-index]').count(),0);assert.equal(await phone.locator('[data-pointer-index]').count(),0);
      for(const line of q.body.split('\n')){
       await page.getByRole('button',{name:'Reveal next line',exact:true}).click();
       await phone.getByText(line,{exact:true}).waitFor();
+      const count=q.body.split('\n').indexOf(line)+1;assert.equal(await stage.locator('[data-pointer-index]').count(),count);assert.equal(await phone.locator('[data-pointer-index]').count(),count);
      }
     }
     await phoneToggle.click();
@@ -90,12 +93,13 @@ test('audience layout regression with fourteen demo responses, live and revealed
     await page.getByRole('button',{name:'Full screen',exact:true}).click();
     await page.waitForFunction(()=>!!document.fullscreenElement);
     const figures=async suffix=>{
-     await stage.locator('.gm-slide-figures img').first().waitFor();
+     await stage.locator('.gm-slide-figures img,.gm-annotated-figure').first().waitFor();
+     for(const sample of await stage.locator('.gm-sample-line').all()){const m=await sample.evaluate(el=>({bullet:getComputedStyle(el,'::before').content,size:parseFloat(getComputedStyle(el).fontSize)}));assert.ok(['none','normal'].includes(m.bullet));assert.ok(m.size<=17.1);}
      await page.waitForFunction(()=>[...document.querySelectorAll('.gm-stage-content .gm-slide-figures img')].every(i=>i.complete&&i.naturalWidth>0));
      await fit(name+' '+suffix,.96);
      const metrics=await stage.evaluate(s=>{
-      const c=s.closest('.gm-slide-canvas'),a=c.getBoundingClientRect(),footer=s.querySelector('.gm-slide-sources').getBoundingClientRect(),img=s.querySelector('.gm-slide-figures figure:not(.gm-qr) img'),qr=s.querySelector('.gm-qr img'),box=img.getBoundingClientRect(),scale=a.width/1280;
-      const logicalWidth=Math.min(box.width,box.height*img.naturalWidth/img.naturalHeight)/scale;
+      const c=s.closest('.gm-slide-canvas'),a=c.getBoundingClientRect(),footer=s.querySelector('.gm-slide-sources').getBoundingClientRect(),img=s.querySelector('.gm-slide-figures figure:not(.gm-qr) img,.gm-annotated-figure'),qr=s.querySelector('.gm-qr img'),box=img.getBoundingClientRect(),scale=a.width/1280;
+      const logicalWidth=Math.min(box.width,box.height*(img.naturalWidth?img.naturalWidth/img.naturalHeight:img.viewBox.baseVal.width/img.viewBox.baseVal.height))/scale;
       const figBottom=Math.max(...[...s.querySelectorAll('.gm-slide-figures figure')].map(f=>f.getBoundingClientRect().bottom));
       return {logicalWidth,footerBottom:footer.bottom-a.bottom,figureFooterGap:(footer.top-figBottom)/scale,qrWidth:qr?qr.getBoundingClientRect().width/scale:0};
      });
@@ -139,8 +143,9 @@ test('audience layout regression with fourteen demo responses, live and revealed
    }
    await page.getByRole('button',{name:'Full screen',exact:true}).click();await page.waitForFunction(()=>!!document.fullscreenElement);
    await fit(name+' live');
+   if(q.type==='sequence'){assert.equal(await stage.locator('[data-hpa-art]').count(),2);assert.equal(await stage.locator('[data-hpa-signal]').count(),0);}
    if(q.type==='wordcloud')await cloudFit(name+' full screen live',15);
-   if(q.simMode!=='explore'){await page.locator('.gm-fullscreen-controls').getByRole('button',{name:'Reveal results'}).click();await fit(name+' revealed');}
+   if(q.simMode!=='explore'){await page.locator('.gm-fullscreen-controls').getByRole('button',{name:'Reveal results'}).click();await fit(name+' revealed');if(q.type==='sequence'){assert.equal(await stage.locator('[data-hpa-art]').count(),2);assert.ok(await stage.locator('[data-hpa-signal] animateMotion').count()>0);}}
    if(q.type==='wordcloud'){
     await cloudFit(name+' revealed',15);
     await page.screenshot({path:out+'/word-cloud-stress-page1.png'});

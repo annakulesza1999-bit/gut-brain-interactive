@@ -1,5 +1,5 @@
 import React,{useId,useEffect,useRef,useState} from 'react';
-import {safeMedia} from '../../activities.js';
+import {safeMedia,safeSequenceArtwork} from '../../activities.js';
 const stages={
  threat:{title:'A potential threat is appraised',caption:'The brain interprets the situation. Which rapid physiological response may follow?',focus:'brain'},
  sympathetic:{title:'Sympathetic activation',caption:'Neural signals rapidly increase heart rate and breathing and mobilize energy. HPA activity can overlap.',focus:'sympathetic'},
@@ -9,16 +9,42 @@ const stages={
  cortisol:{title:'Cortisol enters circulation',caption:'The adrenal cortex releases cortisol, which acts on tissues throughout the body.',focus:'cortisol'},
  feedback:{title:'Negative feedback',caption:'Cortisol helps inhibit further CRH and ACTH release at the hypothalamus and pituitary.',focus:'feedback'}
 };
-export default function SequenceMedia({media,preset,phase='before'}){
+export default function SequenceMedia({media,preset,phase='before',artwork}){
  const uid=useId().replace(/:/g,''),src=safeMedia(media),stage=stages[preset],host=useRef(null),[compact,setCompact]=useState(false);
  useEffect(()=>{if(!host.current)return;const ro=new ResizeObserver(([e])=>setCompact(e.contentRect.width<550));ro.observe(host.current);return()=>ro.disconnect();},[preset,src]);
  if(src)return <img key={src+phase} src={src} alt={phase==='after'?'Correct biological event':'Biological event before prediction'} className="gm-sequence-upload max-h-[440px] w-full object-contain rounded-xl bg-slate-900"/>;
  if(!stage)return null;
  const n=Object.keys(stages).indexOf(preset),neural=preset==='sympathetic',headFocus=['hypothalamus','crh','feedback'].includes(preset);
  const sage='#176D70',plum='#634078',ochre='#A96531',ink='#032138',muted='#657F93';
+ const art=safeSequenceArtwork(artwork);
  const body='M226 13 C207 13 196 26 195 43 C194 48 195 52 195 57 Q189 56 190 65 Q192 74 199 75 C201 85 207 92 213 96 L211 110 Q210 119 196 123 Q165 129 148 140 Q132 151 126 180 L116 218 L106 260 Q103 272 107 281 L111 294 Q117 302 123 295 L130 280 Q133 276 133 267 L143 226 L159 186 Q163 205 165 231 Q165 255 170 277 Q168 299 177 321 L174 375 L170 428 Q168 444 180 447 L199 447 Q207 444 208 430 L217 376 L226 330 L235 376 L244 430 Q245 444 253 447 L272 447 Q284 444 282 428 L278 375 L275 321 Q284 299 282 277 Q287 255 287 231 Q289 205 293 186 L309 226 L319 267 Q319 276 322 280 L329 295 Q335 302 341 294 L345 281 Q349 272 346 260 L336 218 L326 180 Q320 151 304 140 Q287 129 256 123 Q242 119 241 110 L239 96 C245 92 251 85 253 75 Q260 74 262 65 Q263 56 257 57 C258 52 258 48 257 43 C256 26 245 13 226 13Z';
  function line(d,color,width=2,dash){return <path d={d} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={dash}/>;}
- function motion(d,color){return <g>{line(d,color,3,'7 5')}<circle r="5" fill={color}><animateMotion dur="2.6s" repeatCount="indefinite" path={d}/></circle></g>;}
+ function motion(d,color){return <g data-hpa-signal={preset}>{line(d,color,3,'7 5')}<circle r="5" fill={color}><animateMotion dur="2.6s" repeatCount="indefinite" path={d}/></circle></g>;}
+ if(art)return <figure ref={host} className="gm-hpa-figure gm-hpa-artwork rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden">
+ <svg viewBox={compact?"0 0 410 980":"0 0 820 490"} className="block mx-auto w-full max-w-[920px]" role="img" aria-label={stage.title+': '+stage.caption} data-hpa-stage={preset}>
+ <rect width={compact?410:820} height={compact?980:490} fill="white"/>
+ <g fontFamily="Source Sans 3, Arial, sans-serif" fill={ink}>
+ <text x="24" y="27" fontSize="12" fontWeight="700" letterSpacing="2">BODY OVERVIEW</text>
+ {!compact&&<path d="M410 20 V465" stroke="#DCE5EC"/>}
+ <image data-hpa-art="body" href={art.body} x="0" y="32" width="410" height="455" preserveAspectRatio="xMidYMid meet"/>
+ {line('M224 75 L224 148 L224 208', '#BAADA0',2.2)}
+ {preset==='threat'&&<circle cx="224" cy="61" r="13" fill={sage} opacity=".25"/>}
+ {headFocus&&<circle cx="224" cy="70" r="8" fill={sage} opacity=".3"/>}
+ {neural&&<>{motion('M224 72 L224 144 Q224 164 228 181',sage)}{motion('M224 106 L224 144 Q205 146 199 164',sage)}{motion('M224 144 Q242 144 250 164',sage)}</>}
+ {preset==='acth'&&motion('M224 78 C226 110 226 153 226 186 L224 232 Q214 240 203 242',plum)}
+ {preset==='cortisol'&&<>{motion('M203 242 Q222 244 224 232 L224 182 L224 102',ochre)}{motion('M250 242 Q224 244 224 232 L224 182',ochre)}</>}
+ {preset==='feedback'&&motion('M203 242 Q224 244 224 232 L224 182 L224 74',sage)}
+ <g transform={compact?"translate(-410 490)":undefined}>
+ <text x="459" y="27" fontSize="12" fontWeight="700" letterSpacing="2">MAGNIFIED BRAIN REGION</text>
+ <image data-hpa-art="brain" href={art.brain} x="410" y="32" width="410" height="289" preserveAspectRatio="xMidYMid meet"/>
+ {headFocus&&<circle cx="574" cy="181" r="10" fill={sage} opacity=".28"/>}
+ {preset==='crh'&&motion('M574 181 Q574 194 572 224',sage)}
+ {preset==='acth'&&motion('M572 224 L550 251 L530 278',plum)}
+ {preset==='feedback'&&<>{motion('M530 280 Q536 205 574 181',sage)}{motion('M530 280 Q548 242 572 224',sage)}</>}
+ <rect x="440" y="337" width="360" height="133" rx="15" fill="#DFEFF0" stroke="#C5D3DE"/>
+ <text x="458" y="356" fontSize="10.5" fontWeight="700" letterSpacing="1.05" fill={sage}>{phase==='before'?'CURRENT EVENT - PREDICT THE NEXT STEP':'EVENT REVEALED'}</text>
+ <foreignObject x="458" y="366" width="324" height="96"><div xmlns="http://www.w3.org/1999/xhtml" style={{fontFamily:'Source Sans 3,Arial,sans-serif',color:ink}}><div style={{fontSize:'16px',fontWeight:700,lineHeight:'1.15',marginBottom:'5px'}}>{stage.title}</div><div style={{fontSize:'13px',lineHeight:'1.32'}}>{stage.caption}</div></div></foreignObject>
+ </g></g></svg><figcaption className="px-4 pb-3 text-xs text-slate-400">Teaching schematic: organ positions and signaling routes are simplified; neural and endocrine responses can overlap.</figcaption></figure>;
  return <figure ref={host} className="gm-hpa-figure rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden">
  <svg viewBox={compact?"0 0 410 980":"0 0 820 490"} className="block mx-auto w-full max-w-[920px]" role="img" aria-label={stage.title+': '+stage.caption}>
  <defs><linearGradient id={uid+'skin'} x1="0" x2="1" y1="0" y2=".6"><stop offset="0" stopColor="#F4E6DA"/><stop offset="1" stopColor="#E7D5C7"/></linearGradient><marker id={uid+'arrow'} viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10Z" fill={muted}/></marker></defs>
