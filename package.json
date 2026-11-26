@@ -34,7 +34,8 @@
     "preview": "vite preview",
     "server": "node server/index.js",
     "start": "node init && node server/index.js",
-    "prepare:atlas": "node scripts/prepare-atlas.mjs"
+    "prepare:atlas": "node scripts/prepare-atlas.mjs",
+    "build:editor-preview": "vite build --config vite.editor-preview.config.js --mode editor-preview && node scripts/package-editor-preview.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",

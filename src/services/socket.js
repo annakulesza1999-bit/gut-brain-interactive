@@ -6,7 +6,7 @@ const host = window.location.hostname;
 const socketUrl = window.location.origin;
 
 export const socket = io(socketUrl, {
-  autoConnect: true,
+  autoConnect: import.meta.env.MODE !== 'editor-preview',
   reconnection: true,
   reconnectionAttempts: 10,
   reconnectionDelay: 1000,

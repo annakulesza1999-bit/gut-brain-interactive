@@ -40,3 +40,6 @@ Candidate run 45834486533: package installation, all 31 tests, atlas, frontend b
 
 ### Remediation result
 Candidate run [45834680350](https://github.com/annakulesza1999-bit/gut-brain-interactive/actions/runs/45834680350) completed successfully: clean install, 31 unit tests, pinned atlas, frontend build, 15-client actual loopback integration, and full `npm audit --audit-level=low` reporting **0 vulnerabilities**. All six patched versions and removal of xlsx are recorded in the npm-generated lockfile. No audit exclusions. This is a dependency audit, not a penetration test or approval for public hosting. Final development branch preflight uses only `npm ci --ignore-scripts`, not lock regeneration. Browser and mobile verification, application-level security, and deployment remain outstanding.
+
+## Restricted editor preview
+Separate static frontend entry point uses the actual editor and IndexedDB library; no QuizProvider or active socket connection. The packaged loopback-only Python static launcher serves only the preview HTML, assets and atlas, sets restrictive browser headers and does not provide API endpoints. No public deployment or student session access. Browser verification required before distribution; actual classroom server remains guarded.

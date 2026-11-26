@@ -46,3 +46,5 @@ config.bat
 # Local-only data (never commit classroom records)
 /server/runtime-db.json
 /server/db.json
+
+/dist-preview/

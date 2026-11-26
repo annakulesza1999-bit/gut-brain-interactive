@@ -1,0 +1,16 @@
+GUT & MIND — LOCAL EDITOR PREVIEW
+================================
+This package contains the actual presentation library and slide editor, not the live classroom server. No npm installation is required. You need Python 3 and a current browser.
+
+1. Extract the entire ZIP into one folder.
+2. Open Terminal (macOS/Linux) or PowerShell (Windows) in that folder.
+3. macOS/Linux: python3 open-preview.py
+   Windows:      py -3 open-preview.py
+4. Your browser should open http://127.0.0.1:8765/editor-preview.html. If not, paste that address into it.
+5. Keep the terminal open while editing. Press Ctrl+C to stop the local preview.
+
+Use the practice presentation or create a new test deck. Save & Close, then Backup to export a .gutmind.json file. Storage is tied to your browser and this exact local address. Back up before switching browser, computer or future website. Do not enter real student data. The live server, student joining and PowerPoint import are intentionally absent. Do not expose this port or use a tunnel.
+
+The 3D anatomy model is bundled for offline use. See atlas/ATLAS-LICENSE.md. If WebGL is not available on your device, the viewer may not work.
+
+Only download this preview from the successful GitHub Actions run in your own repository. Do not use the inherited original executable.

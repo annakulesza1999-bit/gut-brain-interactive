@@ -175,7 +175,7 @@ export default function QuestionEditorModal({
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(questions, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `digi_warriors_questions_${Date.now()}.json`);
+    downloadAnchor.setAttribute("download", `gut_mind_questions_${Date.now()}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -193,7 +193,7 @@ export default function QuestionEditorModal({
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                <span>Visual Question Bank & Slide Editor</span>
+                <span>Presentation slide editor</span>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono">
                   {questions.length} Items
                 </span>
@@ -209,7 +209,7 @@ export default function QuestionEditorModal({
               type="button"
               onClick={onExportPresentation||handleExportJSON}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition-colors"
-              title="Download JSON File"
+              title="Download presentation backup"
             >
               <Download className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Backup presentation</span>
@@ -324,6 +324,7 @@ export default function QuestionEditorModal({
                   
                   {/* Question Type Selector */}
                   <select
+                    aria-label="Slide type"
                     value={currentQ.type || 'mcq'}
                     onChange={(e) => handleUpdateCurrentQ('type', e.target.value)}
                     className="px-3 py-1 rounded-lg bg-slate-950 border border-slate-700 text-xs font-semibold text-white focus:outline-none focus:border-blue-500"
@@ -369,7 +370,7 @@ export default function QuestionEditorModal({
                     onClick={() => handleDelete(selectedIndex)}
                     disabled={questions.length <= 1}
                     className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-30 text-rose-400 transition-colors"
-                    title="Delete"
+                    title="Delete slide"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -392,7 +393,7 @@ export default function QuestionEditorModal({
 
               {currentQ.type!=='text' && <section className="p-4 border border-slate-800 rounded-2xl space-y-3">
                 <label className="block text-sm font-medium">Countdown</label>
-                <select className="w-full p-2 rounded-lg border border-slate-700 bg-slate-950" value={currentQ.timerSeconds==null?'default':currentQ.timerSeconds===0?'off':'custom'} onChange={ev=>handleUpdateCurrentQ('timerSeconds',ev.target.value==='default'?null:ev.target.value==='off'?0:30)}><option value="default">Use session default</option><option value="off">No countdown</option><option value="custom">Custom duration</option></select>
+                <select className="w-full p-2 rounded-lg border border-slate-700 bg-slate-950" aria-label="Countdown mode" value={currentQ.timerSeconds==null?'default':currentQ.timerSeconds===0?'off':'custom'} onChange={ev=>handleUpdateCurrentQ('timerSeconds',ev.target.value==='default'?null:ev.target.value==='off'?0:30)}><option value="default">Use session default</option><option value="off">No countdown</option><option value="custom">Custom duration</option></select>
                 {currentQ.timerSeconds>0&&<label className="block text-sm">Seconds (1–3600)<input type="number" min="1" max="3600" value={currentQ.timerSeconds} onChange={ev=>handleUpdateCurrentQ('timerSeconds',Math.max(1,Math.min(3600,Number(ev.target.value)||1)))} className="block w-full p-2 rounded-lg border border-slate-700 bg-slate-950"/></label>}
                 <p className="text-xs text-slate-400">When time expires, submissions close and results are revealed. Advance when ready.</p>
               </section>}
