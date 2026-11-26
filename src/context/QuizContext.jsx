@@ -14,6 +14,10 @@ export function QuizProvider({ children }) {
   
   const [sessionStatus, setSessionStatus] = useState('ready'); // 'ready' | 'running' | 'paused' | 'finished'
   const [timerDuration, setTimerDuration] = useState(30);
+  const [activeDuration,setActiveDuration]=useState(30);
+  const [textVisible,setTextVisible]=useState(0);
+  const [thumbs,setThumbs]=useState({up:0,down:0});
+  const applyActivityUI=useCallback(data=>{setTextVisible(data?.activityUI?.textVisible||0);setThumbs(data?.activityUI?.thumbs||{up:0,down:0});},[]);
   const [speedBonusEnabled, setSpeedBonusEnabled] = useState(true);
   const [showTopic, setShowTopic] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(30);
@@ -88,7 +92,9 @@ export function QuizProvider({ children }) {
         setSessionStatus(res.status);
         setCurrentQuestionIndex(res.currentQuestionIndex);
         setQuestionState(res.questionState);
-        setTimerDuration(res.timerDuration);
+        setTimerDuration(res.timerDuration ?? 30);
+        setActiveDuration(res.activeDuration ?? res.timerDuration ?? 30);
+        applyActivityUI(res);
         setTimeRemaining(res.timeRemaining ?? res.timerDuration);
         setSpeedBonusEnabled(res.speedBonusEnabled);
         setTotalQuestions(res.totalQuestions);
@@ -158,8 +164,10 @@ export function QuizProvider({ children }) {
       setSessionStatus('running');
       setCurrentQuestionIndex(data.currentQuestionIndex || 0);
       setTotalQuestions(data.totalQuestions || 20);
-      setTimerDuration(data.timerDuration || 30);
-      setTimeRemaining(data.timerDuration || 30);
+      setTimerDuration(data.timerDuration ?? 30);
+      setActiveDuration(data.activeDuration??data.timerDuration??30);
+      setTimeRemaining(data.activeDuration??data.timerDuration??30);
+      applyActivityUI(data);
       setQuestionState('active');
       setSelectedOption(null);
       setIsAnswerSubmitted(false);
@@ -195,7 +203,9 @@ export function QuizProvider({ children }) {
       setWordCloudWords([]);
     };
 
-    const handleQuestionChanged = ({ currentQuestionIndex: idx, totalQuestions: total }) => {
+    const handleQuestionChanged = (data) => {
+      const {currentQuestionIndex:idx,totalQuestions:total}=data;
+      setActiveDuration(data.activeDuration??0);setTimeRemaining(data.activeDuration??0);applyActivityUI(data);
       setCurrentQuestionIndex(idx);
       setTotalQuestions(total);
       setQuestionState('active');
@@ -280,6 +290,10 @@ export function QuizProvider({ children }) {
       setWordCloudWords(words || []);
     };
 
+    const handleThumbs=data=>setThumbs({up:data.up||0,down:data.down||0});
+    const handleText=data=>{setTextVisible(data.visibleLines.length);setCurrentQuestion(q=>q?.type==='text'&&q.index===data.questionIndex?{...q,visibleLines:data.visibleLines,textTotal:data.textTotal}:q);};
+    socket.on('thumbs_updated',handleThumbs);
+    socket.on('text_reveal_updated',handleText);
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
     socket.on('participants_updated', handleParticipantsUpdated);
@@ -306,6 +320,8 @@ export function QuizProvider({ children }) {
     }
 
     return () => {
+      socket.off('thumbs_updated',handleThumbs);
+      socket.off('text_reveal_updated',handleText);
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
       socket.off('participants_updated', handleParticipantsUpdated);
@@ -371,8 +387,10 @@ export function QuizProvider({ children }) {
         setSessionStatus(res.status || 'ready');
         setCurrentQuestionIndex(res.currentQuestionIndex || 0);
         setQuestionState(res.questionState || 'active');
-        setTimerDuration(res.timerDuration || 30);
-        setTimeRemaining(res.timeRemaining || 30);
+        setTimerDuration(res.timerDuration ?? 30);
+        setActiveDuration(res.activeDuration ?? res.timerDuration ?? 30);
+        applyActivityUI(res);
+        setTimeRemaining(res.timeRemaining ?? 30);
         setSpeedBonusEnabled(res.speedBonusEnabled !== undefined ? res.speedBonusEnabled : true);
         setShowTopic(res.showTopic !== undefined ? res.showTopic : false);
         setTotalQuestions(res.totalQuestions || 20);
@@ -414,6 +432,7 @@ export function QuizProvider({ children }) {
         setParticipantPhone(cleanPhone);
         setRole('participant');
         setSessionStatus(res.sessionStatus || 'ready');
+        setTimerDuration(res.timerDuration??30);setActiveDuration(res.activeDuration??res.timerDuration??30);setTimeRemaining(res.timeRemaining??0);applyActivityUI(res);
         setTotalQuestions(res.totalQuestions || 20);
         setCurrentQuestionIndex(res.currentQuestionIndex || 0);
         setQuestionState(res.questionState || 'active');
@@ -600,6 +619,9 @@ export function QuizProvider({ children }) {
       sessionCode,
       sessionStatus,
       timerDuration,
+      activeDuration,textVisible,thumbs,
+      resetThumbs:()=>socket.emit('reset_thumbs',{sessionCode}),
+      revealTextLine:()=>socket.emit('reveal_text_line',{sessionCode,questionIndex:currentQuestionIndex}),
       speedBonusEnabled,
       showTopic,
       setShowTopic,

@@ -66,7 +66,7 @@ export default function TrainerLogin({ onBack }) {
         }
         // Basic schema check
         const first = parsed[0];
-        if (parsed.some(q=>!q.question || (!['wordcloud','curve'].includes(q.type) && (!Array.isArray(q.options) || !Number.isInteger(q.correctAnswer) || q.correctAnswer < 0 || q.correctAnswer >= q.options.length)))) {
+        if (parsed.some(q=>!q.question || (!['wordcloud','curve','text'].includes(q.type) && (!Array.isArray(q.options) || !Number.isInteger(q.correctAnswer) || q.correctAnswer < 0 || q.correctAnswer >= q.options.length)))) {
           throw new Error('Invalid question format. Each item must have question, options[], and correctAnswer.');
         }
 
@@ -290,6 +290,7 @@ export default function TrainerLogin({ onBack }) {
             </div>
           </div>
 
+          <label className="block text-sm">Custom session countdown (seconds, 0 = off)<input type="number" min="0" max="3600" value={timerDuration} onChange={ev=>setTimerDuration(Math.max(0,Math.min(3600,Number(ev.target.value)||0)))} className="block w-full mt-1 p-2 rounded-lg border border-slate-700 bg-slate-950"/></label>
           {/* Speed Scoring Toggle */}
           <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
             <div className="flex items-center gap-3">

@@ -11,8 +11,8 @@ export function normalizeCurve(points) {
   if (points[points.length-1][0] - points[0][0] < .05) return null;
   return points.map(p => p.map(v => Math.round(v*10000)/10000));
 }
-export function publicActivity(q) {
-  return {type:q.type || 'mcq', xLabel:q.xLabel, yLabel:q.yLabel, xTicks:q.xTicks, stressMarker:q.stressMarker, sequenceTitle:q.sequenceTitle, sequenceStep:q.sequenceStep, sequenceTotal:q.sequenceTotal, beforeMedia:q.beforeMedia, beforePreset:q.beforePreset};
+export function publicActivity(q, visible=initialTextCount(q)) {
+  return {type:q.type || 'mcq', timerSeconds:q.timerSeconds, revealMode:q.revealMode, visibleLines:q.type==='text'?textLines(q).slice(0,visible):undefined, textTotal:q.type==='text'?textLines(q).length:undefined, xLabel:q.xLabel, yLabel:q.yLabel, xTicks:q.xTicks, stressMarker:q.stressMarker, sequenceTitle:q.sequenceTitle, sequenceStep:q.sequenceStep, sequenceTotal:q.sequenceTotal, beforeMedia:q.beforeMedia, beforePreset:q.beforePreset};
 }
 export function safeMedia(value) {
   if (typeof value !== 'string' || value.length > 500000) return '';
@@ -43,4 +43,22 @@ export function averageCurves(curves, samples=101) {
     });
     return [x,ys.reduce((a,b)=>a+b,0)/ys.length];
   });
+}
+
+export function timerSeconds(value, fallback=30) {
+ const n=value===null||value===undefined||value===''?Number(fallback):Number(value);
+ return Number.isFinite(n)?Math.min(3600,Math.max(0,Math.round(n))):30;
+}
+export function activityDuration(q, fallback=30) {
+ return q?.type==='text'?0:timerSeconds(q?.timerSeconds,fallback);
+}
+export function textLines(q) {
+ return (typeof q?.body==='string'?q.body:'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,100);
+}
+export function initialTextCount(q) {
+ return q?.type==='text'?(q.revealMode==='step'?0:textLines(q).length):0;
+}
+export function reactionSummary(votes={}) {
+ const values=Object.values(votes);
+ return {up:values.filter(x=>x==='👍').length,down:values.filter(x=>x==='👎').length};
 }

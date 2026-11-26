@@ -35,8 +35,9 @@ export default function ParticipantResultScreen() {
   const speedBonus = lastAnswerResult?.speedBonus ?? 0;
   const pointsEarned = lastAnswerResult?.pointsEarned ?? (basePoints + speedBonus);
 
-  if(currentQuestion?.type==='curve') return <CurveResults question={currentQuestion} curves={revealData?.curves||[]} revealed={true} participant/>;
-  if(currentQuestion?.type==='sequence') return <div className="max-w-xl mx-auto space-y-4"><SequenceHeading question={currentQuestion}/><SequenceMedia media={revealData?.afterMedia} preset={revealData?.afterPreset} phase="after"/><h2 className="text-xl">{currentQuestion.options?.[correctAnswer]}</h2><p className="text-sm">{explanation}</p><p className="text-sm text-slate-400">Waiting for the next stage.</p></div>;
+  if(currentQuestion?.type==='curve') return <div className="pb-24"><CurveResults question={currentQuestion} curves={revealData?.curves||[]} revealed={true} participant/><ReactionActionBar/></div>;
+  if(currentQuestion?.type==='sequence') return <div className="max-w-xl mx-auto space-y-4"><SequenceHeading question={currentQuestion}/><SequenceMedia media={revealData?.afterMedia} preset={revealData?.afterPreset} phase="after"/><h2 className="text-xl">{currentQuestion.options?.[correctAnswer]}</h2><p className="text-sm">{explanation}</p><p className="text-sm text-slate-400">Waiting for the next stage.</p><ReactionActionBar/></div>;
+  if(currentQuestion?.type==='wordcloud')return <div className="p-6 pb-24"><h2>Word cloud complete</h2><p>Waiting for the next activity.</p><ReactionActionBar/></div>;
   return (
     <div className="max-w-xl mx-auto px-3 sm:px-4 py-4 sm:py-8 animate-fade-in space-y-4 sm:space-y-5">
       

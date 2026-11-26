@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import TextSlide from '../common/TextSlide';
 import {CurveInput} from '../common/CurveActivity';
 import SequenceMedia, {SequenceHeading} from '../common/SequenceMedia';
 import { useQuiz } from '../../context/QuizContext';
@@ -17,7 +18,7 @@ export default function ParticipantQuestionScreen() {
     selectedOption,
     isAnswerSubmitted,
     timeRemaining,
-    timerDuration,
+    timerDuration,activeDuration,
     submitAnswer,
     sessionStatus,
     speedBonusEnabled,
@@ -102,7 +103,7 @@ export default function ParticipantQuestionScreen() {
             )}
           </div>
           
-          {!['curve','sequence'].includes(currentQuestion.type) && <TimerDisplay timeRemaining={timeRemaining} totalDuration={timerDuration} />}
+          {currentQuestion.type!=='text' && <TimerDisplay timeRemaining={timeRemaining} totalDuration={activeDuration} />}
         </div>
 
         {/* Paused Overlay Notice */}
@@ -113,7 +114,7 @@ export default function ParticipantQuestionScreen() {
           </div>
         )}
 
-        {currentQuestion.type === 'curve' ? <CurveInput key={currentQuestionIndex} question={currentQuestion}/> : currentQuestion.type === 'wordcloud' ? (
+        {currentQuestion.type === 'text' ? <TextSlide question={currentQuestion}/> : currentQuestion.type === 'curve' ? <CurveInput key={currentQuestionIndex} question={currentQuestion}/> : currentQuestion.type === 'wordcloud' ? (
           <WordCloudInput question={currentQuestion} />
         ) : (
           <>
@@ -176,7 +177,7 @@ export default function ParticipantQuestionScreen() {
       </div>
 
       {/* Answer Submitted Sticky Feedback */}
-      {isAnswerSubmitted && !['wordcloud','curve'].includes(currentQuestion.type) && (
+      {isAnswerSubmitted && !['wordcloud','curve','text'].includes(currentQuestion.type) && (
         <div className="mt-6 mb-16 p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/50 text-emerald-200 flex items-center justify-center gap-2.5 animate-slide-up shadow-xl">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
           <span className="font-extrabold text-xs sm:text-sm">

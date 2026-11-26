@@ -8,7 +8,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { db } from './db.js';
 import * as XLSX from 'xlsx';
-import { curveIdentity, normalizeCurve, publicActivity, safeMedia } from '../src/activities.js';
+import { curveIdentity, normalizeCurve, publicActivity, safeMedia, timerSeconds, activityDuration, textLines, initialTextCount, reactionSummary } from '../src/activities.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,6 +61,19 @@ try {
 
 // In-Memory Sessions Store (live running sessions)
 const sessions = new Map();
+function completionCount(session, index=session.currentQuestionIndex) {
+ const q=session.questions[index];
+ if(q?.type==='text')return 0;
+ if(q?.type==='curve')return (session.curveSubmissions?.[index]||[]).length;
+ if(q?.type==='wordcloud')return new Set((session.wordCloudSubmissions?.[index]||[]).map(x=>x.participantId).filter(Boolean)).size;
+ return session.participants.filter(p=>p.answers[index]!==undefined).length;
+}
+function completionPayload(session) {return {questionIndex:session.currentQuestionIndex,answeredCount:completionCount(session),totalParticipants:session.participants.length};}
+function textState(session){const q=session.questions[session.currentQuestionIndex];return {questionIndex:session.currentQuestionIndex,visibleLines:textLines(q).slice(0,session.textVisible||0),textTotal:textLines(q).length};}
+function broadcastText(session){io.to(session.code).emit('text_reveal_updated',textState(session));}
+function thumbsState(session){return {questionIndex:session.currentQuestionIndex,...reactionSummary(session.thumbVotes)};}
+function resetActivityUI(session){session.textVisible=initialTextCount(session.questions[session.currentQuestionIndex]);session.thumbVotes={};}
+
 
 // Helper to calculate scores, rankings and deltas
 function updateSessionRankings(session) {
@@ -104,7 +117,7 @@ function calculateSessionAnalytics(session) {
       }
     });
 
-    if (q.type === 'curve') answeredCount = (session.curveSubmissions?.[qIndex] || []).length;
+    if (['curve','wordcloud','text'].includes(q.type)) answeredCount = completionCount(session,qIndex);
     const notAnsweredCount = totalParticipants - answeredCount;
     const accuracyPct = totalParticipants > 0 ? Math.round((correctCount / totalParticipants) * 100) : 0;
     const avgResponseTimeMs = answeredCount > 0 ? Math.round(totalResponseTime / answeredCount) : 0;
@@ -126,7 +139,7 @@ function calculateSessionAnalytics(session) {
       answeredCount,
       notAnsweredCount,
       correctCount,
-      incorrectCount: q.type === 'curve' ? 0 : answeredCount - correctCount,
+      incorrectCount: ['curve','wordcloud','text'].includes(q.type) ? 0 : answeredCount - correctCount,
       type: q.type || 'mcq',
       accuracyPct,
       avgResponseTimeMs,
@@ -380,20 +393,22 @@ io.on('connection', (socket) => {
         trainerName: trainerName || 'Trainer',
         trainerSocketId: socket.id,
         status: 'ready',
-        timerDuration: Number(timerDuration) || 30,
+        timerDuration: timerSeconds(timerDuration),
         speedBonusEnabled: Boolean(speedBonusEnabled),
         showTopic: Boolean(showTopic),
         currentQuestionIndex: 0,
         questionState: 'active',
         questionStartTime: null,
-        timeRemaining: Number(timerDuration) || 30,
+        timeRemaining: timerSeconds(timerDuration),
         timerInterval: null,
         questions: questionSet,
         participants: [],
         completedQuestions: [],
         qaQuestions: [],
         wordCloudSubmissions: {},
-        curveSubmissions: {}
+        curveSubmissions: {},
+        textVisible:0,
+        thumbVotes:{}
       };
 
       sessions.set(code, newSession);
@@ -451,7 +466,7 @@ io.on('connection', (socket) => {
 
       let answeredCount = 0;
       session.participants.forEach(p => {
-        if (p.answers[session.currentQuestionIndex] !== undefined || (session.curveSubmissions?.[session.currentQuestionIndex] || []).some(c=>c.participantId===p.id)) answeredCount++;
+        // Completion is calculated below by activity type.
       });
 
       const participantList = session.participants.map(p => ({
@@ -472,6 +487,8 @@ io.on('connection', (socket) => {
         questionState: session.questionState,
         timeRemaining: session.timeRemaining,
         timerDuration: session.timerDuration,
+        activeDuration: activityDuration(session.questions[session.currentQuestionIndex],session.timerDuration),
+        activityUI: {textVisible:session.textVisible||0,thumbs:thumbsState(session)},
         speedBonusEnabled: session.speedBonusEnabled,
         showTopic: session.showTopic !== undefined ? session.showTopic : false,
         totalQuestions: session.questions.length,
@@ -480,7 +497,7 @@ io.on('connection', (socket) => {
         completedQuestions: session.completedQuestions,
         currentQuestion: currQ ? { index: session.currentQuestionIndex, total: session.questions.length, ...currQ } : null,
         liveAnswerCount: {
-          answeredCount,
+          answeredCount: completionCount(session),
           totalParticipants: session.participants.length
         },
         analytics
@@ -581,7 +598,7 @@ io.on('connection', (socket) => {
           options: q.options,
           difficulty: q.difficulty,
           category: q.category,
-          ...publicActivity(q)
+          ...publicActivity(q,session.textVisible)
         } : null;
 
         const myAns = existing.answers[session.currentQuestionIndex];
@@ -598,6 +615,8 @@ io.on('connection', (socket) => {
           questionState: session.questionState,
           timeRemaining: session.timeRemaining,
           timerDuration: session.timerDuration,
+          activeDuration: activityDuration(session.questions[session.currentQuestionIndex],session.timerDuration),
+          activityUI: {textVisible:session.textVisible||0,thumbs:thumbsState(session)},
           speedBonusEnabled: session.speedBonusEnabled,
           totalQuestions: session.questions.length,
           participants: session.participants.map(p => ({ id: p.id, name: p.name, phone: p.phone, score: p.score, rank: p.currentRank, connected: p.connected })),
@@ -640,12 +659,14 @@ io.on('connection', (socket) => {
           sessionCode: code,
           student,
           participant: newParticipant,
-          currentQuestion: session.status === 'ready' ? null : (() => { const q = session.questions[session.currentQuestionIndex]; return {index:session.currentQuestionIndex,total:session.questions.length,id:q.id,question:q.question,options:q.options,category:q.category,difficulty:q.difficulty,...publicActivity(q)}; })(),
+          currentQuestion: session.status === 'ready' ? null : (() => { const q = session.questions[session.currentQuestionIndex]; return {index:session.currentQuestionIndex,total:session.questions.length,id:q.id,question:q.question,options:q.options,category:q.category,difficulty:q.difficulty,...publicActivity(q,session.textVisible)}; })(),
           sessionStatus: session.status,
           currentQuestionIndex: session.currentQuestionIndex,
           questionState: session.questionState,
           timeRemaining: session.timeRemaining,
           timerDuration: session.timerDuration,
+          activeDuration: activityDuration(session.questions[session.currentQuestionIndex],session.timerDuration),
+          activityUI: {textVisible:session.textVisible||0,thumbs:thumbsState(session)},
           speedBonusEnabled: session.speedBonusEnabled,
           totalQuestions: session.questions.length,
           participants: participantList
@@ -665,8 +686,7 @@ io.on('connection', (socket) => {
     session.currentQuestionIndex = 0;
     session.questionState = 'active';
     session.questionStartTime = Date.now();
-    session.timeRemaining = session.timerDuration;
-
+    resetActivityUI(session);
     startTimer(session);
 
     const q = session.questions[0];
@@ -678,7 +698,7 @@ io.on('connection', (socket) => {
       options: q.options,
       difficulty: q.difficulty,
       category: q.category,
-          ...publicActivity(q)
+          ...publicActivity(q,session.textVisible)
     };
 
     const trainerQuestion = {
@@ -692,6 +712,8 @@ io.on('connection', (socket) => {
       currentQuestionIndex: 0,
       totalQuestions: session.questions.length,
       timerDuration: session.timerDuration,
+      activeDuration: session.timeRemaining,
+      activityUI:{textVisible:session.textVisible||0,thumbs:thumbsState(session)},
       question: participantQuestion
     });
 
@@ -702,9 +724,9 @@ io.on('connection', (socket) => {
   // Timer runner
   function startTimer(session) {
     if (session.timerInterval) clearInterval(session.timerInterval);
-    if (['curve','sequence'].includes(session.questions[session.currentQuestionIndex]?.type) || session.timerDuration <= 0) return;
-
-    session.timeRemaining = session.timerDuration;
+    session.timerInterval = null;
+    session.timeRemaining = activityDuration(session.questions[session.currentQuestionIndex], session.timerDuration);
+    if (session.timeRemaining <= 0) return;
 
     session.timerInterval = setInterval(() => {
       if (session.status === 'paused') return;
@@ -764,15 +786,16 @@ io.on('connection', (socket) => {
     }
 
     const q = session.questions[questionIndex];
-    if (questionIndex !== session.currentQuestionIndex || !q || q.type === 'curve' || !Number.isInteger(selectedOption) || selectedOption < 0 || selectedOption >= (q.options?.length || 0)) return callback && callback({success:false,error:'Invalid or inactive question.'});
+    if (questionIndex !== session.currentQuestionIndex || !q || ['curve','text','wordcloud'].includes(q.type) || !Number.isInteger(selectedOption) || selectedOption < 0 || selectedOption >= (q.options?.length || 0)) return callback && callback({success:false,error:'Invalid or inactive question.'});
     const isCorrect = (selectedOption === q.correctAnswer);
 
     let basePoints = isCorrect ? 100 : 0;
     let speedBonus = 0;
 
-    if (isCorrect && q.type !== 'sequence' && session.speedBonusEnabled && session.timerDuration > 0) {
-      const timeUsedSec = Math.min(session.timerDuration, (responseTimeMs || 0) / 1000);
-      const remainingRatio = Math.max(0, (session.timerDuration - timeUsedSec) / session.timerDuration);
+    const duration=activityDuration(q,session.timerDuration);
+    if (isCorrect && q.type !== 'sequence' && session.speedBonusEnabled && duration > 0) {
+      const timeUsedSec = Math.min(duration, (responseTimeMs || 0) / 1000);
+      const remainingRatio = Math.max(0, (duration - timeUsedSec) / duration);
       speedBonus = Math.round(remainingRatio * 50);
     }
 
@@ -797,7 +820,7 @@ io.on('connection', (socket) => {
 
     io.to(session.code).emit('live_answer_count', {
       questionIndex,
-      answeredCount,
+      answeredCount: completionCount(session),
       totalParticipants: session.participants.length
     });
 
@@ -834,10 +857,26 @@ io.on('connection', (socket) => {
     io.to(session.code).emit('live_answer_count',{questionIndex,answeredCount:entries.length,totalParticipants:session.participants.length});
   });
 
+  socket.on('reset_thumbs', ({sessionCode}={}) => {
+    const session=sessions.get(sessionCode);
+    if(!session||session.trainerSocketId!==socket.id)return;
+    session.thumbVotes={};
+    io.to(session.code).emit('thumbs_updated',thumbsState(session));
+  });
+  socket.on('reveal_text_line', ({sessionCode,questionIndex}={}) => {
+    const session=sessions.get(sessionCode);
+    if(!session||session.trainerSocketId!==socket.id||session.currentQuestionIndex!==questionIndex)return;
+    const q=session.questions[questionIndex];
+    if(q?.type!=='text')return;
+    session.textVisible=Math.min(textLines(q).length,(session.textVisible||0)+1);
+    broadcastText(session);
+  });
   // Trainer manually reveals the answer
   socket.on('reveal_answer', ({ sessionCode }) => {
     const session = sessions.get(sessionCode);
-    if (!session) return;
+    if (!session || session.questionState!=='active') return;
+    const q=session.questions[session.currentQuestionIndex];
+    if(q?.type==='text'){if(socket.id===session.trainerSocketId){session.textVisible=Math.min(textLines(q).length,(session.textVisible||0)+1);broadcastText(session);}return;}
 
     if (session.timerInterval) {
       clearInterval(session.timerInterval);
@@ -866,6 +905,8 @@ io.on('connection', (socket) => {
     const session = sessions.get(sessionCode);
     if (!session) return;
 
+    const current=session.questions[session.currentQuestionIndex];
+    if(current?.type==='text' && (session.textVisible||0)<textLines(current).length){if(socket.id===session.trainerSocketId){session.textVisible++;broadcastText(session);}return;}
     if (!session.completedQuestions.includes(session.currentQuestionIndex)) {
       session.completedQuestions.push(session.currentQuestionIndex);
     }
@@ -893,8 +934,7 @@ io.on('connection', (socket) => {
       session.currentQuestionIndex = nextIndex;
       session.questionState = 'active';
       session.questionStartTime = Date.now();
-      session.timeRemaining = session.timerDuration;
-
+      resetActivityUI(session);
       startTimer(session);
 
       const q = session.questions[nextIndex];
@@ -906,7 +946,7 @@ io.on('connection', (socket) => {
         options: q.options,
         difficulty: q.difficulty,
         category: q.category,
-          ...publicActivity(q)
+          ...publicActivity(q,session.textVisible)
       };
 
       const trainerQuestion = {
@@ -917,7 +957,8 @@ io.on('connection', (socket) => {
 
       io.to(session.code).emit('question_changed', {
         currentQuestionIndex: nextIndex,
-        totalQuestions: session.questions.length
+        totalQuestions: session.questions.length,
+        activeDuration:session.timeRemaining,activityUI:{textVisible:session.textVisible||0,thumbs:thumbsState(session)}
       });
 
       io.to(session.trainerSocketId).emit('trainer_question', trainerQuestion);
@@ -934,8 +975,7 @@ io.on('connection', (socket) => {
     session.currentQuestionIndex = questionIndex;
     session.questionState = 'active';
     session.questionStartTime = Date.now();
-    session.timeRemaining = session.timerDuration;
-
+    resetActivityUI(session);
     startTimer(session);
 
     const q = session.questions[questionIndex];
@@ -947,7 +987,7 @@ io.on('connection', (socket) => {
       options: q.options,
       difficulty: q.difficulty,
       category: q.category,
-          ...publicActivity(q)
+          ...publicActivity(q,session.textVisible)
     };
 
     const trainerQuestion = {
@@ -958,7 +998,8 @@ io.on('connection', (socket) => {
 
     io.to(session.code).emit('question_changed', {
       currentQuestionIndex: questionIndex,
-      totalQuestions: session.questions.length
+      totalQuestions: session.questions.length,
+      activeDuration:session.timeRemaining,activityUI:{textVisible:session.textVisible||0,thumbs:thumbsState(session)}
     });
 
     io.to(session.trainerSocketId).emit('trainer_question', trainerQuestion);
@@ -995,6 +1036,8 @@ io.on('connection', (socket) => {
     session.questionState = 'active';
     session.completedQuestions = [];
     session.curveSubmissions = {};
+    session.wordCloudSubmissions = {};
+    resetActivityUI(session);
 
     session.participants.forEach(p => {
       p.score = 0;
@@ -1014,15 +1057,21 @@ io.on('connection', (socket) => {
   });
 
   // Real-Time Floating Emoji Reactions
-  socket.on('send_reaction', ({ sessionCode, emoji, senderName }) => {
+  socket.on('send_reaction', ({ sessionCode, emoji }={}) => {
     const session = sessions.get(sessionCode);
-    if (!session || !emoji) return;
-
+    const allowed=['❤️','👍','👎','🔥','👏','💡','🎉','🚀','😂'];
+    if (!session || !allowed.includes(emoji)) return;
+    const participant=session.participants.find(p=>p.socketId===socket.id&&p.connected);
+    if(!participant && socket.id!==session.trainerSocketId)return;
+    const now=Date.now();
+    if(now-(socket.data.lastReaction||0)<300)return;
+    socket.data.lastReaction=now;
+    if(participant && ['👍','👎'].includes(emoji)){
+      (session.thumbVotes||={})[participant.id]=emoji;
+      io.to(session.code).emit('thumbs_updated',thumbsState(session));
+    }
     io.to(session.code).emit('reaction_received', {
-      id: `${Date.now()}-${Math.random()}`,
-      emoji,
-      senderName: senderName || 'Anonymous',
-      timestamp: Date.now()
+      id: now+'-'+Math.random(),emoji,senderName:'Anonymous',timestamp:now
     });
   });
 
@@ -1105,10 +1154,13 @@ io.on('connection', (socket) => {
   // Live Word Cloud Submission
   const handleWordCloudSubmit = ({ sessionCode, word, questionIndex, participantPhone }, callback) => {
     const session = sessions.get(sessionCode);
-    if (!session || !word) return callback && callback({ success: false });
+    if (!session || typeof word!=='string' || !word.trim() || word.trim().length>35 || session.questionState!=='active' || session.status!=='running') return callback && callback({ success: false });
+    const participant=session.participants.find(p=>p.socketId===socket.id&&p.connected);
+    if(!participant)return callback&&callback({success:false});
 
     if (!session.wordCloudSubmissions) session.wordCloudSubmissions = {};
     const qIdx = questionIndex !== undefined ? questionIndex : session.currentQuestionIndex;
+    if(qIdx!==session.currentQuestionIndex || session.questions[qIdx]?.type!=='wordcloud')return callback&&callback({success:false});
 
     if (!session.wordCloudSubmissions[qIdx]) {
       session.wordCloudSubmissions[qIdx] = [];
@@ -1116,11 +1168,12 @@ io.on('connection', (socket) => {
 
     session.wordCloudSubmissions[qIdx].push({
       text: word.trim(),
-      phone: participantPhone || '',
+      participantId:participant.id,
       timestamp: Date.now()
     });
 
-    const currentWords = session.wordCloudSubmissions[qIdx];
+    const currentWords = session.wordCloudSubmissions[qIdx].map(({text,timestamp})=>({text,timestamp}));
+    io.to(session.code).emit('live_answer_count',completionPayload(session));
 
     // Compute word map frequencies
     const wordMap = {};
@@ -1187,7 +1240,7 @@ io.on('connection', (socket) => {
 
     let answeredCount = 0;
     session.participants.forEach(p => {
-      if (p.answers[session.currentQuestionIndex] !== undefined || (session.curveSubmissions?.[session.currentQuestionIndex] || []).some(c=>c.participantId===p.id)) answeredCount++;
+      // Completion is calculated below by activity type.
     });
 
     const payload = {
@@ -1200,6 +1253,8 @@ io.on('connection', (socket) => {
       questionState: session.questionState,
       timeRemaining: session.timeRemaining,
       timerDuration: session.timerDuration,
+      activeDuration: activityDuration(session.questions[session.currentQuestionIndex],session.timerDuration),
+      activityUI: {textVisible:session.textVisible||0,thumbs:thumbsState(session)},
       speedBonusEnabled: session.speedBonusEnabled,
       showTopic: session.showTopic !== undefined ? session.showTopic : false,
       totalQuestions: session.questions.length,
@@ -1207,11 +1262,11 @@ io.on('connection', (socket) => {
       participants: participantList,
       completedQuestions: session.completedQuestions,
       liveAnswerCount: {
-        answeredCount,
+        answeredCount: completionCount(session),
         totalParticipants: session.participants.length
       },
       qaQuestions: session.qaQuestions || [],
-      wordCloudWords: (session.wordCloudSubmissions && session.wordCloudSubmissions[session.currentQuestionIndex]) || [],
+      wordCloudWords: (session.wordCloudSubmissions?.[session.currentQuestionIndex] || []).map(({text,timestamp})=>({text,timestamp})),
       analytics
     };
 
@@ -1227,7 +1282,7 @@ io.on('connection', (socket) => {
           options: currQ.options,
           difficulty: currQ.difficulty,
           category: currQ.category,
-          ...publicActivity(currQ)
+          ...publicActivity(currQ,session.textVisible)
         };
       }
     }
