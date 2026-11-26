@@ -23,6 +23,7 @@ test('audience layout regression with fourteen demo responses, live and revealed
  for(let i=0;i<60;i++){try{if((await fetch(url)).ok){ready=true;break;}}catch{}await delay(100);}assert.ok(ready);
  const browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});t.after(()=>browser.close());
  const page=await browser.newPage({viewport:{width:1366,height:768}}),errors=[],checks=[];page.on('pageerror',e=>errors.push(e.message));
+ async function capture(options){try{await page.screenshot({...options,timeout:2500});}catch(e){console.warn('Optional screenshot unavailable: '+options.path+' '+e.message);}}
  async function fit(name,min=.80){
   await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(140);
   const metrics=await page.locator('.gm-slide-viewport').evaluate(v=>{const c=v.querySelector('.gm-slide-canvas'),s=v.querySelector('.gm-stage-content'),a=c.getBoundingClientRect(),b=s.getBoundingClientRect();return {fit:Number(v.dataset.fitScale),ratio:a.width/a.height,overflow:b.bottom-a.bottom,scroll:v.scrollHeight-v.clientHeight};});
@@ -95,7 +96,7 @@ test('audience layout regression with fourteen demo responses, live and revealed
      if(preset==='feedback')assert.equal(await mobile.locator('[data-hpa-inhibition] circle').count(),2);
      console.log('Verified phone/presenter HPA artwork and animation: stage '+q.sequenceStep+' '+phase);
      if((q.sequenceStep===1||q.sequenceStep===5)&&phase==='after'){
-      await page.screenshot({path:out+'/hpa-phone-'+q.sequenceStep+'-'+phase+'.png',timeout:5000}).catch(e=>console.warn('Optional screenshot unavailable: '+e.message));
+      await capture({path:out+'/hpa-phone-'+q.sequenceStep+'-'+phase+'.png',timeout:5000}).catch(e=>console.warn('Optional screenshot unavailable: '+e.message));
      }
     }
     await checkAnatomy(q.beforePreset,'before');
@@ -149,7 +150,7 @@ test('audience layout regression with fourteen demo responses, live and revealed
      if(q.figureLayout==='wide')assert.ok(metrics.logicalWidth>=850,name+' wide figure too small '+JSON.stringify(metrics));
      if(q.figureLayout==='large')assert.ok(metrics.logicalWidth>=280,name+' portrait figure too small '+JSON.stringify(metrics));
      if(q.textImages.length===2)assert.ok(metrics.qrWidth>=110&&metrics.qrWidth<=125,name+' QR size '+JSON.stringify(metrics));
-     await page.screenshot({path:out+'/layout-'+name+'-'+suffix+'.png'});
+     await capture({path:out+'/layout-'+name+'-'+suffix+'.png'});
     };
     await figures('720p');
     await page.getByRole('button',{name:'Exit full screen'}).click();await page.waitForFunction(()=>!document.fullscreenElement);
@@ -170,7 +171,7 @@ test('audience layout regression with fourteen demo responses, live and revealed
     assert.equal(await stage.getByText(sentence,{exact:true}).count(),2);assert.equal(await stage.locator('[data-open-response]').count(),16);
     await phoneToggle.click();await page.getByRole('button',{name:'Full screen',exact:true}).click();await page.waitForFunction(()=>!!document.fullscreenElement);await fit(name+' live');
     const region=stage.getByRole('region',{name:'Open-ended responses'});assert.ok(await region.evaluate(el=>{el.scrollTop=el.scrollHeight;return el.scrollHeight>el.clientHeight&&el.scrollTop>0;}));
-    await page.locator('.gm-fullscreen-controls').getByRole('button',{name:'Reveal results'}).click();await fit(name+' revealed');assert.equal(await stage.locator('[data-open-response]').count(),16);await page.screenshot({path:out+'/open-ended.png'});
+    await page.locator('.gm-fullscreen-controls').getByRole('button',{name:'Reveal results'}).click();await fit(name+' revealed');assert.equal(await stage.locator('[data-open-response]').count(),16);await capture({path:out+'/open-ended.png'});
     await page.getByRole('button',{name:'Exit full screen'}).click();await page.waitForFunction(()=>!document.fullscreenElement);continue;
    }
    if(q.type==='wordcloud'){
@@ -200,14 +201,14 @@ test('audience layout regression with fourteen demo responses, live and revealed
    }
    if(q.type==='sequence'){assert.equal(await stage.locator('[data-hpa-art]').count(),2);assert.equal(await stage.locator('[data-vessel="artery"]').count(),6);assert.equal(await stage.locator('[data-vessel="vein"]').count(),6);assert.equal(await stage.locator('[data-hpa-pituitary]').count(),1);if(q.beforePreset==='threat')assert.equal(await stage.locator('[data-hpa-signal]').count(),0);}
    if(q.type==='wordcloud')await cloudFit(name+' full screen live',15);
-   if(q.simMode!=='explore'){await page.locator('.gm-fullscreen-controls').getByRole('button',{name:'Reveal results'}).click();await fit(name+' revealed');if(q.type==='sequence'){assert.equal(await stage.locator('[data-hpa-art]').count(),2);assert.ok(await stage.locator('[data-hpa-signal] animateMotion').count()>0);if(q.afterPreset==='feedback'){for(const kind of ['crh','acth','cortisol','feedback'])assert.ok(await stage.locator('[data-hpa-signal="'+kind+'"] animateMotion').count()>0,kind+' missing');assert.equal(await stage.locator('[data-hpa-inhibition] circle').count(),2);const colors=await stage.evaluate(s=>['cortisol','feedback'].map(k=>s.querySelector('[data-hpa-signal="'+k+'"] circle')?.getAttribute('fill')));assert.equal(colors[0],colors[1],'cortisol and feedback must share a color');await page.screenshot({path:out+'/hpa-complete-loop.png'});}}}
+   if(q.simMode!=='explore'){await page.locator('.gm-fullscreen-controls').getByRole('button',{name:'Reveal results'}).click();await fit(name+' revealed');if(q.type==='sequence'){assert.equal(await stage.locator('[data-hpa-art]').count(),2);assert.ok(await stage.locator('[data-hpa-signal] animateMotion').count()>0);if(q.afterPreset==='feedback'){for(const kind of ['crh','acth','cortisol','feedback'])assert.ok(await stage.locator('[data-hpa-signal="'+kind+'"] animateMotion').count()>0,kind+' missing');assert.equal(await stage.locator('[data-hpa-inhibition] circle').count(),2);const colors=await stage.evaluate(s=>['cortisol','feedback'].map(k=>s.querySelector('[data-hpa-signal="'+k+'"] circle')?.getAttribute('fill')));assert.equal(colors[0],colors[1],'cortisol and feedback must share a color');await capture({path:out+'/hpa-complete-loop.png'});}}}
    if(q.type==='wordcloud'){
     await cloudFit(name+' revealed',15);
-    await page.screenshot({path:out+'/word-cloud-stress-page1.png'});
+    await capture({path:out+'/word-cloud-stress-page1.png'});
     await stage.getByRole('button',{name:'Next word cloud page'}).click();
     await cloudFit(name+' revealed page 2',6);
     await fit(name+' page 2');
-    await page.screenshot({path:out+'/word-cloud-stress-page2.png'});
+    await capture({path:out+'/word-cloud-stress-page2.png'});
     await stage.getByRole('button',{name:'Previous word cloud page'}).click();
     await stage.getByRole('button',{name:'Response frequencies',exact:true}).click();
     assert.equal(await stage.getByRole('list',{name:'Response frequencies'}).locator('li').count(),15);
@@ -220,16 +221,16 @@ test('audience layout regression with fourteen demo responses, live and revealed
     await cloudFit(name+' returned to cloud',15);
    }
    if(q.type==='research'){
-    if(q.researchKind==='prediction'){assert.equal(await stage.locator('.gm-prediction-tile').count(),4);await page.screenshot({path:out+'/results-four-predictions.png'});}
+    if(q.researchKind==='prediction'){assert.equal(await stage.locator('.gm-prediction-tile').count(),4);await capture({path:out+'/results-four-predictions.png'});}
     else {assert.equal(await stage.locator('.gm-evidence-card').count(),2);await stage.getByRole('button',{name:'Next page'}).click();await fit(name+' page 2');await stage.getByRole('button',{name:'Next page'}).click();assert.equal(await stage.locator('.gm-evidence-card').count(),1);await stage.getByText('5. Evidence statement 5:',{exact:false}).waitFor();await fit(name+' page 3');}
-    await stage.getByRole('button',{name:'Study findings'}).click();await fit(name+' findings');await page.screenshot({path:out+'/results-'+q.researchKind+'-findings.png'});
-    await stage.getByRole('button',{name:'Confidence analysis'}).click();await fit(name+' calibration');await page.screenshot({path:out+'/results-'+q.researchKind+'-confidence.png'});
+    await stage.getByRole('button',{name:'Study findings'}).click();await fit(name+' findings');await capture({path:out+'/results-'+q.researchKind+'-findings.png'});
+    await stage.getByRole('button',{name:'Confidence analysis'}).click();await fit(name+' calibration');await capture({path:out+'/results-'+q.researchKind+'-confidence.png'});
    }
    if(q.type==='simulation'&&q.simMode!=='explore'&&q.simKind!=='recovery'){await stage.getByRole('button',{name:'Next page'}).click();await fit(name+' page 2');await stage.getByRole('button',{name:'#2',exact:true}).click();await stage.getByRole('button',{name:'Selected scenario'}).click();await fit(name+' detail');}
    if(q.type==='matching'){await stage.getByRole('button',{name:'Next page'}).click();await fit(name+' page 2');}
-   await page.screenshot({path:out+'/layout-'+name+'.png'});
+   await capture({path:out+'/layout-'+name+'.png'});
    await page.getByRole('button',{name:'Exit full screen'}).click();await page.waitForFunction(()=>!document.fullscreenElement);
   }
   assert.deepEqual(errors,[]);
- }finally{await writeFile(out+'/layout-checks.json',JSON.stringify(checks,null,2));await page.screenshot({path:out+'/layout-last.png'}).catch(()=>{});}
+ }finally{await writeFile(out+'/layout-checks.json',JSON.stringify(checks,null,2));await capture({path:out+'/layout-last.png'}).catch(()=>{});}
 });
