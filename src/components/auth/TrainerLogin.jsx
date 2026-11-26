@@ -3,15 +3,21 @@ import { useQuiz } from '../../context/QuizContext';
 import { Presentation, Clock, Zap, ArrowLeft, ArrowRight, Upload, CheckCircle2, FileText, AlertCircle, Tag, UserCheck, RefreshCw, Radio, Edit3, X } from 'lucide-react';
 import defaultQuestions from '../../data/questions.json';
 import QuestionEditorModal from '../trainer/QuestionEditorModal';
+import usePresentationLibrary from '../trainer/usePresentationLibrary';
+import PresentationLibrary from '../trainer/PresentationLibrary';
+import {launchProblem,blankSlide} from '../../presentations.js';
 
 export default function TrainerLogin({ onBack }) {
   const { createSession, reconnectTrainer, errorMessage } = useQuiz();
   const [name, setName] = useState(() => localStorage.getItem('dw_trainer_name') || '');
-  const [timerDuration, setTimerDuration] = useState(30);
-  const [speedBonus, setSpeedBonus] = useState(true);
-  const [showTopic, setShowTopic] = useState(false);
-  const [customQuestions, setCustomQuestions] = useState(null);
-  const [customFileName, setCustomFileName] = useState('');
+  const library=usePresentationLibrary();
+  const [fallbackSettings,setFallbackSettings]=useState({timerDuration:30,speedBonus:false,showTopic:false});
+  const settings=library.active?.content.settings||fallbackSettings;
+  const {timerDuration,speedBonus,showTopic}=settings;
+  const updateSetting=(key,value)=>{const next={...settings,[key]:value};if(library.active)library.update({settings:next});else setFallbackSettings(next);};
+  const setTimerDuration=v=>updateSetting('timerDuration',v),setSpeedBonus=v=>updateSetting('speedBonus',v),setShowTopic=v=>updateSetting('showTopic',v);
+  const customQuestions=library.active?.content.questions||null;
+  const customFileName=library.active?.content.title||'';
   const [fileError, setFileError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -52,35 +58,6 @@ export default function TrainerLogin({ onBack }) {
     { label: 'No timer', value: 0 },
   ];
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setFileError('');
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const parsed = JSON.parse(event.target.result);
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-          throw new Error('Question file must contain a non-empty array of questions.');
-        }
-        // Basic schema check
-        const first = parsed[0];
-        if (parsed.some(q=>!q.question || (!['wordcloud','curve','text'].includes(q.type) && (!Array.isArray(q.options) || !Number.isInteger(q.correctAnswer) || q.correctAnswer < 0 || q.correctAnswer >= q.options.length)))) {
-          throw new Error('Invalid question format. Each item must have question, options[], and correctAnswer.');
-        }
-
-        setCustomQuestions(parsed);
-        setCustomFileName(file.name);
-      } catch (err) {
-        setFileError(err.message || 'Failed to parse questions JSON.');
-        setCustomQuestions(null);
-        setCustomFileName('');
-      }
-    };
-    reader.readAsText(file);
-  };
-
   const handleReconnectSession = (session) => {
     setReconnectingCode(session.code);
     reconnectTrainer({
@@ -107,10 +84,11 @@ export default function TrainerLogin({ onBack }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
-
+    if (!name.trim()||library.busy) return;
+    if(library.active){const problem=launchProblem(library.active.content);if(problem){setFileError(problem);return;}if(!await library.flush(true,'Before presenting')){setFileError('Could not save your presentation. Download a backup before continuing.');return;}}
+    setFileError('');
     setIsSubmitting(true);
     createSession({
       name: name.trim(),
@@ -339,70 +317,14 @@ export default function TrainerLogin({ onBack }) {
             </label>
           </div>
 
-          {/* Question Bank Info & Custom Uploader */}
-          <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-bold text-white">Question Bank</span>
-              </div>
-              <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                {questionCount} Questions Loaded
-              </span>
-            </div>
-
-            <p className="text-[11px] text-slate-400 mb-3">
-              {customQuestions 
-                ? `Using custom file: ${customFileName}` 
-                : 'Using Digi Warriors Course 1 – Day 1 question bank.'}
-            </p>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => setIsEditorOpen(true)}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 text-xs font-bold transition-colors"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>✏️ Visual Slide & Question Editor</span>
-              </button>
-
-              <label className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-900 border border-dashed border-slate-700 hover:border-blue-500 text-slate-300 hover:text-white text-xs cursor-pointer transition-colors">
-                <Upload className="w-3.5 h-3.5" />
-                <span>{customQuestions ? 'Replace JSON' : 'Upload JSON'}</span>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </label>
-
-              {customQuestions && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCustomQuestions(null);
-                    setCustomFileName('');
-                  }}
-                  className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-rose-500/40 text-xs text-rose-400 transition-colors"
-                >
-                  Reset
-                </button>
-              )}
-            </div>
-
-            {fileError && (
-              <p className="text-[11px] text-rose-400 mt-2 font-medium">
-                {fileError}
-              </p>
-            )}
-          </div>
+          <PresentationLibrary library={library} onEdit={()=>setIsEditorOpen(true)}/>
+          {fileError&&<p role="alert" className="text-xs text-rose-700">{fileError}</p>}
+          {!library.active&&<p className="text-xs text-slate-400">Create or import a presentation to begin editing. Without one, the original sample questions are used.</p>}
 
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={!name.trim() || isSubmitting}
+            disabled={!name.trim() || isSubmitting || library.busy}
             className="w-full flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition-all duration-200"
           >
             <span>{isSubmitting ? 'Creating Session...' : 'Continue to Trainer Dashboard'}</span>
@@ -418,11 +340,12 @@ export default function TrainerLogin({ onBack }) {
         <QuestionEditorModal
           isOpen={isEditorOpen}
           onClose={() => setIsEditorOpen(false)}
-          initialQuestions={customQuestions || defaultQuestions}
-          onSaveQuestions={(newQuestions) => {
-            setCustomQuestions(newQuestions);
-            setCustomFileName(`Custom (${newQuestions.length} Questions)`);
-          }}
+          initialQuestions={customQuestions || [blankSlide()]}
+          onChangeQuestions={questions=>library.update({questions})}
+          saveStatus={library.status}
+          saveError={library.error}
+          onExportPresentation={library.exportFile}
+          onSaveQuestions={async questions=>{library.update({questions});return library.flush(true,'Editor saved');}}
         />
       )}
 

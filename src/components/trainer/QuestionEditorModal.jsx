@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { hpaStages, safeMedia } from '../../activities.js';
 import { 
   Plus, 
@@ -22,7 +22,7 @@ export default function QuestionEditorModal({
   isOpen,
   onClose,
   initialQuestions = [],
-  onSaveQuestions
+  onSaveQuestions,onChangeQuestions,saveStatus,saveError,onExportPresentation
 }) {
   const [questions, setQuestions] = useState(() => {
     return initialQuestions && initialQuestions.length > 0 ? JSON.parse(JSON.stringify(initialQuestions)) : [
@@ -46,6 +46,10 @@ export default function QuestionEditorModal({
 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saving,setSaving]=useState(false);
+  const lastQuestions=useRef(questions);
+  const onChangeRef=useRef(onChangeQuestions);onChangeRef.current=onChangeQuestions;
+  useEffect(()=>{if(lastQuestions.current!==questions){lastQuestions.current=questions;onChangeRef.current?.(questions);}},[questions]);
 
   if (!isOpen) return null;
 
@@ -148,17 +152,11 @@ export default function QuestionEditorModal({
     setSelectedIndex(targetIdx);
   };
 
-  const handleSaveAndApply = () => {
-    if (onSaveQuestions) {
-      onSaveQuestions(questions);
-    }
-    setSaveSuccess(true);
-    setTimeout(() => {
-      setSaveSuccess(false);
-      onClose();
-    }, 800);
+  const handleSaveAndApply = async () => {
+    if(saving)return;setSaving(true);
+    try{const ok=await onSaveQuestions?.(questions);if(ok===false)return;setSaveSuccess(true);onClose();}
+    finally{setSaving(false);}
   };
-
   const handleExportJSON = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(questions, null, 2));
     const downloadAnchor = document.createElement('a');
@@ -187,31 +185,36 @@ export default function QuestionEditorModal({
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
-                Design Multiple-Choice Questions (MCQs), Polls, and Live Word Clouds.
+                {saveStatus||'Edit your presentation'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
-              onClick={handleExportJSON}
+              type="button"
+              onClick={onExportPresentation||handleExportJSON}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition-colors"
               title="Download JSON File"
             >
               <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Export JSON</span>
+              <span className="hidden sm:inline">Backup presentation</span>
             </button>
 
             <button
+              type="button"
+              disabled={saving}
               onClick={handleSaveAndApply}
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>{saveSuccess ? 'Saved!' : 'Save & Apply'}</span>
+              <span>{saving?'Saving…':saveSuccess ? 'Saved!' : 'Save & Close'}</span>
             </button>
 
             <button
-              onClick={onClose}
+              type="button"
+              disabled={saving}
+              onClick={handleSaveAndApply}
               className="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors ml-1"
             >
               <X className="w-5 h-5" />
@@ -219,6 +222,7 @@ export default function QuestionEditorModal({
           </div>
         </div>
 
+        {saveError&&<p role="alert" className="px-4 py-2 text-xs text-rose-700">{saveError} Download a backup before closing.</p>}
         {/* Main Body: Sidebar Question List + Form Editor */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           

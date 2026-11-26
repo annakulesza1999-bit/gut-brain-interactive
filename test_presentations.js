@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {normalizeContent,readBackup,makeBackup,snapshot,launchProblem,blankSlide,HISTORY_LIMIT} from './src/presentations.js';
+test('legacy import preserves activity fields and media',()=>{const media='data:image/gif;base64,YQ==';const q={id:1,type:'sequence',question:'Next?',options:['A','B'],correctAnswer:0,beforeMedia:media,futureField:{a:1}};const {content}=readBackup([q],'Old');assert.deepEqual(content.questions[0],q);assert.equal(content.title,'Old');});
+test('full backup round trips slides settings and history',()=>{const content=normalizeContent({title:'Deck',questions:[blankSlide()],settings:{timerDuration:0}});const history=snapshot([],content,'Original');const data=makeBackup({content,history});assert.deepEqual(readBackup(data),{content,history});assert.equal(content.settings.timerDuration,0);});
+test('future schema rejected and unknown activity preserved',()=>{assert.throws(()=>readBackup({format:'gut-mind-presentation',schemaVersion:2}));const c=normalizeContent({questions:[{id:1,type:'future',question:'Test',extra:42}]});assert.equal(c.questions[0].extra,42);assert.match(launchProblem(c),/not supported/);});
+test('checkpoints bounded and identical snapshots deduplicated',()=>{let h=[];for(let i=0;i<15;i++)h=snapshot(h,normalizeContent({title:String(i),questions:[blankSlide()]}),'Version');assert.equal(h.length,HISTORY_LIMIT);assert.equal(snapshot(h,h.at(-1).content,'Duplicate'),h);});
