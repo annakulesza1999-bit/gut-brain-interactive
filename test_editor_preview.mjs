@@ -146,7 +146,7 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   // Compare a reference curve, but only after closing the prediction.
   await page.getByRole('button',{name:'Edit current slide'}).click();await page.getByRole('button',{name:'+ Draw a curve',exact:true}).click();await page.getByRole('button',{name:'Use illustrative cortisol example'}).click();
   await page.getByRole('button',{name:'Present this slide'}).click();await phone.getByRole('button',{name:'Submit prediction'}).waitFor();await page.getByRole('button',{name:'Add demo responses'}).click();assert.equal(await page.locator('[data-reference-curve]').count(),0);await page.getByRole('button',{name:'Reveal results'}).click();await page.locator('[data-reference-curve]').waitFor();await phone.locator('[data-reference-curve]').waitFor();await page.screenshot({path:out+'/09-reference-curve.png'});
-  await page.getByRole('button',{name:'Edit current slide'}).click();await page.getByRole('button',{name:'+ Simulation',exact:true}).click();
+  await page.getByRole('button',{name:'Edit current slide'}).click();await page.getByRole('button',{name:'+ Stress & recovery',exact:true}).click();
   await page.getByLabel('Model',{exact:true}).selectOption('recovery');await page.getByLabel('Participation mode').selectOption('explore');
   await page.getByRole('button',{name:'Present this slide'}).click();await phone.getByText('Explore at your own pace. Nothing is submitted.',{exact:true}).waitFor();assert.equal(await phone.getByRole('button',{name:'Submit my scenario'}).count(),0);
   const marker=phone.locator('[data-stressor-marker]');assert.equal(await marker.count(),4);
