@@ -89,7 +89,7 @@ function MainApp() {
     return (
       <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
         <Header />
-        <main className="flex-1 p-4 sm:p-6">
+        <main className="flex-1 p-4 sm:p-6 gm-participant-content">
           {sessionStatus === 'ready' && <ParticipantWaitingRoom />}
           
           {(sessionStatus === 'running' || sessionStatus === 'paused') && (

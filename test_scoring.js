@@ -20,6 +20,6 @@ test('preview accumulates participation and revealed correct answers without dup
  act('nickname',{nickname:'Blue Fox'});act('word',{word:'one'});act('word',{word:'two'});assert.equal(score(),2);
  act('reveal');act('reveal');assert.equal(score(),2);act('goto',{index:1});assert.equal(score(),2);act('answer',{response:1});assert.equal(score(),2);act('reveal');assert.equal(score(),3);
  act('goto',{index:2});act('answer',{response:[[0,0],[.5,1],[1,.2]]});act('reveal');assert.equal(score(),3);
- act('goto',{index:3});act('answer',{response:[.5,.5]});act('reveal');assert.equal(score(),4);
+ act('goto',{index:3});act('answer',{response:[.5,.5]});assert.equal(score(),4);act('reveal');assert.equal(score(),4);
  act('goto',{index:0});assert.equal(score(),4);assert.equal(previewData(deck,s).nickname,'Blue Fox');act('reset');assert.equal(score(),2);
 });

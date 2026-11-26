@@ -36,7 +36,7 @@ function ledgerFor(deck,state){
  const q=deck.questions[state.index],own=q.type==='wordcloud'?state.words.length>0:state.response!==null;
  const rows=[...(own?[{i:0,response:q.type==='wordcloud'?state.words[0]:state.response}]:[]),...state.samples];
  const ledger={...state.scoreLedger};
- if(simpleScoring(q)&&rows.length&&(q.type==='wordcloud'||state.revealed)){
+ if(simpleScoring(q)&&rows.length&&(q.type==='wordcloud'||q.type==='pointmap'&&!q.mapGraded||state.revealed)){
   const rule=scoringRule(q);
   if(rule)ledger[q.id]={slide:state.index+1,title:q.question,rule,entries:rows.map(r=>({i:r.i,points:score(q,r.response,r.i===0&&q.type==='wordcloud'?state.words.length:1).pointsEarned}))};
  }
@@ -104,7 +104,7 @@ export function previewData(deck,state){
  const ownScore=own&&state.revealed&&(q.type!=='wordcloud'||simpleScoring(q))?score(q,q.type==='wordcloud'?state.words[0]:state.response,state.words.length):null;
  const ledger=ledgerFor(deck,state),records=Object.values(ledger),roster=new Set([0,...state.samples.map(x=>x.i),...records.flatMap(r=>r.entries.map(e=>e.i))]);
  const nickname=state.nickname||'Participant 1';
- const scoreParticipants=sharedRanks([...roster].map(i=>({...participantEntry(i),...(i===0?{name:nickname}:{}),score:records.reduce((n,r)=>n+(r.entries.find(e=>e.i===i)?.points||0),0)})));
+ const scoreParticipants=sharedRanks([...roster].map(i=>({...participantEntry(i),...(i===0?{name:nickname}:{name:'Demo participant '+(i+1)}),score:records.reduce((n,r)=>n+(r.entries.find(e=>e.i===i)?.points||0),0)})));
  const scorecard=records.filter(r=>r.entries.some(e=>e.i===0)).map(r=>({slide:r.slide,title:r.title,rule:r.rule,points:r.entries.find(e=>e.i===0).points})).sort((a,b)=>a.slide-b.slide);
  if(simpleSession(deck.questions)){for(const p of participants){const standing=scoreParticipants.find(s=>s.id===p.id);if(standing)Object.assign(p,standing);}}
  const question={id:q.id,question:q.question,options:q.options||[],category:q.category,difficulty:q.difficulty,...publicActivity(q,state.visible)};

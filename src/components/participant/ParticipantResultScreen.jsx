@@ -19,6 +19,7 @@ export default function ParticipantResultScreen() {
     currentQuestion, 
     participantName,
     leaderboard,
+    participants=[],scoreParticipants,
     qaQuestions = []
   } = useQuiz();
 
@@ -31,8 +32,8 @@ export default function ParticipantResultScreen() {
   const optionDist = revealData?.optionDist || [];
 
   // Find participant's rank from leaderboard
-  const myLeaderboardEntry = leaderboard.find(p => p.name.toLowerCase() === participantName.toLowerCase());
-  const myRank = myLeaderboardEntry?.currentRank || 1;
+  const myLeaderboardEntry = (simpleScoring(currentQuestion)?scoreParticipants||participants:leaderboard).find(p => p.name.toLowerCase() === participantName.toLowerCase());
+  const myRank = myLeaderboardEntry?.currentRank ?? myLeaderboardEntry?.rank ?? 1;
   const myDelta = myLeaderboardEntry?.rankDelta || 0;
   const myScore = myLeaderboardEntry?.score ?? (lastAnswerResult?.currentScore || 0);
 

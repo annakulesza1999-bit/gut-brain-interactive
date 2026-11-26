@@ -727,6 +727,7 @@ io.on('connection', (socket) => {
     const value=q.type==='pointmap'?normalizePoint(response):q.type==='simulation'?normalizeSimulation(q.simKind,response):q.type==='research'?normalizeResearchResponse(q,response):q.type==='brain'?normalizeBrainHit(q,response):normalizeMatch(q,response);
     if(!value||(q.type==='pointmap'&&q.mapGraded&&!validTarget(q)))return reply({success:false,error:'Invalid response or target configuration.'});
     entries.push({participantId,...curveIdentity(index),...(q.type==='pointmap'?{point:value}:['simulation','research','brain'].includes(q.type)?{response:value}:{selection:value}),responseTimeMs:Math.max(0,Date.now()-(session.questionStartTime||Date.now()))});
+    if(simpleScoring(q)&&q.type==='pointmap'&&!q.mapGraded){const p=session.participants[index],result=scoreWithPolicy(q,scoreMap(q,value));Object.assign(entries[entries.length-1],result);p.answers[questionIndex]={...result,selectedOption:null,spatial:true};p.score+=result.pointsEarned;publishStandings(session);}
     reply({success:true,...(q.type==='brain'?{brainFeedback:personalBrainFeedback(q,value)}:{})});io.to(session.code).emit('live_answer_count',completionPayload(session));publishLive(session);
   });
   socket.on('submit_curve', ({sessionCode, questionIndex, points} = {}, callback) => {
