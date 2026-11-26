@@ -633,6 +633,7 @@ io.on('connection', (socket) => {
     io.to(session.code).emit('answer_revealed', {
       questionIndex: session.currentQuestionIndex,
       ...spatialResults(session),
+      wordCloudWords:q.type==='wordcloud'?(session.wordCloudSubmissions?.[index]||[]).map(({text})=>text):undefined,
       correctAnswer: q.correctAnswer,
       explanation: q.explanation,
       optionDist: currQA.optionDist,

@@ -106,6 +106,11 @@ test('actual local editor: no network session, save/reload, media, backup, impor
   await page.getByRole('button',{name:'Present this slide'}).click();
   await phone.getByRole('img',{name:'rehearsal-figure.png',exact:true}).waitFor();
   assert.equal(await phone.getByText('Private note not for phone',{exact:true}).count(),0);
+  await page.getByRole('button',{name:'Edit current slide'}).click();await page.getByRole('button',{name:'+ Word Cloud',exact:true}).click();await prompt.fill('Live cloud verification');await page.getByLabel('Countdown mode').selectOption('off');
+  await page.getByRole('button',{name:'Present this slide'}).click();const word=phone.getByPlaceholder('e.g. Stress, recovery, support…');await word.fill('stress');await word.press('Enter');
+  const cloud=page.getByRole('img',{name:'Live frequency word cloud'});await cloud.locator('text').filter({hasText:'stress'}).waitFor();await word.fill('recovery');await word.press('Enter');await cloud.locator('text').filter({hasText:'recovery'}).waitFor();await word.fill('stress');await word.press('Enter');await page.getByText('3 responses · 2 unique',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Add demo responses'}).click();await page.screenshot({path:out+'/06-live-word-cloud.png'});
+  await page.getByRole('button',{name:'Edit current slide'}).click();await page.getByLabel('Response visibility').selectOption('reveal');await page.getByRole('button',{name:'Present this slide'}).click();await word.fill('independent');await word.press('Enter');await page.getByText('Responses are hidden',{exact:true}).waitFor();assert.equal(await cloud.count(),0);await page.getByRole('button',{name:'Reveal results'}).click();await cloud.locator('text').filter({hasText:'independent'}).waitFor();
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);assert.deepEqual(sessionRequests,[]);
  }catch(e){await page.screenshot({path:out+'/failure.png'}).catch(()=>{});throw e;}
 });

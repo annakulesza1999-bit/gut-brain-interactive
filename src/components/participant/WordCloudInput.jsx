@@ -44,7 +44,7 @@ export default function WordCloudInput({ question }) {
                 type="text"
                 value={word}
                 onChange={(e) => setWord(e.target.value)}
-                placeholder="e.g. Dynamic, VLOOKUP, Automation..."
+                placeholder="e.g. Stress, recovery, support…"
                 maxLength={35}
                 className="flex-1 bg-slate-950 border border-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 outline-none text-base"
               />

@@ -43,7 +43,7 @@ test('loopback session: 15 participants, all activity families, auth and private
  {id:3,type:'pointmap',question:'Map',mapGraded:false,options:[],correctAnswer:null,timerSeconds:0},
  {id:4,type:'matching',question:'Match',matchPairs:defaultPairs,matchPoints:100,options:[],correctAnswer:null,timerSeconds:0},
  {id:5,type:'simulation',simKind:'recovery',question:'Simulation',options:[],correctAnswer:null,timerSeconds:0},
- {id:6,...researchTemplate('evidence'),timerSeconds:0},
+ {id:6,...researchTemplate('evidence'),timerSeconds:0,resultsMode:'reveal'},
  {id:7,...brainTemplate(),timerSeconds:0},
  {id:8,type:'wordcloud',question:'Word',options:[],correctAnswer:null,timerSeconds:0},
  {id:9,type:'sequence',question:'Next event?',options:['A','B'],correctAnswer:1,beforePreset:'crh',afterPreset:'acth',timerSeconds:0},
@@ -62,25 +62,28 @@ test('loopback session: 15 participants, all activity families, auth and private
  async function advance(index){const arrived=event(presenter,'trainer_question',q=>q.index===index);presenter.emit('next_question',{sessionCode});await arrived;}
  async function reveal(index){const e=event(presenter,'answer_revealed',r=>r.questionIndex===index);presenter.emit('reveal_answer',{sessionCode});return e;}
  async function spatial(index,response){const a=await Promise.all(students.map(socket=>ack(socket,'submit_spatial',{sessionCode,questionIndex:index,response})));assert.ok(a.every(r=>r.success),JSON.stringify(a.filter(r=>!r.success)));}
+ const participantLeaks=[];students[0].on('live_results',x=>participantLeaks.push(x));
  await advance(1);
+ const liveCurve=event(presenter,'live_results',r=>r.questionIndex===1&&r.data.curves.length===15);
  const auto=event(presenter,'answer_revealed',r=>r.questionIndex===1);
  const curve=[[0,.1],[.5,.9],[1,.2]];
  assert.ok((await Promise.all(students.map(s=>ack(s,'submit_curve',{sessionCode,questionIndex:1,points:curve})))).every(r=>r.success));
  assert.equal((await ack(students[0],'submit_curve',{sessionCode,questionIndex:1,points:curve})).success,false);
+ assert.equal((await liveCurve).data.curves.length,15);
  const curves=(await auto).curves;assert.equal(curves.length,15);assert.equal(new Set(curves.map(c=>c.color)).size,15);
- await advance(2);await spatial(2,[.5,.5]);assert.ok((await reveal(2)).mapResults.every(r=>r.pointsEarned===0));
- await advance(3);await spatial(3,matchKey(questions[3]));assert.ok((await reveal(3)).matchResults.every(r=>r.pointsEarned===100));
- await advance(4);await spatial(4,defaultResponse('recovery'));assert.equal((await reveal(4)).simulationResults.length,15);
- await advance(5);await spatial(5,{answers:[0,1,0],confidence:[80,80,80]});assert.ok((await reveal(5)).researchResults.every(r=>r.pointsEarned===100));
- await advance(6);await spatial(6,{nodeId:questions[6].brainTargets[0],point:[0,0,0]});assert.ok((await reveal(6)).brainResults.every(r=>r.pointsEarned===100));
+ await advance(2);const liveMap=event(presenter,'live_results',r=>r.questionIndex===2&&r.data.mapResults.length===15);await spatial(2,[.5,.5]);const m=(await liveMap).data;assert.equal(m.mapTarget,undefined);assert.equal(m.mapResults[0].isCorrect,undefined);assert.ok((await reveal(2)).mapResults.every(r=>r.pointsEarned===0));
+ await advance(3);const liveMatch=event(presenter,'live_results',r=>r.questionIndex===3&&r.data.matchResults.length===15);await spatial(3,matchKey(questions[3]));assert.equal((await liveMatch).data.matchKey,undefined);assert.ok((await reveal(3)).matchResults.every(r=>r.pointsEarned===100));
+ await advance(4);const liveSim=event(presenter,'live_results',r=>r.questionIndex===4&&r.data.simulationResults.length===15);await spatial(4,defaultResponse('recovery'));assert.equal((await liveSim).data.simulationResults.length,15);assert.equal((await reveal(4)).simulationResults.length,15);
+ await advance(5);let hiddenLeaks=0;const detectHidden=r=>{if(r.questionIndex===5)hiddenLeaks++;};presenter.on('live_results',detectHidden);await spatial(5,{answers:[0,1,0],confidence:[80,80,80]});assert.equal((await ack(presenter,'get_session_state',{sessionCode})).liveResults,null);assert.equal(hiddenLeaks,0);presenter.off('live_results',detectHidden);assert.ok((await reveal(5)).researchResults.every(r=>r.pointsEarned===100));
+ await advance(6);const liveBrain=event(presenter,'live_results',r=>r.questionIndex===6&&r.data.brainResults.length===15);await spatial(6,{nodeId:questions[6].brainTargets[0],point:[0,0,0]});assert.equal((await liveBrain).data.brainTargets,undefined);assert.ok((await reveal(6)).brainResults.every(r=>r.pointsEarned===100));
  await advance(7);
- for(const word of ['stress','recovery'])assert.ok((await ack(students[0],'submit_word_cloud',{sessionCode,questionIndex:7,word})).success);
- const wc=await reveal(7);assert.equal(wc.answeredCount,1);
+ for(const word of ['stress','recovery']){const liveWord=event(presenter,'live_results',r=>r.questionIndex===7&&r.data.words.includes(word));assert.ok((await ack(students[0],'submit_word_cloud',{sessionCode,questionIndex:7,word})).success);await liveWord;}
+ const wc=await reveal(7);assert.deepEqual(wc.wordCloudWords,['stress','recovery']);assert.equal(wc.answeredCount,1);
  await advance(8);
  const state=await ack(students[0],'get_session_state',{sessionCode});assert.equal(state.currentQuestion.afterPreset,undefined);assert.equal(state.analytics,undefined);
  const thumbs=event(presenter,'thumbs_updated');students[0].emit('send_reaction',{sessionCode,emoji:'👍'});assert.equal((await thumbs).up,1);
  async function answer(index,selectedOption){const a=await Promise.all(students.map(s=>ack(s,'submit_answer',{sessionCode,questionIndex:index,selectedOption})));assert.ok(a.every(r=>r.success&&r.pointsEarned===undefined));}
- await answer(8,1);assert.equal((await reveal(8)).afterPreset,'acth');
+ const liveChoice=event(presenter,'live_results',r=>r.questionIndex===8&&r.data.optionDist[1].count===15);await answer(8,1);assert.equal((await liveChoice).data.correctAnswer,undefined);assert.equal((await reveal(8)).afterPreset,'acth');
  await advance(9);
  assert.equal((await ack(intruder,'submit_answer',{sessionCode,questionIndex:9,selectedOption:5})).success,false);
  const before=await ack(students[0],'get_session_state',{sessionCode});assert.equal(before.currentQuestion.correctAnswer,undefined);assert.equal(before.analytics,undefined);
@@ -89,5 +92,6 @@ test('loopback session: 15 participants, all activity families, auth and private
  const privateResult=event(restored,'private_answer_result',r=>r.questionIndex===9);await reveal(9);assert.equal((await privateResult).pointsEarned,100);
  const finalTrainer=event(presenter,'quiz_finished'),finalStudent=event(students[1],'quiz_finished');presenter.emit('next_question',{sessionCode});
  const result=await finalTrainer,student=await finalStudent;assert.equal(result.analytics.gradedQuestionCount,5);assert.equal(result.analytics.avgAccuracy,100);assert.equal(student.leaderboard.filter(r=>r.answers).length,1);assert.equal(student.analytics.questionAnalytics,undefined);
+ assert.deepEqual(participantLeaks,[]);
  const newPresenter=await connect();const restore=await ack(newPresenter,'get_session_state',{sessionCode,trainerToken:created.trainerToken});assert.equal(restore.isTrainer,true);
 });
