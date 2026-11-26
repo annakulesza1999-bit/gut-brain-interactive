@@ -35,13 +35,51 @@ test('audience layout regression with fourteen demo responses, live and revealed
   await page.getByRole('button',{name:'Present',exact:true}).click();
   await page.getByRole('button',{name:'Student phone',exact:true}).click();
   const nav=page.locator('aside').first(),stage=page.locator('.gm-stage-content');
+
+ async function cloudFit(name,expected){
+  await page.evaluate(()=>document.fonts.ready);
+  const cloud=stage.getByRole('img',{name:'Live frequency word cloud'});
+  await cloud.locator('[data-cloud-word]').first().waitFor();
+  await page.waitForTimeout(140);
+  const metrics=await cloud.evaluate(node=>{
+   const box=node.getBoundingClientRect(),words=[...node.querySelectorAll('[data-cloud-word]')].map(w=>({word:w.textContent,b:w.getBoundingClientRect().toJSON(),count:Number(w.dataset.count),size:parseFloat(getComputedStyle(w).fontSize)}));
+   return {box:box.toJSON(),words,scroll:node.scrollHeight-node.clientHeight};
+  });
+  assert.equal(metrics.words.length,expected,name+' word count');
+  assert.ok(metrics.scroll<=1,name+' scroll');
+  for(const [i,w] of metrics.words.entries()){
+   assert.ok(w.b.left>=metrics.box.left-1&&w.b.right<=metrics.box.right+1&&w.b.top>=metrics.box.top-1&&w.b.bottom<=metrics.box.bottom+1,name+' clipped '+w.word);
+   for(const v of metrics.words.slice(i+1)){
+    assert.ok(w.b.right<=v.b.left+1||v.b.right<=w.b.left+1||w.b.bottom<=v.b.top+1||v.b.bottom<=w.b.top+1,name+' overlap '+w.word+' / '+v.word);
+    if(w.count>v.count)assert.ok(w.size>=v.size,name+' frequency size order');
+   }
+  }
+ }
   for(let i=0;i<questions.length;i++){
    const q=questions[i],name=(i+1)+'-'+q.type+(q.simKind?'-'+q.simKind:'')+(q.researchKind?'-'+q.researchKind:'');
    await nav.locator('button').nth(i).click();
    if(q.simMode!=='explore'){await page.getByRole('button',{name:'Add demo responses'}).click();await page.getByRole('status').filter({hasText:'14/15 completed'}).waitFor();}
+   if(q.type==='wordcloud'){
+    await cloudFit(name+' normal live',5);
+    const word=page.frameLocator('iframe[title="Student phone preview"]').getByPlaceholder('e.g. Stress, recovery, support…');
+    for(const text of ['perceived social evaluation','uncertainty about the presentation','anticipatory anxiety','gastrointestinal symptoms','negative feedback regulation','psychological coping resources','sympathetic nervous system','difficulty concentrating','WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW','microbiome diversity']){
+     await word.fill(text);await word.press('Enter');await page.waitForTimeout(100);
+    }
+    await stage.getByText('24 submissions · 15 unique',{exact:true}).waitFor();
+    await cloudFit(name+' long live',15);
+   }
    await page.getByRole('button',{name:'Full screen',exact:true}).click();await page.waitForFunction(()=>!!document.fullscreenElement);
    await fit(name+' live');
+   if(q.type==='wordcloud')await cloudFit(name+' full screen live',15);
    if(q.simMode!=='explore'){await page.locator('.gm-fullscreen-controls').getByRole('button',{name:'Reveal results'}).click();await fit(name+' revealed');}
+   if(q.type==='wordcloud'){
+    await cloudFit(name+' revealed',15);
+    await stage.getByRole('button',{name:'Response frequencies',exact:true}).click();
+    assert.equal(await stage.getByRole('list',{name:'Response frequencies'}).locator('li').count(),15);
+    await fit(name+' frequencies');
+    await stage.getByRole('button',{name:'Back to word cloud',exact:true}).click();
+    await cloudFit(name+' returned to cloud',15);
+   }
    if(q.type==='research'){
     if(q.researchKind==='prediction'){assert.equal(await stage.locator('.gm-prediction-tile').count(),4);await page.screenshot({path:out+'/results-four-predictions.png'});}
     else {assert.equal(await stage.locator('.gm-evidence-card').count(),2);await stage.getByRole('button',{name:'Next page'}).click();await fit(name+' page 2');await stage.getByRole('button',{name:'Next page'}).click();assert.equal(await stage.locator('.gm-evidence-card').count(),1);await stage.getByText('5. Evidence statement 5:',{exact:false}).waitFor();await fit(name+' page 3');}

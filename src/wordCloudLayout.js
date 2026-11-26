@@ -20,3 +20,25 @@ export function layoutWords(stats,measure,width=900,height=460){
  return [];
 }
 export const wordColor=key=>['#0063A6','#176D70','#634078','#735E00','#032138','#407BA4','#7C468C'][hash(key)%7];
+
+export const cloudPageSize=width=>width<600?6:15;
+export function fitCloudWords(stats,measure,width,height,maxCount=stats[0]?.count||1){
+ const availableW=Math.max(1,width-48),availableH=Math.max(1,height-40);
+ const base=Math.min(96,width/10,height/3)*Math.min(1,Math.sqrt(8/Math.max(1,stats.length)));
+ for(let scale=1;scale>=.08;scale*=.88){
+  const words=stats.map(w=>({...w,size:Math.max(8,Math.floor(base*(.35+.65*Math.sqrt(w.count/maxCount))*scale))}));
+  let rowW=0,rowH=0,totalH=0,rows=0,fits=true;
+  for(const w of words){
+   const measured=measure(w.text,w.size);
+   // Reserve additional space for fallback fonts, glyph overhang and rounding.
+   const ww=Math.ceil((Number.isFinite(measured)&&measured>0?measured:w.text.length*w.size)*1.12)+8;
+   const hh=Math.ceil(w.size*1.25)+2;
+   if(ww>availableW){fits=false;break;}
+   if(rowW&&rowW+20+ww>availableW){totalH+=rowH+(rows?12:0);rows++;rowW=0;rowH=0;}
+   rowW+=ww+(rowW?20:0);rowH=Math.max(rowH,hh);
+  }
+  if(rowW){totalH+=rowH+(rows?12:0);rows++;}
+  if(fits&&totalH<=availableH)return {words,rows,height:totalH,fits:true};
+ }
+ return {words:stats.map(w=>({...w,size:8})),rows:0,height:0,fits:false};
+}
