@@ -245,3 +245,22 @@ body:has(.gm-score-dock) .gm-live-participant .gm-participant-content>div{paddin
 .gm-live-participant .gm-live-question .gm-question-status>div{margin:0}
 .gm-live-participant .gm-reaction-controls>div:first-child button{flex:1 1 0;min-width:24px}
 @media(max-width:350px){.gm-live-participant .gm-reaction-controls button{padding:3px;min-width:24px;font-size:16px}.gm-live-participant .gm-reaction-controls button:has(svg){font-size:10px}.gm-mobile-header{gap:5px;padding-inline:8px}.gm-mobile-header .gm-brand{font-size:15px}}
+
+/* Responsive browser shell: keep normal document scrolling and user zoom. */
+.gm-app-shell,.gm-auth-main,.gm-studio-header,.gm-live-participant{min-width:0;max-width:100%}
+.gm-app-shell,.gm-live-participant{min-height:100vh;min-height:100dvh}
+.gm-auth-main>*,.gm-participant-content>*{min-width:0;max-width:100%}
+@media(max-width:767px){
+ .gm-auth-main{align-items:flex-start;padding:16px 12px max(24px,env(safe-area-inset-bottom));}
+ .gm-join-card{padding:16px;border-radius:16px;overflow-wrap:anywhere;}
+ .gm-join-card input,.gm-join-card button[type=submit],.gm-join-card form>button{min-height:44px;font-size:16px;max-width:100%;}
+ .gm-studio-header>div{height:auto;min-height:56px;flex-wrap:wrap;gap:6px;padding:8px 12px;}
+ .gm-studio-header>div>div{min-width:0;max-width:100%;flex-wrap:wrap;}
+ .gm-studio-header .gm-brand{white-space:normal;}
+ .gm-studio-header button,.gm-mobile-header button{min-width:44px;min-height:44px;}
+ .gm-live-participant .gm-participant-content{overflow-wrap:anywhere;}
+ .gm-participant-content :is(img,video,canvas,svg){max-width:100%;}
+ .gm-participant-content :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea,select){min-width:0;max-width:100%;font-size:16px;}
+ .gm-live-participant .gm-score-dock{bottom:max(8px,env(safe-area-inset-bottom));}
+}
+@media(max-width:350px){.gm-auth-main{padding-inline:8px}.gm-join-card{padding:12px}.gm-mobile-header .gm-mobile-session-status{white-space:normal;min-width:0;overflow-wrap:anywhere}}
