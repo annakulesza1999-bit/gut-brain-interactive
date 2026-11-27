@@ -42,9 +42,9 @@ function MainApp() {
   if (!role) {
     if (selectedRolePrompt === 'trainer') {
       return (
-        <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+        <div className="gm-app-shell min-h-screen flex flex-col bg-slate-950 text-slate-100">
           <Header />
-          <main className="flex-1 flex items-center justify-center p-4">
+          <main className="gm-auth-main flex-1 flex items-center justify-center p-4">
             <TrainerLogin onBack={() => setSelectedRolePrompt(null)} />
           </main>
         </div>
@@ -53,9 +53,9 @@ function MainApp() {
 
     if (selectedRolePrompt === 'participant') {
       return (
-        <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+        <div className="gm-app-shell min-h-screen flex flex-col bg-slate-950 text-slate-100">
           <Header />
-          <main className="flex-1 flex items-center justify-center p-4">
+          <main className="gm-auth-main flex-1 flex items-center justify-center p-4">
             <ParticipantLogin onBack={() => setSelectedRolePrompt(null)} />
           </main>
         </div>
@@ -63,9 +63,9 @@ function MainApp() {
     }
 
     return (
-      <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+      <div className="gm-app-shell min-h-screen flex flex-col bg-slate-950 text-slate-100">
         <Header />
-        <main className="flex-1 flex items-center justify-center p-4">
+        <main className="gm-auth-main flex-1 flex items-center justify-center p-4">
           <RoleSelection onSelectRole={(r) => setSelectedRolePrompt(r)} />
         </main>
       </div>
@@ -75,7 +75,7 @@ function MainApp() {
   // Flow 2: Trainer Experience
   if (role === 'trainer') {
     return (
-      <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+      <div className="gm-app-shell min-h-screen flex flex-col bg-slate-950 text-slate-100">
         <Header />
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           {sessionStatus === 'ready' && <TrainerDashboard />}
