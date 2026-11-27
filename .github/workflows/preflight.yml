@@ -4,6 +4,7 @@ on:
     branches:
       - design/academic-minimalism
       - deployment/private-pilot
+      - fix/responsive-phone-layout
   workflow_dispatch:
 concurrency:
   group: gut-mind-preflight-${{ github.ref }}
@@ -13,7 +14,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,10 +40,10 @@ jobs:
       - name: 30-client simple scoring and nickname verification
         run: GM_TEST_CLIENTS=30 GM_SIMPLE_SCORING=1 node --test test_session_smoke.js
       - name: Private pilot access controls with 30 real clients (loopback only)
-        if: github.ref == 'refs/heads/deployment/private-pilot'
+        if: github.ref == 'refs/heads/deployment/private-pilot' || github.ref == 'refs/heads/fix/responsive-phone-layout'
         run: GM_TEST_CLIENTS=30 GM_SIMPLE_SCORING=1 GM_TEST_PILOT=1 node --test test_session_smoke.js
       - name: Restricted production configuration and reverse-proxy simulation
-        if: github.ref == 'refs/heads/deployment/private-pilot'
+        if: github.ref == 'refs/heads/deployment/private-pilot' || github.ref == 'refs/heads/fix/responsive-phone-layout'
         run: node --test test_render_pilot.mjs
       - name: Dependency audit
         if: ${{ always() && steps.install.outcome == 'success' }}
@@ -56,11 +57,23 @@ jobs:
           npm init -y
           npm install --save-exact --ignore-scripts --no-fund playwright@1.58.2
           npm audit --audit-level=low
-          node node_modules/playwright/cli.js install --with-deps chromium
+          node node_modules/playwright/cli.js install --with-deps chromium webkit firefox
       - name: Private pilot live browser verification (loopback only)
-        if: github.ref == 'refs/heads/deployment/private-pilot'
+        if: github.ref == 'refs/heads/deployment/private-pilot' || github.ref == 'refs/heads/fix/responsive-phone-layout'
         env:
           PLAYWRIGHT_MODULE: ${{ runner.temp }}/gm-browser/node_modules/playwright/index.mjs
+        run: node --test test_pilot_browser.mjs
+      - name: Responsive live verification in WebKit
+        if: github.ref == 'refs/heads/fix/responsive-phone-layout'
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/gm-browser/node_modules/playwright/index.mjs
+          GM_BROWSER: webkit
+        run: node --test test_pilot_browser.mjs
+      - name: Responsive live verification in Firefox
+        if: github.ref == 'refs/heads/fix/responsive-phone-layout'
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/gm-browser/node_modules/playwright/index.mjs
+          GM_BROWSER: firefox
         run: node --test test_pilot_browser.mjs
       - name: Browser editor verification
         env:
