@@ -34,7 +34,9 @@ test('phone nickname, accumulated points, scorecard, tie ranks and midline retur
  await phone.getByLabel('Nickname').fill('Blue Fox');await phone.getByRole('button',{name:'Join practice'}).click();
  await strip.getByText('0 points',{exact:true}).waitFor();await strip.getByText('Rank 1/1',{exact:true}).waitFor();
  const nav=page.locator('aside').first();
- const go=async i=>{await nav.locator('button').nth(i).click();await phone.getByRole('heading',{name:questions[i].question,exact:true}).waitFor();};
+ const phoneFrame=page.frames().find(f=>f.url().includes('participant-preview=1'));assert.ok(phoneFrame);
+ async function activityFit(){const m=await phoneFrame.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));assert.ok(m.scroll<=m.width+1,JSON.stringify(m));}
+ const go=async i=>{await nav.locator('button').nth(i).click();await phone.getByRole('heading',{name:questions[i].question,exact:true}).waitFor();await activityFit();};
  await go(1);const input=phone.getByPlaceholder('Type your response…');
  for(const word of ['first idea','second idea']){await input.fill(word);await input.press('Enter');await phone.getByText(word,{exact:true}).waitFor();}
  await strip.getByText('1 point',{exact:true}).waitFor();await strip.click();
